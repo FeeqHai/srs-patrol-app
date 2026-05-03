@@ -7,6 +7,10 @@ import '../../features/tracking/views/map_screen.dart';
 import '../../features/communication/views/radio_screen.dart';
 import '../../features/incident/views/incident_screen.dart';
 
+import 'package:provider/provider.dart';
+import '../../features/auth/providers/auth_provider.dart';
+
+
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -32,9 +36,11 @@ class _MainShellState extends State<MainShell> {
         backgroundColor: Colors.blueGrey[900],
         actions: [
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.logout, color: Colors.redAccent),
             onPressed: () {
-              // TODO: Navigate to Auth/Profile
+              // This triggers the backend sign-out.
+              // The AuthGate in main.dart will instantly detect this and kick you to the Login Screen.
+              context.read<AuthProvider>().logout();
             },
           )
         ],
