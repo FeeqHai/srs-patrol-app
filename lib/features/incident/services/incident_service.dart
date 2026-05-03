@@ -8,6 +8,16 @@ class IncidentService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  /// --- THE NEW FUNCTION: GET REAL-TIME FEED ---
+  /// This returns a Stream that your IncidentScreen listens to.
+  /// It orders them so the most recent patrol reports appear at the top.
+  Stream<QuerySnapshot> getIncidentStream() {
+    return _db
+        .collection('incident_reports')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
   Future<void> submitReport({
     required String userId,
     required String title,

@@ -1,33 +1,27 @@
-// ==========================================
 // File: lib/main.dart
-// ==========================================
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:provider/provider.dart';
 
-// --- 1. Auth Module Imports ---
+import 'firebase_options.dart';
+import 'core/widgets/main_shell.dart';
 import 'features/auth/providers/auth_provider.dart';
-// Note: You probably have an AuthGate or LoginScreen import here normally,
-// but we are bypassing it right now to test the camera.
-
-// --- 2. Attendance/Shift Module Imports ---
+import 'features/auth/views/login_screen.dart';
 import 'features/attendance/providers/attendance_provider.dart';
-
-// --- 3. Incident Module Imports ---
 import 'features/incident/providers/incident_provider.dart';
-import 'features/incident/views/incident_report_screen.dart'; // The screen we are testing
+import 'features/incident/views/incident_report_screen.dart';
 
 void main() async {
-  // Ensure the Flutter engine is running before calling Firebase
+  // Ensure engine is awake before calling native Firebase code
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Boot up the connection to your Firebase Database & Storage
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
+  // Wrap the entire app in a MultiProvider so any module can access the Auth State
   runApp(
-    // MultiProvider sits at the absolute top of the app,
-    // wrapping everything so any screen can access these services.
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -45,16 +39,45 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SRS Patrol',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.redAccent),
+      title: 'SRS App',
+      themeMode: ThemeMode.dark,
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorSchemeSeed: Colors.blueGrey,
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF121212),
       ),
-      // THE PENETRATION TEST BYPASS:
-      // We are temporarily forcing the app to load the Incident UI on startup
-      // instead of the Login Screen so you can immediately test the camera and upload.
-      home: const IncidentReportScreen(),
+      // Hand routing control to the AuthGate instead of hardcoding MainShell
+      home: const AuthGate(),
+    );
+  }
+}
+
+/// The AuthGate acts as the bouncer for your application.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // StreamBuilder constantly listens to the Firebase Auth token on the device
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // 1. While Firebase is checking the local cache for a token, show a loader
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // 2. If a valid user token is found, unlock the KRT/SRS Main Dashboard
+        if (snapshot.hasData) {
+          return const MainShell();
+        }
+
+        // 3. If no user is found (logged out), force them to the Login Screen
+        return const LoginScreen();
+      },
     );
   }
 }
