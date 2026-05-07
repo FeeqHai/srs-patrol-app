@@ -83,20 +83,47 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: authProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton(
-                  onPressed: () {
-                    if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-                      context.read<AuthProvider>().login(
-                        _emailController.text,
-                        _passwordController.text,
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlueAccent,
-                    foregroundColor: Colors.black,
+                        onPressed: () {
+                          if (_emailController.text.isNotEmpty &&
+                              _passwordController.text.isNotEmpty) {
+                            context.read<AuthProvider>().login(
+                              _emailController.text,
+                              _passwordController.text,
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.lightBlueAccent,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text(
+                          'SECURE LOGIN',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Navigational trigger to the Registration Module
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don't have an account?"),
+                  TextButton(
+                    onPressed: () {
+                      // Pushes the RegisterScreen over the LoginScreen
+                      Navigator.pushNamed(context, '/register');
+                    },
+                    child: const Text(
+                      'Register Here',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  child: const Text('SECURE LOGIN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
+                ],
               ),
             ],
           ),

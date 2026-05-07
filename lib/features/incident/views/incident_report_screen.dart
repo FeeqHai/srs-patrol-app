@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../providers/incident_provider.dart';
 
@@ -64,13 +63,13 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     }
 
     // 2. Get the Patroller's ID
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    String? currentUserId;
+    if (currentUserId == null) return;
 
     // 3. Trigger the Provider
     final provider = context.read<IncidentProvider>();
     final success = await provider.createIncidentReport(
-      userId: user.uid,
+      userId: currentUserId,
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
       category: _selectedCategory,

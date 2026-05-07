@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/incident_service.dart';
 import 'incident_report_screen.dart';
 
@@ -19,51 +18,51 @@ class IncidentScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        // Connects to your Firestore 'incidents' collection
-        stream: IncidentService().getIncidentStream(),
-        builder: (context, snapshot) {
-          // 1. Error Handling
-          if (snapshot.hasError) {
-            return const Center(child: Text("Error loading incidents"));
-          }
-
-          // 2. Loading State
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snapshot.data!.docs;
-
-          // 3. Empty State
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.security, size: 64, color: Colors.grey[800]),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "No incidents reported.\nYour neighborhood is secure.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // 4. The Feed
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80), // Padding for FAB
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              return _buildIncidentCard(data);
-            },
-          );
-        },
-      ),
+      // body: StreamBuilder<QuerySnapshot>(
+      //   // Connects to your Firestore 'incidents' collection
+      //   stream: IncidentService().getIncidentStream(),
+      //   builder: (context, snapshot) {
+      //     // 1. Error Handling
+      //     if (snapshot.hasError) {
+      //       return const Center(child: Text("Error loading incidents"));
+      //     }
+      //
+      //     // 2. Loading State
+      //     if (snapshot.connectionState == ConnectionState.waiting) {
+      //       return const Center(child: CircularProgressIndicator());
+      //     }
+      //
+      //     final docs = snapshot.data!.docs;
+      //
+      //     // 3. Empty State
+      //     if (docs.isEmpty) {
+      //       return Center(
+      //         child: Column(
+      //           mainAxisAlignment: MainAxisAlignment.center,
+      //           children: [
+      //             Icon(Icons.security, size: 64, color: Colors.grey[800]),
+      //             const SizedBox(height: 16),
+      //             const Text(
+      //               "No incidents reported.\nYour neighborhood is secure.",
+      //               textAlign: TextAlign.center,
+      //               style: TextStyle(color: Colors.grey),
+      //             ),
+      //           ],
+      //         ),
+      //       );
+      //     }
+      //
+      //     // 4. The Feed
+      //     return ListView.builder(
+      //       padding: const EdgeInsets.only(bottom: 80), // Padding for FAB
+      //       itemCount: docs.length,
+      //       itemBuilder: (context, index) {
+      //         final data = docs[index].data() as Map<String, dynamic>;
+      //         return _buildIncidentCard(data);
+      //       },
+      //     );
+      //   },
+      // ),
 
       // Floating Action Button to launch the report form[cite: 1]
       floatingActionButton: FloatingActionButton.extended(
@@ -162,10 +161,10 @@ class IncidentScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w500),
                 ),
                 const Spacer(),
-                Text(
-                  "Time: ${data['timestamp'] != null ? (data['timestamp'] as Timestamp).toDate().toString().substring(11, 16) : 'Just now'}",
-                  style: const TextStyle(color: Colors.grey, fontSize: 11),
-                ),
+                // Text(
+                //   "Time: ${data['timestamp'] != null ? (data['timestamp'] as Timestamp).toDate().toString().substring(11, 16) : 'Just now'}",
+                //   style: const TextStyle(color: Colors.grey, fontSize: 11),
+                // ),
               ],
             ),
           ),

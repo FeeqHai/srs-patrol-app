@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../providers/attendance_provider.dart';
 
@@ -55,8 +54,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         );
 
         // 2. Get the current logged-in patroller's ID
-        final User? currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser == null) {
+        String? currentUserId;
+        if (currentUserId == null) {
           if (!mounted) return;
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +67,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
         // 3. Trigger the Anti-Cheat Engine (This will prompt for GPS permissions!)
         final provider = context.read<AttendanceProvider>();
-        final bool success = await provider.processQrScan(currentUser.uid, qrData);
+        final bool success = await provider.processQrScan(currentUserId, qrData);
 
         if (!mounted) return;
         Navigator.pop(context); // Close dialog

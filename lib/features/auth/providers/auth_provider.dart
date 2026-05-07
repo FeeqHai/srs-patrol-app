@@ -17,7 +17,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners(); // Tells the UI to show a loading spinner
 
     try {
-      await _authService.loginWithEmail(email, password);
+      String? currentUserId;
       _isLoading = false;
       notifyListeners();
       return true; // Login success
@@ -30,6 +30,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _authService.logout();
+
   }
 }

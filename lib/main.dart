@@ -1,83 +1,40 @@
-// File: lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:provider/provider.dart';
-
-import 'firebase_options.dart';
-import 'core/widgets/main_shell.dart';
-import 'features/auth/providers/auth_provider.dart';
+import 'package:provider/provider.dart'; // REQUIRED: Import the provider package
 import 'features/auth/views/login_screen.dart';
-import 'features/attendance/providers/attendance_provider.dart';
-import 'features/incident/providers/incident_provider.dart';
-import 'features/incident/views/incident_report_screen.dart';
+import 'features/auth/views/register_screen.dart';
+import 'features/auth/providers/auth_provider.dart'; // REQUIRED: Import your provider
 
-void main() async {
-  // Ensure engine is awake before calling native Firebase code
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const SRSPatrolApp());
+}
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+class SRSPatrolApp extends StatelessWidget {
+  const SRSPatrolApp({Key? key}) : super(key: key);
 
-  // Wrap the entire app in a MultiProvider so any module can access the Auth State
-  runApp(
-    MultiProvider(
+  @override
+  Widget build(BuildContext context) {
+    // 1. Wrap the entire app in a MultiProvider
+    return MultiProvider(
       providers: [
+        // 2. Inject the AuthProvider into the widget tree
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
-        ChangeNotifierProvider(create: (_) => IncidentProvider()),
+
+        // Note: When you rebuild your IncidentProvider later, you will add it here:
+        // ChangeNotifierProvider(create: (_) => IncidentProvider()),
       ],
-      child: const MyApp(),
-    ),
-  );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SRS App',
-      themeMode: ThemeMode.dark,
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorSchemeSeed: Colors.blueGrey,
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF121212),
+      // 3. Your MaterialApp remains exactly the same as before
+      child: MaterialApp(
+        title: 'SRS Patrol System',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        initialRoute: '/login',
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
+        },
       ),
-      // Hand routing control to the AuthGate instead of hardcoding MainShell
-      home: const AuthGate(),
-    );
-  }
-}
-
-/// The AuthGate acts as the bouncer for your application.
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // StreamBuilder constantly listens to the Firebase Auth token on the device
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // 1. While Firebase is checking the local cache for a token, show a loader
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        // 2. If a valid user token is found, unlock the KRT/SRS Main Dashboard
-        if (snapshot.hasData) {
-          return const MainShell();
-        }
-
-        // 3. If no user is found (logged out), force them to the Login Screen
-        return const LoginScreen();
-      },
     );
   }
 }
