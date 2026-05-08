@@ -14,7 +14,10 @@ class ApiClient {
     try {
       // http.post automatically encodes Map<String, String> so PHP's $_POST can read it
       final response = await http.post(url, body: body);
-
+      // 1. INJECT THIS DEBUG LINE:
+      print("=== RAW SERVER RESPONSE ===");
+      print(response.body);
+      print("===========================");
       // 200 means "OK" from the server
       if (response.statusCode == 200) {
         // We expect our PHP scripts to always return JSON (e.g., {"status": "success", "message": "..."})

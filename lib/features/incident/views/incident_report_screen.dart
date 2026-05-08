@@ -1,10 +1,10 @@
-// File: lib/features/incident/views/incident_report_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/incident_provider.dart';
+import '../../auth/providers/auth_provider.dart'; // INJECT THIS IMPORT
 
 class IncidentReportScreen extends StatefulWidget {
   const IncidentReportScreen({super.key});
@@ -53,7 +53,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
   }
 
   Future<void> _submitReport() async {
-    // 1. Validate the form
+    // 1. Validate the form and image
     if (!_formKey.currentState!.validate()) return;
     if (_imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,11 +62,18 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
       return;
     }
 
-    // 2. Get the Patroller's ID
-    String? currentUserId;
-    if (currentUserId == null) return;
+    // 2. Extract the Patroller's UUID from the active session
+    final authProvider = context.read<AuthProvider>();
+    final String? currentUserId = authProvider.userId;
 
-    // 3. Trigger the Provider
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authorization Failure: Invalid session. Please log in again.'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+
+    // 3. Trigger the Provider Payload
     final provider = context.read<IncidentProvider>();
     final success = await provider.createIncidentReport(
       userId: currentUserId,
@@ -78,10 +85,10 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
 
     if (!mounted) return;
 
-    // 4. Handle the result
+    // 4. Evaluate Server Response
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('REPORT SECURED: Uploaded to KRT Command.'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('REPORT SECURED: Uploaded to Command Center.'), backgroundColor: Colors.green),
       );
       // Reset the form after a successful upload
       setState(() {

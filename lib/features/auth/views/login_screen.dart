@@ -83,27 +83,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: authProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton(
-                        onPressed: () {
-                          if (_emailController.text.isNotEmpty &&
-                              _passwordController.text.isNotEmpty) {
-                            context.read<AuthProvider>().login(
-                              _emailController.text,
-                              _passwordController.text,
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.lightBlueAccent,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text(
-                          'SECURE LOGIN',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                  // 1. Mark the callback as asynchronous
+                  onPressed: () async {
+                    if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+
+                      // 2. Await the boolean response from the AuthProvider
+                      final bool success = await context.read<AuthProvider>().login(
+                        _emailController.text,
+                        _passwordController.text,
+                      );
+
+                      // 3. Evaluate the result and ensure the widget is still active in memory
+                      if (success && context.mounted) {
+                        // 4. Navigate to the primary dashboard, destroying the login screen in the stack
+                        Navigator.pushReplacementNamed(context, '/home');
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightBlueAccent,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text('SECURE LOGIN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ),
 
               const SizedBox(height: 24),

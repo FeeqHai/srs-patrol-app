@@ -1,4 +1,3 @@
-// File: lib/features/incident/providers/incident_provider.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -25,12 +24,10 @@ class IncidentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Grab the exact GPS coordinates at the moment of reporting
       Position currentPosition = await _determinePosition();
 
-      // Send everything to the service
-      await _service.submitReport(
-        userId: userId,
+      final String? serverError = await _service.submitReport(
+        reporterId: userId,
         title: title,
         description: description,
         category: category,
@@ -38,19 +35,25 @@ class IncidentProvider extends ChangeNotifier {
         location: currentPosition,
       );
 
-      _isLoading = false;
-      notifyListeners();
-      return true; // Success
+      if (serverError == null) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _isLoading = false;
+        _errorMessage = serverError;
+        notifyListeners();
+        return false;
+      }
 
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
-      return false; // Failed
+      return false;
     }
   }
 
-  // Standard GPS request block
   Future<Position> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) throw Exception('Location services are disabled.');

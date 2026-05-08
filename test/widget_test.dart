@@ -8,23 +8,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:srs_app/main.dart';
+import 'package:srs_app/main.dart'; // Ensure this matches your package name
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // STRUCTURAL CORRECTION: Changed MyApp() to SRSPatrolApp()
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const SRSPatrolApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // The default test looks for a '0' and a '1' which do not exist in our app.
+    // For now, we will just verify the app boots without crashing.
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }
