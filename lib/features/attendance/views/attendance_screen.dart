@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import 'package:geolocator/geolocator.dart'; // Required to fetch the lock coordinates
+import 'package:geolocator/geolocator.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
@@ -18,7 +18,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   MobileScannerController? _scannerController;
   
   bool _isProcessing = false;
-  bool _shiftActive = false; // The definitive state lock
+  bool _shiftActive = false;
   String _activeCheckpoint = "";
   String _activeLocation = "";
 
@@ -85,10 +85,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         final bool success = await provider.processQrScan(currentUserId, qrData);
 
         if (!mounted) return;
-        Navigator.pop(context); // Purge dialog
+        Navigator.pop(context);
 
         if (success) {
-          // Fetch the exact coordinates utilized for the lock to display on the UI
           Position? position = await Geolocator.getLastKnownPosition();
           String locationString = position != null 
               ? "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}"
@@ -101,18 +100,144 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             _isProcessing = false;
           });
           
-          // Physically destroy the camera sensor to prevent memory leaks or ghost scans
           _scannerController?.dispose();
           _scannerController = null;
 
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('SCAN REJECTED: ${provider.errorMessage}'),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 5),
-            ),
-          );
+          
+          if (provider.errorMessage!.contains('Sila aktifkan') || provider.errorMessage!.contains('kebenaran lokasi')) {
+            // MODAL A: Hardware/Location Rejection
+            showDialog(
+              context: context,
+              builder: (context) => Dialog(
+                backgroundColor: const Color(0xFF1E1E1E),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 10,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.location_on, color: Colors.orange, size: 48),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Lokasi Diperlukan 📍',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Hai! Sistem perlukan akses lokasi (GPS) anda untuk mengesahkan kawasan rondaan. Sila aktifkan tetapan ini untuk memulakan shif.',
+                        style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+                        textAlign: TextAlign.center, // DIRECTIVE EXECUTED: Reverted to Center
+                      ),
+                      const SizedBox(height: 28),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                foregroundColor: Colors.white54,
+                              ),
+                              child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                Navigator.pop(context);
+                                await Geolocator.openLocationSettings();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.lightBlueAccent,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('Buka Tetapan', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          } else {
+            // --- MODAL B UX INTERCEPTION ---
+            String friendlyError = provider.errorMessage ?? "Ralat pelayan tidak diketahui.";
+            
+            // Translate backend strings into human UI
+            if (friendlyError.contains('Shift Lockout') || friendlyError.contains('Temporal Lock')) {
+              friendlyError = "Anda telah pun merekodkan checkpoint ini untuk shif yang sedang aktif. Anda tidak perlu mengimbasnya dua kali. Sila teruskan rondaan ke lokasi seterusnya.";
+            } else if (friendlyError.contains('Unknown Checkpoint')) {
+              friendlyError = "Kod QR tidak sah. Sila pastikan anda mengimbas kod QR KRT yang didaftarkan.";
+            }
+
+            // MODAL B: System/Temporal Lockout Rejection
+            showDialog(
+              context: context,
+              builder: (context) => Dialog(
+                backgroundColor: const Color(0xFF1E1E1E),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 10,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Imbasan Ditolak ⚠️',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        friendlyError, // Directly outputs the friendly translation
+                        style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+                        textAlign: TextAlign.center, // DIRECTIVE EXECUTED: Reverted to Center
+                      ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Faham & Tutup', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+          
           setState(() => _isProcessing = false);
           _scannerController?.start();
         }
@@ -122,7 +247,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // STATE B: The Shift Dashboard (Camera Unmounted)
     if (_shiftActive) {
       return Scaffold(
         backgroundColor: const Color(0xFF121212),
@@ -164,15 +288,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
     }
 
-    // STATE A: The Hardware Scanner
     return Scaffold(
-      extendBodyBehindAppBar: true,
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Shift Scanner', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       body: Stack(
         children: [
           if (_scannerController != null)

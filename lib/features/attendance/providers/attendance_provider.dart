@@ -16,25 +16,24 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // The service returns a String error message if PHP fails, or null if successful.
       final String? errorResult = await _service.clockIn(userId, qrPayload);
 
       if (errorResult == null) {
         _isLoading = false;
         notifyListeners();
-        return true; // Complete Success
+        return true;
       } else {
+        _errorMessage = errorResult;
         _isLoading = false;
-        _errorMessage =
-            errorResult; // Extract the specific PHP error (e.g., parameter mismatch)
         notifyListeners();
-        return false; // Logic Failure
+        return false;
       }
     } catch (e) {
       _isLoading = false;
+      // Differentiate the error type
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
-      return false; // Network Crash
+      return false;
     }
   }
 }

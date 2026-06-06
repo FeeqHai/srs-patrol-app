@@ -1,10 +1,11 @@
+// File: lib/features/incident/views/incident_report_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/incident_provider.dart';
-import '../../auth/providers/auth_provider.dart'; // INJECT THIS IMPORT
+import '../../auth/providers/auth_provider.dart';
 
 class IncidentReportScreen extends StatefulWidget {
   const IncidentReportScreen({super.key});
@@ -37,45 +38,53 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     super.dispose();
   }
 
-  // Hardware bridge to open the phone's camera
   Future<void> _takePhoto() async {
-    // We compress the image to 70% quality to save your Storage bandwidth
     final XFile? photo = await _picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: 70,
+      imageQuality: 70, 
     );
 
     if (photo != null) {
-      setState(() {
-        _imageFile = File(photo.path);
-      });
+      setState(() => _imageFile = File(photo.path));
     }
   }
 
-  Future<void> _submitReport() async {
-    // 1. Validate the form and image
+Future<void> _submitReport() async {
+    // 1. HARDWARE LOCK: Force the keyboard to collapse before state changes
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
+    
     if (_imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Evidence required: Please take a photo.'), backgroundColor: Colors.redAccent),
-      );
+      _showSnackBar('Bahan bukti diperlukan: Sila ambil gambar insiden.', Colors.redAccent);
       return;
     }
 
-    // 2. Extract the Patroller's UUID from the active session
-    final authProvider = context.read<AuthProvider>();
-    final String? currentUserId = authProvider.userId;
-
+    final String? currentUserId = context.read<AuthProvider>().userId;
     if (currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Authorization Failure: Invalid session. Please log in again.'), backgroundColor: Colors.redAccent),
-      );
+      _showSnackBar('Ralat Sesi: Sila log masuk semula.', Colors.redAccent);
       return;
     }
 
-    // 3. Trigger the Provider Payload
+    // 2. LOADING OVERLAY
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        backgroundColor: Color(0xFF1E1E1E),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Colors.redAccent),
+            SizedBox(height: 16),
+            Text('Menyambung ke GPS & Memuat Naik...', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+          ],
+        ),
+      ),
+    );
+
     final provider = context.read<IncidentProvider>();
-    final success = await provider.createIncidentReport(
+    final bool success = await provider.createIncidentReport(
       userId: currentUserId,
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
@@ -85,136 +94,182 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
 
     if (!mounted) return;
 
-    // 4. Evaluate Server Response
+    // 3. Purge the loading overlay safely
+    Navigator.pop(context);
+
+    // 4. THE SAFEGUARDED STATE ROUTING
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('REPORT SECURED: Uploaded to Command Center.'), backgroundColor: Colors.green),
+      // INTERFACE UPGRADE: A blocking success modal instead of a passive snackbar
+      showDialog(
+        context: context,
+        barrierDismissible: false, // Force them to acknowledge it
+        builder: (context) => Dialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 10,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 64),
+                const SizedBox(height: 20),
+                const Text('Laporan Berjaya', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 12),
+                const Text(
+                  'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.', 
+                  textAlign: TextAlign.center, 
+                  style: TextStyle(color: Colors.white70, height: 1.5)
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // 1. Dismiss this success dialog
+                      
+                      // 2. THE SAFEGUARD: Only pop the screen if there is an actual feed behind it
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        // If testing directly via main.dart, reset the form instead of committing suicide
+                        setState(() {
+                          _titleController.clear();
+                          _descController.clear();
+                          _imageFile = null;
+                        });
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.greenAccent,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Kembali ke Menu', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
-      // Reset the form after a successful upload
-      setState(() {
-        _titleController.clear();
-        _descController.clear();
-        _imageFile = null;
-        _selectedCategory = 'Suspicious Activity';
-      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('UPLOAD FAILED: ${provider.errorMessage}'), backgroundColor: Colors.red),
-      );
+      _showSnackBar('RALAT MUAT NAIK: ${provider.errorMessage}', Colors.red);
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message, style: const TextStyle(fontWeight: FontWeight.bold)), backgroundColor: color),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // We watch the provider to show a loading spinner while the GPS/Upload happens
-    final bool isUploading = context.watch<IncidentProvider>().isLoading;
-
+    // Note: We no longer watch the provider state to destroy the UI here.
     return Scaffold(
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: const Text('Log Incident', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.redAccent[700],
+        title: const Text('Lapor Insiden', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: isUploading
-          ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.redAccent),
-            SizedBox(height: 16),
-            Text('Acquiring GPS & Uploading Evidence...', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-      )
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Evidence Photo Box ---
+              // Evidence Capture Area
               GestureDetector(
                 onTap: _takePhoto,
                 child: Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[400]!),
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12),
                   ),
                   child: _imageFile != null
                       ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(_imageFile!, fit: BoxFit.cover),
-                  )
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.file(_imageFile!, fit: BoxFit.cover),
+                        )
                       : const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.camera_alt, size: 50, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text('Tap to capture evidence', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt, size: 48, color: Colors.white54),
+                            SizedBox(height: 8),
+                            Text('Ketuk untuk ambil gambar bukti', style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 24),
 
-              // --- Category Dropdown ---
+              const Text('Kategori Insiden', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Incident Category',
-                  border: OutlineInputBorder(),
+                value: _selectedCategory,
+                dropdownColor: const Color(0xFF1E1E1E),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
-                items: _categories.map((String category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategory = newValue!;
-                  });
-                },
+                items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                onChanged: (val) => setState(() => _selectedCategory = val!),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // --- Title Input ---
+              const Text('Tajuk Ringkas', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Short Title',
-                  hintText: 'e.g., Broken Fence at Gate B',
-                  border: OutlineInputBorder(),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Cth: Pagar rosak di Lorong 4',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Please enter a title' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Sila masukkan tajuk' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // --- Description Input ---
+              const Text('Keterangan Lanjut', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _descController,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Detailed Description',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Terangkan butiran kejadian...',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Please describe the incident' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Penerangan tidak boleh dibiarkan kosong' : null,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // --- Submit Button ---
-              ElevatedButton.icon(
-                onPressed: _submitReport,
-                icon: const Icon(Icons.cloud_upload),
-                label: const Text('SUBMIT REPORT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent[700],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              SizedBox(
+                height: 55,
+                child: ElevatedButton.icon(
+                  onPressed: _submitReport,
+                  icon: const Icon(Icons.cloud_upload),
+                  label: const Text('HANTAR LAPORAN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ),
             ],

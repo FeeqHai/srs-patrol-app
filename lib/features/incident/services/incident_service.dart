@@ -55,4 +55,27 @@ class IncidentService {
       return "Network Exception: Could not reach the command center.";
     }
   }
+
+  // Fetch all incidents from the backend
+  Future<List<dynamic>> fetchAllIncidents() async {
+    try {
+      // Assuming your endpoint is something like 'incidents/get_incidents.php'
+      final response = await http.get(Uri.parse(ApiConstants.baseUrl + 'incidents/get_incidents.php'));
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          return data['data']; // Returns the list of incidents
+        } else {
+          throw Exception(data['message']);
+        }
+      } else {
+        throw Exception("Server Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Network Exception: $e");
+    }
+  }
+
+  
 }

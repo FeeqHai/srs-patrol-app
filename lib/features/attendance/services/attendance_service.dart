@@ -43,29 +43,33 @@ class AttendanceService {
     }
   }
 
-  // Hardware Authorization and Extraction
+// Standard boilerplate: Industry-Standard Native Request Flow
   Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
 
+    // 1. Check if GPS is enabled at all
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw Exception('Location services are disabled. Please activate GPS hardware.');
+      throw Exception('Sila aktifkan perkhidmatan lokasi (GPS) pada peranti anda.');
     }
 
+    // 2. Check permission status
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      // THIS is the standard Shopee/TikTok style prompt
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw Exception('Location permissions are restricted by the user.');
+        throw Exception('SRS Patrol memerlukan kebenaran lokasi untuk pengesahan shif.');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      throw Exception('Location permissions are permanently locked by the OS.');
+      // This is the only time we mention settings, because the OS locked us out
+      throw Exception('Lokasi disekat secara kekal. Sila beri kebenaran di dalam Settings.');
     }
 
-    // INJECTED: The hardware safety kill-switch (10-second absolute limit)
+    // 3. Return the position with the hardware kill-switch
     return await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
