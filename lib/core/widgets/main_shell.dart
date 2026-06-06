@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/incident/views/incident_report_screen.dart';
 
+// 1. INJECT THE MISSING IMPORT
+import '../../features/attendance/views/attendance_screen.dart';
+
 class MainShell extends StatefulWidget {
   const MainShell({Key? key}) : super(key: key);
 
@@ -13,10 +16,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
+  // 2. UPDATE THE ROUTING ARRAY
   final List<Widget> _screens = [
     const Center(child: Text('Dashboard Module Offline', style: TextStyle(fontSize: 18))),
     const IncidentReportScreen(),
-    const Center(child: Text('Attendance Module Offline', style: TextStyle(fontSize: 18))),
+    const AttendanceScreen(), // The placeholder is replaced with the active module
   ];
 
   @override

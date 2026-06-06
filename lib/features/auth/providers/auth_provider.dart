@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/network/api_client.dart'; // INJECTED: The centralized network layer
 
 class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -30,15 +29,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse(ApiConstants.baseUrl + ApiConstants.loginEndpoint);
-      final response = await http.post(
-        url,
-        body: {'email': email, 'password': password},
+      // 1. Construct the POST payload
+      final Map<String, String> payload = {
+        'email': email,
+        'password': password,
+      };
+
+      // 2. Transmit via ApiClient (This prevents the malformed URL crash)
+      final data = await ApiClient.postData(
+        ApiConstants.loginEndpoint,
+        payload,
       );
 
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200 && data['status'] == 'success') {
+      // 3. Evaluate the validated JSON response
+      if (data['status'] == 'success') {
         _userId = data['data']['id'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', _userId!);
@@ -52,7 +56,12 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // 4. Expose the raw exception to the IDE console for engineering review
+      print('=== LOGIN NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      print('Stack Trace: $stackTrace');
+      
       _errorMessage = "Network Exception: Unable to communicate with the server.";
       _isLoading = false;
       notifyListeners();

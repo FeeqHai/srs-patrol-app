@@ -6,7 +6,7 @@ import 'features/auth/views/register_screen.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/incident/providers/incident_provider.dart';
 import 'core/widgets/main_shell.dart';
-
+import 'features/attendance/providers/attendance_provider.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const SRSPatrolApp());
@@ -18,9 +18,10 @@ class SRSPatrolApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
+providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => IncidentProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()), // INJECTED: The missing dependency
       ],
       child: MaterialApp(
         title: 'SRS Patrol System',

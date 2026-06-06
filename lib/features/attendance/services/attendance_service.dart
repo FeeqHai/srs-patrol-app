@@ -1,67 +1,76 @@
 // File: lib/features/attendance/services/attendance_service.dart
+
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/network/api_client.dart';
 
-
 class AttendanceService {
   final Uuid _uuid = const Uuid();
 
-  // The primary clock-in function
   Future<String?> clockIn(String userId, String qrPayload) async {
     try {
-      // 1. Get the live GPS coordinates
+      // 1. Hardware Interrogation: Bounded Execution
       Position currentPos = await _determinePosition();
 
-      // 2. Generate local Primary Key
+      // 2. Cryptographic Generation: Local Primary Key
       final String attendanceId = _uuid.v4();
 
-      // 3. Construct the Payload
+      // 3. Payload Construction: Strict Backend Alignment
       final Map<String, String> payload = {
         'id': attendanceId,
         'user_id': userId,
-        'qr_data': qrPayload,
+        'checkpoint_id': qrPayload, // FIXED: Aligned with $_POST['checkpoint_id']
         'latitude': currentPos.latitude.toString(),
         'longitude': currentPos.longitude.toString(),
-        // Note: PHP should generate the exact 'clock_in_time' timestamp upon receipt to prevent client-side time manipulation.
       };
 
-      // 4. Transmit to Server via ApiClient
-      // Ensure 'attendance/clock_in.php' is added to ApiConstants
+      // 4. Network Transmission
       final response = await ApiClient.postData("attendance/clock_in.php", payload);
 
+      // 5. Evaluation Phase
       if (response['status'] == 'success') {
-        return null; // Clock-in successful
+        return null; // Pipeline successful
       } else {
-        return response['message']; // Return specific PHP error
+        return response['message']; // Explicit failure output
       }
-    } catch (e) {
-      return "Clock-In Exception: $e";
+    } catch (e, stackTrace) {
+      // Diagnostic Exposure
+      print('=== ATTENDANCE HARDWARE/NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      print('Stack Trace: $stackTrace');
+      print('=============================================');
+      return "System Exception: $e";
     }
   }
 
-  // Standard boilerplate to request GPS permissions from the user
+  // Hardware Authorization and Extraction
   Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) throw Exception('Location services are disabled. Please turn on GPS.');
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled. Please activate GPS hardware.');
+    }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw Exception('Location permissions are denied');
+        throw Exception('Location permissions are restricted by the user.');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      throw Exception('Location permissions are permanently denied.');
+      throw Exception('Location permissions are permanently locked by the OS.');
     }
 
+    // INJECTED: The hardware safety kill-switch (10-second absolute limit)
     return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      ),
     );
   }
 }

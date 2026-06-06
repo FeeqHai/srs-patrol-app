@@ -41,9 +41,19 @@ class AuthService {
         return response['message']; // Return the specific error from PHP (e.g., duplicate email)
       }
 
-    } catch (e) {
-      // Catch network timeouts or malformed JSON
-      return "Network Exception: Unable to communicate with the server. $e";
+   } catch (e, stackTrace) {
+      // 1. Print the exact exception token
+      print('=== CRITICAL NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      
+      // 2. Print the exact URL being targeted to verify typos
+      print('Target URI: ${ApiConstants.registerEndpoint}');
+      
+      // 3. Print the raw execution stack to trace the exact line of failure
+      print('Stack Trace: $stackTrace');
+      print('==================================');
+      
+      return "Network Exception: Unable to communicate with the server.";
     }
   }
 }
