@@ -213,7 +213,7 @@ Future<void> _submitReport() async {
               const Text('Kategori Insiden', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 dropdownColor: const Color(0xFF1E1E1E),
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(

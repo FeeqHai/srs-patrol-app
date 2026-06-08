@@ -15,15 +15,16 @@ class ApiClient {
       // http.post automatically encodes Map<String, String> so PHP's $_POST can read it
       final response = await http.post(url, body: body);
       // 1. INJECT THIS DEBUG LINE:
-print('=== RAW HTTP NETWORK DATA ===');
+      print('=== RAW HTTP NETWORK DATA ===');
       print('Target URI Hit: ${response.request?.url}');
       print('HTTP Status Code: ${response.statusCode}');
       print('Raw Body Response: "${response.body}"');
       print('=============================');
-    
-    // Prevent the crash if the server returns a blank response
+      // Prevent the crash if the server returns a blank response
       if (response.body.isEmpty) {
-        throw Exception("Server returned a completely blank response. Status Code: ${response.statusCode}");
+        throw Exception(
+          "Server returned a completely blank response. Status Code: ${response.statusCode}",
+        );
       }
       // 200 means "OK" from the server
       if (response.statusCode == 200) {

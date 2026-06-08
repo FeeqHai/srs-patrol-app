@@ -13,7 +13,7 @@ void main() {
 }
 
 class SRSPatrolApp extends StatelessWidget {
-  const SRSPatrolApp({Key? key}) : super(key: key);
+  const SRSPatrolApp({super.key});
 
   @override
   Widget build(BuildContext context) {

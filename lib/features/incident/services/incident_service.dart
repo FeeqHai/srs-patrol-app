@@ -6,7 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/constants/api_constants.dart';
 
 class IncidentService {
-  final String _uploadEndpoint = ApiConstants.baseUrl + 'incidents/upload_incident.php';
+  final String _uploadEndpoint = '${ApiConstants.baseUrl}incidents/upload_incident.php';
 
   Future<String?> submitReport({
     required String reporterId,
@@ -60,7 +60,7 @@ class IncidentService {
   Future<List<dynamic>> fetchAllIncidents() async {
     try {
       // Assuming your endpoint is something like 'incidents/get_incidents.php'
-      final response = await http.get(Uri.parse(ApiConstants.baseUrl + 'incidents/get_incidents.php'));
+      final response = await http.get(Uri.parse('${ApiConstants.baseUrl}incidents/get_incidents.php'));
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);

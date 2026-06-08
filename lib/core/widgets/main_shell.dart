@@ -7,7 +7,7 @@ import '../../features/attendance/views/attendance_screen.dart';
 import '../../features/incident/views/incident_screen.dart'; // FIXED: Pointing to the Feed, not the Form
 
 class MainShell extends StatefulWidget {
-  const MainShell({Key? key}) : super(key: key);
+  const MainShell({super.key});
 
   @override
   State<MainShell> createState() => _MainShellState();

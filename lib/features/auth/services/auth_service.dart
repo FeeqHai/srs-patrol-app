@@ -12,6 +12,9 @@ class AuthService {
   /// Returns null if successful, or an error message string if it fails.
   Future<String?> registerPatroller({
     required String fullName,
+    required String icNumber,       // NEW DATA
+    required String phoneNumber,    // NEW DATA
+    required String districtZone,   // NEW DATA
     required String email,
     required String password,
   }) async {
@@ -23,6 +26,9 @@ class AuthService {
     final Map<String, String> payload = {
       'id': newUserId,
       'full_name': fullName,
+      'ic_number': icNumber,        // NEW DATA
+      'phone_number': phoneNumber,  // NEW DATA
+      'district_zone': districtZone,// NEW DATA
       'email': email,
       'password': password,
     };
