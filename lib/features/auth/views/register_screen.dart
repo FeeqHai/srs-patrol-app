@@ -136,7 +136,7 @@ Future<void> _submitRegistration() async {
                   _buildTextField(_phoneController, 'No. Telefon (Kecemasan)', Icons.phone, TextInputType.phone),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _selectedZone,
+                    initialValue: _selectedZone,
                     dropdownColor: const Color(0xFF1E1E1E),
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(

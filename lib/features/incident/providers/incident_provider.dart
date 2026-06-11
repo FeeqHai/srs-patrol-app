@@ -17,7 +17,7 @@ class IncidentProvider extends ChangeNotifier {
     required String title,
     required String description,
     required String category,
-    required File imageFile,
+    required List<File> imageFiles,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -31,7 +31,7 @@ class IncidentProvider extends ChangeNotifier {
         title: title,
         description: description,
         category: category,
-        imageFile: imageFile,
+        imageFiles: imageFiles,
         location: currentPosition,
       );
 

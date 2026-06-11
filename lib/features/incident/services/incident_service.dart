@@ -13,7 +13,7 @@ class IncidentService {
     required String title,
     required String description,
     required String category,
-    required File imageFile,
+    required List<File> imageFiles,
     required Position location,
   }) async {
     try {
@@ -32,9 +32,11 @@ class IncidentService {
       request.fields['latitude'] = location.latitude.toString();
       request.fields['longitude'] = location.longitude.toString();
 
-      // 3. Attach Binary Image
-      var pic = await http.MultipartFile.fromPath('image', imageFile.path);
-      request.files.add(pic);
+      // 3. Attach Binary Images
+      for (var file in imageFiles) {
+        var pic = await http.MultipartFile.fromPath('images[]', file.path);
+        request.files.add(pic);
+      }
 
       // 4. Send and evaluate response
       var streamedResponse = await request.send();
@@ -51,16 +53,24 @@ class IncidentService {
       } else {
         return "Server Protocol Error: ${response.statusCode}";
       }
-    } catch (e) {
-      return "Network Exception: Could not reach the command center.";
+    } catch (e, stackTrace) {
+      print('=== CRITICAL NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      print('Target URI: $_uploadEndpoint');
+      print('Stack Trace: $stackTrace');
+      print('==================================');
+      return "Network Exception: Could not reach the command center. Raw error: $e";
     }
   }
 
   // Fetch all incidents from the backend
-  Future<List<dynamic>> fetchAllIncidents() async {
+  Future<List<dynamic>> fetchAllIncidents({String? patrollerId}) async {
     try {
-      // Assuming your endpoint is something like 'incidents/get_incidents.php'
-      final response = await http.get(Uri.parse('${ApiConstants.baseUrl}incidents/get_incidents.php'));
+      String url = '${ApiConstants.baseUrl}incidents/get_incidents.php';
+      if (patrollerId != null && patrollerId.isNotEmpty) {
+        url += '?user_id=$patrollerId';
+      }
+      final response = await http.get(Uri.parse(url));
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -72,7 +82,12 @@ class IncidentService {
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('=== CRITICAL NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      print('Target URI: ${ApiConstants.baseUrl}incidents/get_incidents.php');
+      print('Stack Trace: $stackTrace');
+      print('==================================');
       throw Exception("Network Exception: $e");
     }
   }

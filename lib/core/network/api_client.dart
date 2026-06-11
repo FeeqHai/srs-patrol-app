@@ -33,7 +33,12 @@ class ApiClient {
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('=== CRITICAL NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      print('Target URI: $url');
+      print('Stack Trace: $stackTrace');
+      print('==================================');
       throw Exception("Network connection failed: $e");
     }
   }
@@ -51,7 +56,12 @@ class ApiClient {
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('=== CRITICAL NETWORK EXCEPTION ===');
+      print('Exception: $e');
+      print('Target URI: $url');
+      print('Stack Trace: $stackTrace');
+      print('==================================');
       throw Exception("Network connection failed: $e");
     }
   }

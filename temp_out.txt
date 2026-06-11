@@ -1,0 +1,89 @@
+Created At: 2026-06-11T08:42:04Z
+Completed At: 2026-06-11T08:42:04Z
+File Path: `file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/incident/views/incident_screen.dart`
+Total Lines: 305
+Total Bytes: 11963
+Showing lines 1 to 305
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: // File: lib/features/incident/views/incident_screen.dart
+2: import 'dart:convert';
+3: import 'package:flutter/material.dart';
+4: import 'package:http/http.dart' as http;
+5: import '../../../core/constants/api_constants.dart';
+6: import 'package:shared_preferences/shared_preferences.dart';
+7: import 'package:intl/intl.dart';
+8: import 'incident_report_screen.dart';
+9: import 'incident_detail_screen.dart';
+10: 
+11: class IncidentScreen extends StatefulWidget {
+12:   final String? patrollerIdFilter;
+13:   final String? patrollerNameFilter;
+14: 
+15:   const IncidentScreen({super.key, this.patrollerIdFilter, this.patrollerNameFilter});
+16: 
+17:   @override
+18:   State<IncidentScreen> createState() => _IncidentScreenState();
+19: }
+20: 
+21: class _IncidentScreenState extends State<IncidentScreen> {
+22:   final List<dynamic> _incidents = [];
+23:   int _page = 1;
+24:   bool _isLoading = false;
+25:   bool _hasMore = true;
+26:   final ScrollController _scrollController = ScrollController();
+27: 
+28:   DateTime? _shiftStartTime;
+29: 
+30:   @override
+31:   void initState() {
+32:     super.initState();
+33:     _fetchShiftData();
+34:     _fetchIncidents();
+35:     _scrollController.addListener(() {
+36:       if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+37:         _fetchIncidents();
+38:       }
+39:     });
+40:   }
+41: 
+42:   Future<void> _fetchShiftData() async {
+43:     final prefs = await SharedPreferences.getInstance();
+44:     final bool isActive = prefs.getBool('s
+<truncated 9848 bytes>
+zontal: 8, vertical: 2),
+271:                                 margin: const EdgeInsets.only(right: 8),
+272:                                 decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+273:                                 child: Text(
+274:                                   (data['category'] ?? "UMUM").toUpperCase(), 
+275:                                   style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+276:                                   overflow: TextOverflow.ellipsis,
+277:                                 ),
+278:                               ),
+279:                             ),
+280:                           ],
+281:                         ),
+282:                         const SizedBox(height: 8),
+283:                         Text(data['title'] ?? "Tiada Tajuk", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+284:                         const SizedBox(height: 4),
+285:                         Row(
+286:                           children: [
+287:                             const Icon(Icons.access_time, color: Colors.white54, size: 12),
+288:                             const SizedBox(width: 4),
+289:                             Text(formattedDate, style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+290:                           ],
+291:                         ),
+292:                         const SizedBox(height: 4),
+293:                         Text(data['description'] ?? "", style: const TextStyle(color: Colors.white54, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+294:                       ],
+295:                     ),
+296:                   ),
+297:                 ),
+298:               ],
+299:             ),
+300:           ],
+301:         ),
+302:       ),
+303:     );
+304:   }
+305: }
+The above content shows the entire, complete file contents of the requested file.

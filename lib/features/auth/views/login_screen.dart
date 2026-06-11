@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.security, size: 100, color: Colors.blueGrey),
+              Image.asset('assets/icon.png', height: 100),
               const SizedBox(height: 20),
               const Text(
                 'SRS Patrol Portal',

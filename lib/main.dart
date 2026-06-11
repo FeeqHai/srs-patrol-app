@@ -7,8 +7,21 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/incident/providers/incident_provider.dart';
 import 'core/widgets/main_shell.dart';
 import 'features/attendance/providers/attendance_provider.dart';
-void main() {
+import 'features/tracking/providers/tracking_provider.dart';
+import 'features/post/views/admin_mobile_layout.dart';
+import 'features/post/views/ketua_mobile_layout.dart';
+import 'features/post/views/web_dashboard_layout.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+  await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
+  
   runApp(const SRSPatrolApp());
 }
 
@@ -22,6 +35,7 @@ providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => IncidentProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()), // INJECTED: The missing dependency
+        ChangeNotifierProvider(create: (_) => TrackingProvider()),
       ],
       child: MaterialApp(
         title: 'SRS Patrol System',
@@ -29,19 +43,12 @@ providers: [
         themeMode: ThemeMode.system, // Listens to device OS setting
 
         // --- DYNAMIC ROUTING ---
-        home: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            if (authProvider.isAuthenticated) {
-              return const MainShell();
-            }
-            return const LoginScreen();
-          },
-        ),
+        home: const RootRouter(),
 
         routes: {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
-          '/home': (context) => const MainShell(),
+          '/home': (context) => const RootRouter(), // Fixed: Maps to dynamic router instead of hardcoded MainShell
         },
 
         // --- LIGHT THEME ---
@@ -125,6 +132,35 @@ providers: [
         ),
 
       ),
+    );
+  }
+}
+
+class RootRouter extends StatelessWidget {
+  const RootRouter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        if (authProvider.isAuthenticated) {
+          if (authProvider.role == 'ketua_krt' || authProvider.role == 'ketua') {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 800) {
+                  return const WebDashboardLayout(); // Web
+                }
+                return const AdminMobileLayout(); // Mobile
+              },
+            );
+          } else if (authProvider.role == 'ketua_peronda') {
+            return const KetuaMobileLayout(); // Custom Mobile for Squad Leader
+          } else {
+            return const MainShell(); // Normal Mobile for Patroller
+          }
+        }
+        return const LoginScreen();
+      },
     );
   }
 }

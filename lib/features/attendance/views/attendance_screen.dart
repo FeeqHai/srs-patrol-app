@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
@@ -21,11 +24,52 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _shiftActive = false;
   String _activeCheckpoint = "";
   String _activeLocation = "";
+  DateTime? _shiftStartTime;
 
   @override
   void initState() {
     super.initState();
+    _loadShiftData();
     _initializeScanner();
+  }
+
+  Future<void> _loadShiftData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool isActive = prefs.getBool('shiftActive') ?? false;
+    
+    if (isActive) {
+      final String? startTimeStr = prefs.getString('shiftStartTime');
+      if (startTimeStr != null) {
+        final DateTime startTime = DateTime.parse(startTimeStr);
+        final Duration diff = DateTime.now().difference(startTime);
+        
+        // Check if 4 hours have passed
+        if (diff.inHours >= 4) {
+          await _clearShiftData();
+        } else {
+          setState(() {
+            _shiftActive = true;
+            _activeCheckpoint = prefs.getString('activeCheckpoint') ?? "";
+            _activeLocation = prefs.getString('activeLocation') ?? "";
+            _shiftStartTime = startTime;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _clearShiftData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('shiftActive');
+    await prefs.remove('activeCheckpoint');
+    await prefs.remove('activeLocation');
+    await prefs.remove('shiftStartTime');
+    
+    _initializeScanner(); // Reactivate the camera hardware
+
+    setState(() {
+      _shiftActive = false;
+    });
   }
 
   void _initializeScanner() {
@@ -89,14 +133,34 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
         if (success) {
           Position? position = await Geolocator.getLastKnownPosition();
-          String locationString = position != null 
-              ? "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}"
-              : "GPS Data Secured";
+          String locationString = "GPS Data Secured";
+          
+          if (position != null) {
+            try {
+              List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+              if (placemarks.isNotEmpty) {
+                final place = placemarks.first;
+                locationString = '${place.locality}, ${place.administrativeArea}';
+              } else {
+                locationString = "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
+              }
+            } catch (e) {
+              locationString = "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
+            }
+          }
+
+          final DateTime now = DateTime.now();
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('shiftActive', true);
+          await prefs.setString('activeCheckpoint', 'Pos Utama KRT');
+          await prefs.setString('activeLocation', locationString);
+          await prefs.setString('shiftStartTime', now.toIso8601String());
 
           setState(() {
             _shiftActive = true;
-            _activeCheckpoint = qrData;
+            _activeCheckpoint = 'Pos Utama KRT';
             _activeLocation = locationString;
+            _shiftStartTime = now;
             _isProcessing = false;
           });
           
@@ -128,7 +192,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Lokasi Diperlukan 📍',
+                        'Lokasi Diperlukan',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                         textAlign: TextAlign.center,
                       ),
@@ -177,12 +241,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           } else {
             // --- MODAL B UX INTERCEPTION ---
             String friendlyError = provider.errorMessage ?? "Ralat pelayan tidak diketahui.";
+            String modalTitle = 'Imbasan Ditolak';
+            IconData modalIcon = Icons.error_outline;
+            Color modalColor = Colors.redAccent;
             
             // Translate backend strings into human UI
             if (friendlyError.contains('Shift Lockout') || friendlyError.contains('Temporal Lock')) {
               friendlyError = "Anda telah pun merekodkan checkpoint ini untuk shif yang sedang aktif. Anda tidak perlu mengimbasnya dua kali. Sila teruskan rondaan ke lokasi seterusnya.";
+              modalTitle = 'Peringatan Shif';
+              modalIcon = Icons.info_outline;
+              modalColor = Colors.orangeAccent;
             } else if (friendlyError.contains('Unknown Checkpoint')) {
               friendlyError = "Kod QR tidak sah. Sila pastikan anda mengimbas kod QR KRT yang didaftarkan.";
+            } else if (friendlyError.contains('tamat tempoh')) {
+              friendlyError = "Kod QR ini telah tamat tempoh pelindungan (60 saat). Sila minta Ketua memaparkan Kod QR yang baharu untuk mengelakkan penipuan tangkapan skrin.";
+              modalTitle = 'QR Tamat Tempoh';
+              modalIcon = Icons.timer_off;
+              modalColor = Colors.orange;
+            } else if (friendlyError.contains('terlalu jauh')) {
+              // Extract the distance from the backend message if possible
+              friendlyError = friendlyError.replaceAll('Clock-in ditolak: ', '') + "\n\nSistem Anti-Penipuan mengesan anda tidak berada berdekatan dengan Ketua (Pos Utama).";
+              modalTitle = 'Lokasi Tidak Sah';
+              modalIcon = Icons.location_off;
+              modalColor = Colors.redAccent;
             }
 
             // MODAL B: System/Temporal Lockout Rejection
@@ -200,15 +281,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
+                          color: modalColor.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                        child: Icon(modalIcon, color: modalColor, size: 48),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Imbasan Ditolak ⚠️',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      Text(
+                        modalTitle,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
@@ -248,40 +329,58 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   Widget build(BuildContext context) {
     if (_shiftActive) {
+      final String endTimeStr = _shiftStartTime != null 
+          ? DateFormat('hh:mm a').format(_shiftStartTime!.add(const Duration(hours: 4)))
+          : "TBA";
+
       return Scaffold(
         backgroundColor: const Color(0xFF121212),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.greenAccent.withValues(alpha: 0.1),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.greenAccent.withValues(alpha: 0.1),
+                    ),
+                    child: const Icon(Icons.verified_user, color: Colors.greenAccent, size: 90),
                   ),
-                  child: const Icon(Icons.verified_user, color: Colors.greenAccent, size: 90),
-                ),
-                const SizedBox(height: 32),
-                const Text('MULAKAN SHIF', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
-                const SizedBox(height: 16),
-                Card(
-                  color: const Color(0xFF1E1E1E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      children: [
-                        _buildInfoRow(Icons.flag, "Checkpoint", _activeCheckpoint),
-                        const Divider(color: Colors.white24, height: 32),
-                        _buildInfoRow(Icons.my_location, "GPS Koordinat", _activeLocation),
-                      ],
+                  const SizedBox(height: 32),
+                  const Text('MULAKAN SHIF', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
+                  const SizedBox(height: 12),
+                  Text('Anggaran Tamat Shif: $endTimeStr', style: const TextStyle(fontSize: 16, color: Colors.amberAccent, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Card(
+                    color: const Color(0xFF1E1E1E),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          _buildInfoRow(Icons.flag, "Checkpoint", _activeCheckpoint),
+                          const Divider(color: Colors.white24, height: 32),
+                          _buildInfoRow(Icons.my_location, "GPS Koordinat", _activeLocation),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 32),
+                  OutlinedButton.icon(
+                    onPressed: () => _clearShiftData(),
+                    icon: const Icon(Icons.stop_circle_outlined, color: Colors.redAccent),
+                    label: const Text('Tamatkan Shif Awal', style: TextStyle(color: Colors.redAccent)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  )
+                ],
+              ),
             ),
           ),
         ),
@@ -313,8 +412,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           SafeArea(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.flash_on, color: Colors.white),
+                        onPressed: () => _scannerController?.toggleTorch(),
+                        style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+                        onPressed: () => _scannerController?.switchCamera(),
+                        style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
