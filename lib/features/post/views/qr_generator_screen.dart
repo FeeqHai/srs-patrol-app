@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 
 class QrGeneratorScreen extends StatefulWidget {
   const QrGeneratorScreen({super.key});
@@ -86,11 +88,11 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       });
 
     } catch (e) {
-      _currentLocation = 'Gagal mengesan lokasi ($e). Sila semak GPS.';
+      _currentLocation = '${context.read<SettingsProvider>().t('Gagal mengesan lokasi')}: $e';
       _qrData = null;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ralat GPS: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('${context.read<SettingsProvider>().t('Ralat GPS:')} $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -100,33 +102,36 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            'Jana QR Kehadiran',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+          Text(
+            settings.t('Jana QR Kehadiran'),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Papar kod QR ini kepada peronda untuk merekod kehadiran.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+          Text(
+            settings.t('Papar kod QR ini kepada peronda untuk merekod kehadiran.'),
+            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6), fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
 
           if (_isLoading)
-            const CircularProgressIndicator(color: Colors.indigoAccent)
+            Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))
           else if (_qrData != null)
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, 10))
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10))
                 ],
               ),
               child: Column(
@@ -136,7 +141,14 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                     version: QrVersions.auto,
                     size: 250.0,
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -145,7 +157,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                       const Icon(Icons.timer, color: Colors.redAccent, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Tamat Tempoh: $_timeLeft saat',
+                        '${settings.t('Tamat Tempoh:')} $_timeLeft ${settings.t('saat')}',
                         style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
@@ -161,18 +173,18 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: Colors.redAccent),
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.timer_off, color: Colors.redAccent, size: 64),
-                  SizedBox(height: 16),
+                  const Icon(Icons.timer_off, color: Colors.redAccent, size: 64),
+                  const SizedBox(height: 16),
                   Text(
-                    'Kod QR Telah Tamat Tempoh',
-                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 18),
+                    settings.t('Kod QR Telah Tamat Tempoh'),
+                    style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    'Sila jana semula kod QR untuk peronda seterusnya.',
-                    style: TextStyle(color: Colors.white70),
+                    settings.t('Sila jana semula kod QR untuk peronda seterusnya.'),
+                    style: const TextStyle(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -184,8 +196,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(12),
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
@@ -195,8 +208,8 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Lokasi Semasa (Pos Utama)', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                      Text(_currentLocation, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(settings.t('Lokasi Semasa (Pos Utama)'), style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6), fontSize: 12)),
+                      Text(_currentLocation, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -212,7 +225,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
             child: ElevatedButton.icon(
               onPressed: _fetchLocationAndGenerateQR,
               icon: const Icon(Icons.refresh),
-              label: const Text('Jana Semula QR', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+              label: Text(settings.t('Jana Semula QR'), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
             ),
           )
         ],

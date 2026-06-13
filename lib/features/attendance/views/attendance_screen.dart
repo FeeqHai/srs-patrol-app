@@ -98,9 +98,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
-            backgroundColor: Color(0xFF1E1E1E),
-            title: Text('Authenticating...', style: TextStyle(color: Colors.white)),
+          builder: (context) => AlertDialog(
+            title: const Text('Authenticating...'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -174,7 +173,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             showDialog(
               context: context,
               builder: (context) => Dialog(
-                backgroundColor: const Color(0xFF1E1E1E),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 10,
                 child: Padding(
@@ -270,7 +268,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             showDialog(
               context: context,
               builder: (context) => Dialog(
-                backgroundColor: const Color(0xFF1E1E1E),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 10,
                 child: Padding(
@@ -334,7 +331,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           : "TBA";
 
       return Scaffold(
-        backgroundColor: const Color(0xFF121212),
         body: Center(
           child: SingleChildScrollView(
             child: Padding(
@@ -356,7 +352,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   Text('Anggaran Tamat Shif: $endTimeStr', style: const TextStyle(fontSize: 16, color: Colors.amberAccent, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
                   Card(
-                    color: const Color(0xFF1E1E1E),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
@@ -476,9 +471,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(value, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 16, fontWeight: FontWeight.w600)),
             ],
           ),
         ),

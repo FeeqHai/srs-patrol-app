@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../incident/views/incident_screen.dart';
 
@@ -56,8 +58,10 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Colors.indigoAccent));
+      return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
     }
 
     if (_error != null) {
@@ -65,7 +69,7 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
     }
 
     if (_patrollers.isEmpty) {
-      return const Center(child: Text('Tiada peronda dijumpai.', style: TextStyle(color: Colors.white70)));
+      return Center(child: Text(settings.t('Tiada peronda dijumpai.'), style: const TextStyle(color: Colors.white70)));
     }
 
     // Extract unique zones for the dropdown
@@ -93,14 +97,11 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
               Expanded(
                 flex: 2,
                 child: TextField(
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                   decoration: InputDecoration(
-                    hintText: 'Cari nama peronda...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.indigoAccent),
-                    filled: true,
-                    fillColor: const Color(0xFF1E1E1E),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    hintText: settings.t('Cari nama peronda...'),
+                    hintStyle: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.5)),
+                    prefixIcon: Icon(Icons.search, color: Theme.of(context).primaryColor),
                   ),
                   onChanged: (value) {
                     setState(() => _searchQuery = value);
@@ -113,19 +114,19 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedZone,
-                      dropdownColor: const Color(0xFF2C2C2C),
-                      style: const TextStyle(color: Colors.white),
-                      icon: const Icon(Icons.filter_list, color: Colors.indigoAccent),
+                      dropdownColor: Theme.of(context).cardColor,
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      icon: Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
                       isExpanded: true,
                       items: zones.map((zone) => DropdownMenuItem(
                         value: zone,
-                        child: Text(zone, overflow: TextOverflow.ellipsis),
+                        child: Text(zone == 'Semua Zon' ? settings.t(zone) : zone, overflow: TextOverflow.ellipsis),
                       )).toList(),
                       onChanged: (value) {
                         setState(() => _selectedZone = value!);
@@ -141,28 +142,48 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
         // List of filtered patrollers
         Expanded(
           child: filteredPatrollers.isEmpty
-            ? const Center(child: Text('Tiada padanan carian.', style: TextStyle(color: Colors.white54)))
+            ? Center(child: Text(settings.t('Tiada padanan carian.'), style: const TextStyle(color: Colors.white54)))
             : ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: filteredPatrollers.length,
                 itemBuilder: (context, index) {
                   final patroller = filteredPatrollers[index];
                   return Card(
-                    color: const Color(0xFF1E1E1E),
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       leading: const CircleAvatar(
-                        backgroundColor: Colors.indigoAccent,
+                        backgroundColor: Color(0xFF0F3D87),
                         child: Icon(Icons.folder_shared, color: Colors.white),
                       ),
-                      title: Text(patroller['full_name'], style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                      subtitle: Text('Zon: ${patroller['district_zone'] ?? 'Tiada'} | IC: ${patroller['ic_number']}', style: const TextStyle(color: Colors.white54)),
-                      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+                      title: Text(patroller['full_name'], style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                      subtitle: Text('${settings.t('Zon')}: ${patroller['district_zone'] ?? settings.t('Tiada')} | IC: ${patroller['ic_number']}', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6))),
+                      trailing: Icon(Icons.arrow_forward_ios, color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6), size: 16),
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => IncidentScreen(
-                          patrollerIdFilter: patroller['id'],
-                          patrollerNameFilter: patroller['full_name'],
-                        )));
+                        if (MediaQuery.of(context).size.width > 600) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => Dialog(
+                              backgroundColor: Colors.transparent,
+                              insetPadding: const EdgeInsets.all(40),
+                              child: Container(
+                                width: 800,
+                                height: 700,
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: IncidentScreen(
+                                  patrollerIdFilter: patroller['id'],
+                                ),
+                              ),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => IncidentScreen(
+                            patrollerIdFilter: patroller['id'],
+                          )));
+                        }
                       },
                     ),
                   );

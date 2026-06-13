@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../incident/services/incident_service.dart';
 import '../../../core/constants/api_constants.dart';
 
@@ -84,22 +86,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   String _getDayName(int weekday) {
+    final settings = context.read<SettingsProvider>();
     switch (weekday) {
-      case 1: return 'Isn';
-      case 2: return 'Sel';
-      case 3: return 'Rab';
-      case 4: return 'Kha';
-      case 5: return 'Jum';
-      case 6: return 'Sab';
-      case 7: return 'Aha';
+      case 1: return settings.t('Isn');
+      case 2: return settings.t('Sel');
+      case 3: return settings.t('Rab');
+      case 4: return settings.t('Kha');
+      case 5: return settings.t('Jum');
+      case 6: return settings.t('Sab');
+      case 7: return settings.t('Aha');
       default: return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final settings = context.watch<SettingsProvider>();
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Colors.indigoAccent));
+      return Center(child: CircularProgressIndicator(color: theme.primaryColor));
     }
 
     final spots = List.generate(7, (index) {
@@ -114,31 +119,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       return _getDayName(d.weekday);
     });
 
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final subtitleColor = textColor.withValues(alpha: 0.6);
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Papan Pemuka Analitik',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+          Text(
+            settings.t('Papan Pemuka Analitik'),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Ringkasan insiden dan statistik rondaan minggu ini.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+          Text(
+            settings.t('Ringkasan insiden dan statistik rondaan minggu ini.'),
+            style: TextStyle(color: subtitleColor, fontSize: 16),
           ),
           const SizedBox(height: 32),
           
           // KPI Cards
-          Row(
-            children: [
-              _buildKpiCard('Total Insiden (Minggu)', '$_totalWeeklyIncidents', Icons.warning, Colors.redAccent),
-              const SizedBox(width: 16),
-              _buildKpiCard('Rondaan Aktif', 'N/A', Icons.directions_walk, Colors.greenAccent),
-              const SizedBox(width: 16),
-              _buildKpiCard('Peronda Sedia Ada', '$_totalPatrollers', Icons.people, Colors.indigoAccent),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildKpiCard(settings.t('Total Insiden (Minggu)'), '$_totalWeeklyIncidents', Icons.warning, Colors.redAccent),
+                const SizedBox(width: 16),
+                _buildKpiCard(settings.t('Peronda Sedia Ada'), '$_totalPatrollers', Icons.people, theme.primaryColor),
+              ],
+            ),
           ),
           
           const SizedBox(height: 32),
@@ -148,27 +157,37 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             height: 400,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Trend Insiden (7 Hari Terakhir)', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(settings.t('Trend Insiden (7 Hari Terakhir)'), style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 24),
                 Expanded(
                   child: LineChart(
                     LineChartData(
+                      minY: 0,
                       gridData: const FlGridData(show: false),
                       titlesData: FlTitlesData(
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
+                            reservedSize: 40,
                             getTitlesWidget: (value, meta) {
                               if (value.toInt() >= 0 && value.toInt() < daysLabels.length) {
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(daysLabels[value.toInt()], style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                                  child: Text(daysLabels[value.toInt()], style: TextStyle(color: subtitleColor, fontSize: 12)),
                                 );
                               }
                               return const Text('');
@@ -184,11 +203,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         LineChartBarData(
                           spots: spots,
                           isCurved: true,
-                          color: Colors.indigoAccent,
+                          preventCurveOverShooting: true,
+                          color: theme.primaryColor,
                           barWidth: 4,
                           belowBarData: BarAreaData(
                             show: true,
-                            color: Colors.indigoAccent.withValues(alpha: 0.3),
+                            color: theme.primaryColor.withValues(alpha: 0.3),
                           ),
                         ),
                       ],
@@ -208,17 +228,47 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 16),
-            Text(value, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                height: 1.2,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(title, style: const TextStyle(color: Colors.white54)),
+            Text(
+              title,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

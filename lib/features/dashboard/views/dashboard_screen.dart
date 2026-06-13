@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../incident/services/incident_service.dart';
 import '../../incident/views/incident_detail_screen.dart';
@@ -189,8 +190,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -199,35 +202,94 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               if (_activeSosList.isNotEmpty)
                 _buildSosBanner(),
-              const Text(
-                'Selamat Datang, Peronda SRS!',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+              Text(
+                '${settings.t('Selamat Datang')}, Peronda!',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: theme.textTheme.titleLarge?.color),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              Text(
+                settings.t('Status Semasa'),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.titleMedium?.color),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _shiftActive ? null : widget.onNavigateToScan,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: _shiftActive ? Colors.green.withValues(alpha: 0.1) : theme.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _shiftActive ? Colors.green.withValues(alpha: 0.3) : theme.dividerColor,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        _shiftActive ? Icons.timer : Icons.directions_walk,
+                        color: _shiftActive ? Colors.green : theme.primaryColor,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _shiftActive ? settings.t('Sedang Meronda') : settings.t('Bersedia Untuk Rondaan'),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: _shiftActive ? Colors.green : theme.textTheme.bodyLarge?.color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _shiftActive
+                            ? _elapsedTime
+                            : settings.t('Tekan di sini untuk mula'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: _shiftActive ? 28 : 14,
+                          fontWeight: _shiftActive ? FontWeight.bold : FontWeight.normal,
+                          color: _shiftActive ? theme.textTheme.bodyLarge?.color : theme.textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Ringkasan Aktiviti Anda',
-                    style: TextStyle(fontSize: 16, color: Colors.white70),
+                  Text(
+                    settings.t('Ringkasan Aktiviti'),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.titleMedium?.color),
                   ),
                   Container(
-                    height: 30,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
-                      borderRadius: BorderRadius.circular(8),
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _incidentFilter,
-                        dropdownColor: const Color(0xFF1E1E1E),
-                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+                        dropdownColor: theme.cardColor,
+                        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8), fontSize: 13, fontWeight: FontWeight.w600),
+                        icon: Icon(Icons.arrow_drop_down, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8), size: 20),
                         items: ['Harian', 'Mingguan', 'Bulanan', 'Semua'].map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
-                            child: Text(value),
+                            child: Text(settings.t(value)),
                           );
                         }).toList(),
                         onChanged: (newValue) {
@@ -244,19 +306,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Rondaan Anda Card
-              SizedBox(
-                width: double.infinity,
-                child: _buildMetricCard('Rondaan Anda', _shiftActive ? 'Aktif' : 'Tidak Aktif', _shiftActive ? Icons.verified_user : Icons.remove_circle_outline, _shiftActive ? Colors.greenAccent : Colors.grey)
-              ),
-              const SizedBox(height: 16),
               // Trend Insiden Graph
               Container(
                 height: 250,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,21 +324,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Jumlah Insiden', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text(_incidentCount.toString(), style: const TextStyle(color: Colors.redAccent, fontSize: 24, fontWeight: FontWeight.bold)),
+                        Text(settings.t('Jumlah Insiden'), style: TextStyle(color: theme.textTheme.titleMedium?.color, fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text(_incidentCount.toString(), style: TextStyle(color: theme.primaryColor, fontSize: 24, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: LineChart(
                         LineChartData(
+                          minY: 0,
                           gridData: const FlGridData(show: false),
                           titlesData: FlTitlesData(
                             bottomTitles: AxisTitles(
                               sideTitles: SideTitles(
                                 showTitles: true,
+                                reservedSize: 30,
                                 getTitlesWidget: (value, meta) {
-                                  final daysLabels = ['Isn', 'Sel', 'Rab', 'Kha', 'Jum', 'Sab', 'Aha'];
+                                  final daysLabels = [
+                                    settings.t('Isn'), settings.t('Sel'), settings.t('Rab'), 
+                                    settings.t('Kha'), settings.t('Jum'), settings.t('Sab'), settings.t('Aha')
+                                  ];
                                   final todayIndex = DateTime.now().weekday - 1;
                                   final startDayIndex = (todayIndex - 6) % 7;
                                   
@@ -288,7 +353,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   if (value.toInt() >= 0 && value.toInt() < 7) {
                                     return Padding(
                                       padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(daysLabels[displayIndex], style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                                      child: Text(daysLabels[displayIndex], style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7), fontSize: 10)),
                                     );
                                   }
                                   return const Text('');
@@ -304,11 +369,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             LineChartBarData(
                               spots: List.generate(7, (index) => FlSpot(index.toDouble(), _weeklyCounts[index].toDouble())),
                               isCurved: true,
-                              color: Colors.redAccent,
-                              barWidth: 3,
+                              preventCurveOverShooting: true,
+                              color: theme.primaryColor,
+                              barWidth: 4,
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: Colors.redAccent.withValues(alpha: 0.2),
+                                color: theme.primaryColor.withValues(alpha: 0.2),
                               ),
                             ),
                           ],
@@ -318,57 +384,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'Status Semasa',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: _shiftActive ? null : widget.onNavigateToScan,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: _shiftActive ? Colors.greenAccent.withValues(alpha: 0.1) : const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _shiftActive ? Colors.greenAccent.withValues(alpha: 0.3) : Colors.white12,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        _shiftActive ? Icons.timer : Icons.directions_walk,
-                        color: _shiftActive ? Colors.greenAccent : Colors.lightBlueAccent,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _shiftActive ? 'Shif Aktif' : 'Bersedia Untuk Rondaan',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: _shiftActive ? Colors.greenAccent : Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _shiftActive
-                            ? _elapsedTime
-                            : 'Tekan untuk mula',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: _shiftActive ? 24 : 14,
-                          fontWeight: _shiftActive ? FontWeight.bold : FontWeight.normal,
-                          color: _shiftActive ? Colors.white : Colors.white54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -376,28 +391,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 16),
-          Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-          const SizedBox(height: 4),
-          Text(title, style: const TextStyle(fontSize: 12, color: Colors.white54)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSosBanner() {
+    final settings = context.watch<SettingsProvider>();
     final sos = _activeSosList.first;
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -418,16 +413,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('AMARAN KECEMASAN (SOS)', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text(settings.t('AMARAN KECEMASAN (SOS)'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 4),
-                    Text('${sos['full_name']} memerlukan bantuan!', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    Text('${sos['full_name']} ${settings.t('memerlukan bantuan!')}', style: const TextStyle(color: Colors.white, fontSize: 14)),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text('Masa: ${sos['created_at']}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text('${settings.t('Masa')}: ${sos['created_at']}', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 12)),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -436,7 +431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => IncidentDetailScreen(incident: sos)));
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-              child: const Text('LIHAT LOKASI', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(settings.t('LIHAT LOKASI'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           )
         ],

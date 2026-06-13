@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 
 import '../providers/incident_provider.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -76,13 +77,13 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedCategory == null || _selectedCategory!.isEmpty) {
-      _showSnackBar('Sila pilih kategori insiden.', Colors.redAccent);
+      _showSnackBar(context.read<SettingsProvider>().t('Sila pilih kategori insiden.'), Colors.redAccent);
       return;
     }
 
     if (_images.isEmpty) {
       _showSnackBar(
-        'Bahan bukti diperlukan: Sila ambil gambar insiden.',
+        context.read<SettingsProvider>().t('Bahan bukti diperlukan: Sila ambil gambar insiden.'),
         Colors.redAccent,
       );
       return;
@@ -90,7 +91,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
 
     final String? currentUserId = context.read<AuthProvider>().userId;
     if (currentUserId == null) {
-      _showSnackBar('Ralat Sesi: Sila log masuk semula.', Colors.redAccent);
+      _showSnackBar(context.read<SettingsProvider>().t('Ralat Sesi: Sila log masuk semula.'), Colors.redAccent);
       return;
     }
 
@@ -98,18 +99,16 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        backgroundColor: Color(0xFF1E1E1E),
+      builder: (context) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.redAccent),
-            SizedBox(height: 16),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
             Text(
-              'Menyambung ke GPS & Memuat Naik...',
-              style: TextStyle(
+              context.read<SettingsProvider>().t('Menyambung ke GPS & Memuat Naik...'),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.white70,
               ),
             ),
           ],
@@ -138,7 +137,6 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
         context: context,
         barrierDismissible: false, // Force them to acknowledge it
         builder: (context) => Dialog(
-          backgroundColor: const Color(0xFF1E1E1E),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -154,19 +152,18 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                   size: 64,
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Laporan Berjaya',
-                  style: TextStyle(
+                Text(
+                  context.read<SettingsProvider>().t('Laporan Berjaya'),
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.',
+                Text(
+                  context.read<SettingsProvider>().t('Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, height: 1.5),
+                  style: const TextStyle(height: 1.5),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -195,9 +192,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Kembali ke Menu',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    child: Text(
+                      context.read<SettingsProvider>().t('Kembali ke Menu'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -207,7 +204,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
         ),
       );
     } else {
-      _showSnackBar('RALAT MUAT NAIK: ${provider.errorMessage}', Colors.red);
+      _showSnackBar('${context.read<SettingsProvider>().t('RALAT MUAT NAIK:')} ${provider.errorMessage}', Colors.red);
     }
   }
 
@@ -225,17 +222,13 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     // Note: We no longer watch the provider state to destroy the UI here.
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: const Text(
-          'Lapor Insiden',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          settings.t('Lapor Insiden'),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -248,9 +241,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               Container(
                 height: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: ListView(
                   scrollDirection: Axis.horizontal,
@@ -297,26 +290,24 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                       child: Container(
                         width: 100,
                         decoration: BoxDecoration(
-                          color: Colors.white10,
+                          color: Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white24,
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
                             style: BorderStyle.solid,
                           ),
                         ),
-                        child: const Column(
+                        child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.add_a_photo,
                               size: 32,
-                              color: Colors.white54,
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
-                              'Tambah',
-                              style: TextStyle(
-                                color: Colors.white54,
+                              settings.t('Tambah'),
+                              style: const TextStyle(
                                 fontSize: 12,
                               ),
                             ),
@@ -329,10 +320,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               ),
               const SizedBox(height: 24),
 
-              const Text(
-                'Kategori Insiden (Carian JPNIN)',
-                style: TextStyle(
-                  color: Colors.white,
+              Text(
+                settings.t('Kategori Insiden (Carian JPNIN)'),
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -357,23 +347,14 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                         controller: controller,
                         focusNode: focusNode,
                         onEditingComplete: onEditingComplete,
-                        style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText: 'Cari kategori (cth: Samun, Dadah)...',
-                          hintStyle: const TextStyle(color: Colors.white38),
-                          filled: true,
-                          fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                          hintText: settings.t('Cari kategori (cth: Samun, Dadah)...'),
                           suffixIcon: const Icon(
                             Icons.search,
-                            color: Colors.white54,
                           ),
                         ),
                         validator: (value) => value == null || value.isEmpty
-                            ? 'Sila pilih kategori insiden'
+                            ? settings.t('Sila pilih kategori insiden')
                             : null,
                       );
                     },
@@ -382,7 +363,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                     alignment: Alignment.topLeft,
                     child: Material(
                       elevation: 4.0,
-                      color: const Color(0xFF2C2C2C),
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
@@ -403,7 +384,6 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                                 padding: const EdgeInsets.all(16.0),
                                 child: Text(
                                   option,
-                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                             );
@@ -416,37 +396,27 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               ),
               const SizedBox(height: 20),
 
-              const Text(
-                'Tajuk Ringkas',
-                style: TextStyle(
-                  color: Colors.white,
+              Text(
+                settings.t('Tajuk Ringkas'),
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
-                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Cth: Pagar rosak di Lorong 4',
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: const Color(0xFF1E1E1E),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+                  hintText: settings.t('Cth: Pagar rosak di Lorong 4'),
                 ),
                 validator: (value) => value == null || value.isEmpty
-                    ? 'Sila masukkan tajuk'
+                    ? settings.t('Sila masukkan tajuk')
                     : null,
               ),
               const SizedBox(height: 20),
 
-              const Text(
-                'Keterangan Lanjut',
-                style: TextStyle(
-                  color: Colors.white,
+              Text(
+                settings.t('Keterangan Lanjut'),
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -454,19 +424,11 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               TextFormField(
                 controller: _descController,
                 maxLines: 4,
-                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Terangkan butiran kejadian...',
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: const Color(0xFF1E1E1E),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+                  hintText: settings.t('Terangkan butiran kejadian...'),
                 ),
                 validator: (value) => value == null || value.isEmpty
-                    ? 'Penerangan tidak boleh dibiarkan kosong'
+                    ? settings.t('Penerangan tidak boleh dibiarkan kosong')
                     : null,
               ),
               const SizedBox(height: 40),
@@ -476,9 +438,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _submitReport,
                   icon: const Icon(Icons.cloud_upload),
-                  label: const Text(
-                    'HANTAR LAPORAN',
-                    style: TextStyle(
+                  label: Text(
+                    settings.t('HANTAR LAPORAN'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1,

@@ -88,14 +88,14 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        backgroundColor: Color(0xFF1E1E1E),
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.redAccent),
-            SizedBox(height: 16),
-            Text('Memuat Naik...', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+            const CircularProgressIndicator(color: Colors.redAccent),
+            const SizedBox(height: 16),
+            Text('Memuat Naik...', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
           ],
         ),
       ),
@@ -123,18 +123,18 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => Dialog(
-            backgroundColor: const Color(0xFF1E1E1E),
+            backgroundColor: Theme.of(context).dialogBackgroundColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 64),
+                  const Icon(Icons.check_circle_outline, color: Colors.green, size: 64),
                   const SizedBox(height: 20),
-                  const Text('Berjaya', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('Berjaya', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                   const SizedBox(height: 12),
-                  const Text('Catatan tambahan telah dihantar.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, height: 1.5)),
+                  Text('Catatan tambahan telah dihantar.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.7), height: 1.5)),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -144,8 +144,8 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                         if (Navigator.canPop(context)) Navigator.pop(context, true); // return to previous screen
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.greenAccent, 
-                        foregroundColor: Colors.black, 
+                        backgroundColor: Colors.green, 
+                        foregroundColor: Colors.white, 
                         padding: const EdgeInsets.symmetric(vertical: 14)
                       ),
                       child: const Text('Kembali', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -168,13 +168,16 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Add additional note', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Colors.transparent,
+        title: const Text('Tambah Nota', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: theme.appBarTheme.iconTheme,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -187,9 +190,9 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
               Container(
                 height: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
+                  color: theme.inputDecorationTheme.fillColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
                 ),
                 child: ListView(
                   scrollDirection: Axis.horizontal,
@@ -212,7 +215,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                             onTap: () => setState(() => _images.remove(file)),
                             child: Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
                               child: const Icon(Icons.close, color: Colors.white, size: 16),
                             ),
                           ),
@@ -224,16 +227,16 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                       child: Container(
                         width: 100,
                         decoration: BoxDecoration(
-                          color: Colors.white10,
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white24, style: BorderStyle.solid),
+                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1), style: BorderStyle.solid),
                         ),
-                        child: const Column(
+                        child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_a_photo, size: 32, color: Colors.white54),
-                            SizedBox(height: 8),
-                            Text('Tambah', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            Icon(Icons.add_a_photo, size: 32, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5)),
+                            const SizedBox(height: 8),
+                            Text('Tambah', style: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5), fontSize: 12)),
                           ],
                         ),
                       ),
@@ -243,7 +246,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
               ),
               const SizedBox(height: 24),
 
-              const Text('Kategori Insiden (Carian JPNIN)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Kategori Insiden (Carian JPNIN)', style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Autocomplete<String>(
                 optionsBuilder: (TextEditingValue textEditingValue) {
@@ -262,14 +265,14 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                     controller: controller,
                     focusNode: focusNode,
                     onEditingComplete: onEditingComplete,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                     decoration: InputDecoration(
                       hintText: 'Cari kategori (cth: Samun, Dadah)...',
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.4)),
                       filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
+                      fillColor: theme.inputDecorationTheme.fillColor,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      suffixIcon: const Icon(Icons.search, color: Colors.white54),
+                      suffixIcon: Icon(Icons.search, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5)),
                     ),
                     validator: (value) => value == null || value.isEmpty ? 'Sila pilih kategori insiden' : null,
                   );
@@ -279,7 +282,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                     alignment: Alignment.topLeft,
                     child: Material(
                       elevation: 4.0,
-                      color: const Color(0xFF2C2C2C),
+                      color: theme.cardColor,
                       borderRadius: BorderRadius.circular(12),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxHeight: 250, maxWidth: 300),
@@ -295,7 +298,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
-                                child: Text(option, style: const TextStyle(color: Colors.white)),
+                                child: Text(option, style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
                               ),
                             );
                           },
@@ -307,33 +310,33 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
               ),
               const SizedBox(height: 20),
 
-              const Text('Tajuk Ringkas', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Tajuk Ringkas', style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
                   hintText: 'Cth: Pagar rosak di Lorong 4',
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.4)),
                   filled: true,
-                  fillColor: const Color(0xFF1E1E1E),
+                  fillColor: theme.inputDecorationTheme.fillColor,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Sila masukkan tajuk' : null,
               ),
               const SizedBox(height: 20),
 
-              const Text('Keterangan Lanjut', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Keterangan Lanjut', style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descController,
                 maxLines: 4,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
                   hintText: 'Terangkan butiran tambahan...',
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.4)),
                   filled: true,
-                  fillColor: const Color(0xFF1E1E1E),
+                  fillColor: theme.inputDecorationTheme.fillColor,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Penerangan tidak boleh dibiarkan kosong' : null,
@@ -349,7 +352,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
               ),

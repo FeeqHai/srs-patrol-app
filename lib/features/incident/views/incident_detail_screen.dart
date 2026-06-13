@@ -1,11 +1,13 @@
-
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/widgets/image_viewer_screen.dart';
-import 'addendum_report_screen.dart';
 
 class IncidentDetailScreen extends StatefulWidget {
   final Map<String, dynamic> incident;
@@ -19,32 +21,14 @@ class IncidentDetailScreen extends StatefulWidget {
 class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   List<dynamic> _addendums = [];
   bool _isLoading = true;
-
-  bool _isShiftActive = false;
+  final TextEditingController _addendumController = TextEditingController();
+  final List<File> _addendumImages = [];
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _fetchAddendums();
-    _checkShiftStatus();
-  }
-
-  Future<void> _checkShiftStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool isActive = prefs.getBool('shiftActive') ?? false;
-    final String? startTimeStr = prefs.getString('shiftStartTime');
-    
-    if (isActive && startTimeStr != null) {
-      final DateTime startTime = DateTime.parse(startTimeStr);
-      final Duration diff = DateTime.now().difference(startTime);
-      setState(() {
-        _isShiftActive = diff.inHours < 4;
-      });
-    } else {
-      setState(() {
-        _isShiftActive = false;
-      });
-    }
   }
 
   Future<void> _fetchAddendums() async {
@@ -61,11 +45,13 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      // DIRECTIVE E: EXCEPTION UNMASKING
-      print("=== CRITICAL NETWORK EXCEPTION ===");
-      print("Exception: $e");
-      print("Target URI: ${ApiConstants.baseUrl}incidents/get_addendums.php");
-      print("==================================");
+    }
+  }
+
+  Future<void> _pickAddendumImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (image != null) {
+      setState(() => _addendumImages.add(File(image.path)));
     }
   }
 
@@ -80,14 +66,43 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     return [imageUrlData.toString()];
   }
 
+  Future<void> _submitAddendum() async {
+    if (_addendumController.text.trim().isEmpty && _addendumImages.isEmpty) return;
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.baseUrl}incidents/addendum.php'));
+      request.fields['id'] = const Uuid().v4();
+      request.fields['incident_id'] = widget.incident['id'];
+      request.fields['text_content'] = _addendumController.text.trim();
+
+      for (var file in _addendumImages) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'images[]',
+          file.path,
+        ));
+      }
+
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        _addendumController.clear();
+        setState(() => _addendumImages.clear());
+        _fetchAddendums(); // Refresh list
+      }
+    } catch (e) {
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final settings = context.watch<SettingsProvider>();
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Butiran Insiden', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(settings.t('Butiran Insiden')),
       ),
       body: Column(
         children: [
@@ -122,38 +137,23 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                Text(widget.incident['title'], style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(widget.incident['title'], style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(widget.incident['description'] ?? '', style: const TextStyle(color: Colors.white70)),
-                const Divider(color: Colors.white24, height: 32),
-                const Text('Catatan Tambahan', style: TextStyle(color: Colors.redAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(widget.incident['description'] ?? '', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8))),
+                Divider(color: theme.dividerColor.withValues(alpha: 0.2), height: 32),
+                Text(settings.t('Catatan Tambahan'), style: TextStyle(color: theme.primaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+                  Center(child: CircularProgressIndicator(color: theme.primaryColor))
                 else if (_addendums.isEmpty)
-                  const Text('Tiada catatan tambahan direkodkan.', style: TextStyle(color: Colors.white54))
+                  Text(settings.t('Tiada catatan tambahan direkodkan.'), style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)))
                 else
                   ..._addendums.map((a) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (a['category'] != null && a['category'].toString().isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            margin: const EdgeInsets.only(bottom: 6),
-                            decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
-                            child: Text(
-                              a['category'].toString().toUpperCase(), 
-                              style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        if (a['title'] != null && a['title'].toString().isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(a['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
-                          ),
-                        if (a['text_content'] != null && a['text_content'].toString().isNotEmpty)
-                          Text(a['text_content'], style: const TextStyle(color: Colors.white)),
+                        if (a['text_content'] != null && a['text_content'].isNotEmpty)
+                          Text(a['text_content'], style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
                         if (_parseImages(a['image_url']).isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
@@ -184,7 +184,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                             ),
                           ),
                         const SizedBox(height: 4),
-                        Text(a['created_at'], style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text(a['created_at'], style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6), fontSize: 12)),
                       ],
                     ),
                   )),
@@ -193,32 +193,82 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           ),
           Container(
             padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            color: const Color(0xFF1E1E1E),
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                if (!_isShiftActive) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Anda mesti berada dalam shif aktif untuk menambah catatan.', style: TextStyle(fontWeight: FontWeight.bold)),
-                    backgroundColor: Colors.redAccent,
-                  ));
-                  return;
-                }
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => AddendumReportScreen(incident: widget.incident))
-                );
-                if (result == true) {
-                  _fetchAddendums();
-                }
-              },
-              icon: const Icon(Icons.add_comment),
-              label: const Text('Add additional note', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isShiftActive ? Colors.redAccent : Colors.grey,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                )
+              ]
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  if (_addendumImages.isNotEmpty)
+                    Container(
+                      height: 80,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: _addendumImages.map((file) => Stack(
+                          children: [
+                            Container(
+                              height: 80,
+                              width: 80,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                image: DecorationImage(image: FileImage(file), fit: BoxFit.cover),
+                              ),
+                            ),
+                            Positioned(
+                              right: 12,
+                              top: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _addendumImages.remove(file)),
+                                child: Container(
+                                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withValues(alpha: 0.6)),
+                                  padding: const EdgeInsets.all(2),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )).toList(),
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.camera_alt, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.6)),
+                        onPressed: _pickAddendumImage,
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _addendumController,
+                          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                          decoration: InputDecoration(
+                            hintText: settings.t('Tambah catatan...'),
+                            hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.4)),
+                            filled: true,
+                            fillColor: theme.inputDecorationTheme.fillColor,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.send, color: theme.primaryColor),
+                        onPressed: _submitAddendum,
+                      )
+                    ],
+                  ),
+                ],
               ),
             ),
           )

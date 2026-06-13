@@ -5,10 +5,12 @@ import 'package:geolocator/geolocator.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../attendance/views/attendance_screen.dart';
 import '../../incident/views/incident_screen.dart';
-import '../../auth/views/profile_screen.dart';
 import '../../dashboard/views/dashboard_screen.dart';
 import '../../incident/services/incident_service.dart';
 import 'admin_incident_screen.dart';
+import '../../../core/widgets/responsive_shell.dart';
+import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/global_menu_button.dart';
 
 class KetuaMobileLayout extends StatefulWidget {
   const KetuaMobileLayout({super.key});
@@ -29,55 +31,46 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
   ];
 
   Future<void> _triggerSOS() async {
+    final settings = context.read<SettingsProvider>();
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.redAccent,
-              size: 32,
+      builder: (context) {
+        final dialogTextColor = Theme.of(context).textTheme.bodyMedium?.color;
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 32),
+              const SizedBox(width: 8),
+              Text(
+                settings.t('AMARAN SOS'),
+                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            settings.t('Adakah anda pasti mahu mencetuskan penggera KECEMASAN?'),
+            style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.7)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(settings.t('Batal'), style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.5))),
             ),
-            SizedBox(width: 8),
-            Text(
-              'AMARAN SOS',
-              style: TextStyle(
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(settings.t('SAHKAN SOS'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
-        ),
-        content: const Text(
-          'Adakah anda pasti mahu mencetuskan penggera KECEMASAN? Tindakan ini akan menghantar lokasi anda serta-merta kepada semua peronda.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            child: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                'SAHKAN SOS',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirm != true) return;
@@ -87,16 +80,15 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        backgroundColor: Color(0xFF1E1E1E),
+      builder: (context) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.redAccent),
-            SizedBox(height: 16),
+            const CircularProgressIndicator(color: Colors.redAccent),
+            const SizedBox(height: 16),
             Text(
-              'Sedang Mengesan Koordinat GPS & Menyiarkan SOS...',
-              style: TextStyle(color: Colors.white),
+              settings.t('Sedang Mengesan GPS & Menyiarkan SOS...'),
+              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
               textAlign: TextAlign.center,
             ),
           ],
@@ -131,28 +123,27 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
         title: 'KECEMASAN / SOS DIHANTAR',
         description: 'Peronda ini memerlukan bantuan SEGERA di koordinat ini.',
         category: 'Kecemasan',
-        imageFiles: [], // Empty image list for fast SOS
+        imageFiles: [],
         location: currentPosition,
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context);
         if (error == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('SOS BERJAYA DISIARKAN!'),
+            SnackBar(
+              content: Text(settings.t('SOS BERJAYA DISIARKAN!')),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 4),
+              duration: const Duration(seconds: 4),
             ),
           );
-          // Switch to Incident Feed tab so they can see the broadcast
           setState(() {
             _currentIndex = 1;
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('RALAT SOS: $error'),
+              content: Text('${settings.t('RALAT SOS')}: $error'),
               backgroundColor: Colors.red,
             ),
           );
@@ -163,7 +154,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('GAGAL PENGESANAN GPS: $e'),
+            content: Text('${settings.t('GAGAL PENGESANAN GPS')}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -189,117 +180,26 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
       const AttendanceScreen(),
     ];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+    final settings = context.watch<SettingsProvider>();
 
-      appBar: AppBar(
-        title: Text(
-          _pageTitles[_currentIndex],
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1E1E1E),
-        elevation: 4,
-        centerTitle: true,
-        actions: [
-          Builder(
-            builder: (context) {
-              return IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                tooltip: 'Menu Profil',
-                onPressed: () {
-                  Scaffold.of(context).openEndDrawer();
-                },
-              );
-            },
-          ),
-        ],
-      ),
-
-      endDrawer: Drawer(
-        backgroundColor: const Color(0xFF1E1E1E),
-        child: Column(
-          children: [
-            const Expanded(
-              child: SafeArea(bottom: false, child: ProfileScreen()),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: const Color(0xFF121212),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-                      foregroundColor: Colors.redAccent,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.logout),
-                    label: const Text(
-                      'Log Keluar',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: () async {
-                      await context.read<AuthProvider>().logout();
-                      if (context.mounted) {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      body: screens[_currentIndex],
-
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF1E1E1E),
-        selectedItemColor: Colors.lightBlueAccent,
-        unselectedItemColor: Colors.white54,
-        type: BottomNavigationBarType
-            .fixed, // Needed for > 3 items to show labels
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          if (index == 4) {
-            if (!_isSosBroadcasting) _triggerSOS();
-          } else {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Insiden'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.folder_shared),
-            label: 'Laporan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.qr_code_scanner),
-            label: 'Rondaan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emergency, color: Colors.redAccent),
-            label: 'SOS',
-          ),
-        ],
-      ),
+    return ResponsiveShell(
+      currentIndex: _currentIndex,
+      onIndexChanged: (index) {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      screens: screens,
+      items: [
+        NavigationItem(icon: Icons.dashboard, label: settings.t('Dashboard')),
+        NavigationItem(icon: Icons.warning, label: settings.t('Insiden')),
+        NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan Peronda')),
+        NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Rondaan')),
+      ],
+      onSosPressed: _triggerSOS,
+      isSosBroadcasting: _isSosBroadcasting,
+      title: settings.t(_pageTitles[_currentIndex]),
+      actions: const [GlobalMenuButton()],
     );
   }
 }

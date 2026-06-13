@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/api_constants.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 
@@ -29,9 +30,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.userId;
 
+    final settings = context.read<SettingsProvider>();
+
     if (userId == null) {
       setState(() {
-        _error = "Sesi tamat. Sila log masuk semula.";
+        _error = settings.t("Sesi tamat. Sila log masuk semula.");
         _isLoading = false;
       });
       return;
@@ -55,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } else {
         setState(() {
-          _error = 'Ralat Pelayan: ${response.statusCode}';
+          _error = '${settings.t('Ralat Pelayan')}: ${response.statusCode}';
           _isLoading = false;
         });
       }
@@ -65,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print("Target URI: ${ApiConstants.baseUrl}auth/get_profile.php");
       print("==================================");
       setState(() {
-        _error = 'Ralat Rangkaian: Tidak dapat menyambung ke pelayan.';
+        _error = settings.t('Ralat Rangkaian');
         _isLoading = false;
       });
     }
@@ -73,8 +76,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Colors.indigoAccent));
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -84,11 +89,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const Icon(Icons.error_outline, color: Colors.redAccent, size: 60),
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            Text(_error!, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _fetchProfile,
-              child: const Text('Cuba Semula'),
+              child: Text(settings.t('Cuba Semula')),
             )
           ],
         ),
@@ -96,58 +101,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (_user == null) {
-      return const Center(child: Text("Tiada data profil", style: TextStyle(color: Colors.white70)));
+      return Center(child: Text(settings.t("Tiada data profil"), style: const TextStyle(fontSize: 16)));
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Center(
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.indigoAccent,
-              child: Icon(Icons.person, size: 40, color: Colors.white),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+              boxShadow: [
+                 BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 5))
+              ]
             ),
+            child: Column(
+               children: [
+                   CircleAvatar(radius: 48, backgroundColor: Theme.of(context).primaryColor, child: const Icon(Icons.person, size: 48, color: Colors.white)),
+                   const SizedBox(height: 16),
+                   Text(_user!.fullName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color), textAlign: TextAlign.center),
+                   const SizedBox(height: 8),
+                   Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                     decoration: BoxDecoration(color: const Color(0xFFFFD100).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                     child: Text(_user!.role.toUpperCase(), style: const TextStyle(color: Color(0xFF0F3D87), fontWeight: FontWeight.bold, letterSpacing: 1)),
+                   ),
+               ]
+            )
           ),
+          const SizedBox(height: 32),
+          Text(settings.t('Maklumat Peribadi'), style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor, letterSpacing: 1)),
           const SizedBox(height: 16),
-          _buildInfoCard('Nama Penuh', _user!.fullName, Icons.badge),
-          _buildInfoCard('No. Kad Pengenalan', _user!.icNumber ?? 'Tiada', Icons.credit_card),
-          _buildInfoCard('Zon Rondaan', _user!.districtZone ?? 'Tiada', Icons.map),
-          _buildInfoCard('No. Telefon', _user!.phoneNumber ?? 'Tiada', Icons.phone),
-          _buildInfoCard('E-mel', _user!.email ?? 'Tiada', Icons.email),
-          _buildInfoCard('Peranan', _user!.role.toUpperCase(), Icons.security),
-          _buildInfoCard('Status Akaun', _user!.accountStatus?.toUpperCase() ?? 'PENDING', Icons.verified_user, 
-            valueColor: _user!.accountStatus == 'active' ? Colors.greenAccent : Colors.orangeAccent),
+          Card(
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+               children: [
+                  _buildInfoRow(settings.t('No. Kad Pengenalan'), _user!.icNumber ?? settings.t('Tiada'), Icons.credit_card),
+                  const Divider(height: 1),
+                  _buildInfoRow(settings.t('Zon Rondaan'), _user!.districtZone ?? settings.t('Tiada'), Icons.map),
+                  const Divider(height: 1),
+                  _buildInfoRow(settings.t('No. Telefon'), _user!.phoneNumber ?? settings.t('Tiada'), Icons.phone),
+                  const Divider(height: 1),
+                  _buildInfoRow(settings.t('E-mel'), _user!.email ?? settings.t('Tiada'), Icons.email_outlined),
+                  const Divider(height: 1),
+                  _buildInfoRow(settings.t('Status Akaun'), _user!.accountStatus?.toUpperCase() ?? 'PENDING', Icons.verified_user_outlined, 
+                    valueColor: _user!.accountStatus == 'active' ? Colors.green : Colors.orange),
+               ]
+            )
+          )
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard(String title, String value, IconData icon, {Color valueColor = Colors.white}) {
-    return Card(
-      color: const Color(0xFF1E1E1E),
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.indigoAccent, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                  const SizedBox(height: 2),
-                  Text(value, style: TextStyle(color: valueColor, fontSize: 14, fontWeight: FontWeight.bold)),
-                ],
-              ),
+  Widget _buildInfoRow(String title, String value, IconData icon, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
+            child: Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6), fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(value, style: TextStyle(color: valueColor ?? Theme.of(context).textTheme.bodyLarge?.color, fontSize: 15, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

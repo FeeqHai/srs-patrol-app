@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
+import '../../../core/providers/settings_provider.dart';
+import 'package:provider/provider.dart';
 import 'incident_report_screen.dart';
 import 'incident_detail_screen.dart';
 
@@ -98,23 +100,37 @@ class _IncidentScreenState extends State<IncidentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      appBar: widget.patrollerIdFilter != null
+          ? AppBar(
+              title: Text(settings.t('Rekod Insiden')),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'Tutup',
+              ),
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.white,
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _refresh,
-        color: Colors.redAccent,
+        color: theme.primaryColor,
         child: _incidents.isEmpty && _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.redAccent),
+            ? Center(
+                child: CircularProgressIndicator(color: theme.primaryColor),
               )
             : _incidents.isEmpty && !_isLoading
             ? ListView(
-                children: const [
-                  SizedBox(height: 300),
+                children: [
+                  const SizedBox(height: 300),
                   Center(
                     child: Text(
-                      "Tiada insiden direkodkan.",
-                      style: TextStyle(color: Colors.white54),
+                      settings.t("Tiada insiden direkodkan."),
+                      style: TextStyle(color: theme.textTheme.bodySmall?.color),
                     ),
                   ),
                 ],
@@ -138,22 +154,26 @@ class _IncidentScreenState extends State<IncidentScreen> {
                 },
               ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: widget.patrollerIdFilter == null
-          ? FloatingActionButton.extended(
-              backgroundColor: Colors.redAccent,
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const IncidentReportScreen(),
-                  ),
-                );
-                await _refresh(); // Fix: Refresh list upon return
-              },
-              icon: const Icon(Icons.add_a_photo, color: Colors.white),
-              label: const Text(
-                "LAPOR INSIDEN",
-                style: TextStyle(fontWeight: FontWeight.bold),
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 70.0), // Underneath SOS button, but above nav bar
+              child: FloatingActionButton.extended(
+                backgroundColor: Colors.redAccent,
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const IncidentReportScreen(),
+                    ),
+                  );
+                  await _refresh(); // Fix: Refresh list upon return
+                },
+                icon: const Icon(Icons.add_a_photo, color: Colors.white),
+                label: Text(
+                  settings.t("LAPOR INSIDEN"),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             )
           : null,
@@ -186,7 +206,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
       },
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: const Color(0xFF1E1E1E),
+        color: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Column(
           children: [
@@ -197,9 +217,9 @@ class _IncidentScreenState extends State<IncidentScreen> {
                   Container(
                     width: 110,
                     height: 110,
-                    decoration: const BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.only(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(15),
                         bottomLeft: Radius.circular(15),
                       ),
@@ -212,9 +232,9 @@ class _IncidentScreenState extends State<IncidentScreen> {
                       child: Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(
+                        errorBuilder: (_, _, _) => Icon(
                           Icons.broken_image,
-                          color: Colors.white24,
+                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
@@ -245,18 +265,18 @@ class _IncidentScreenState extends State<IncidentScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          data['title'] ?? "Tiada Tajuk",
-                          style: const TextStyle(
+                          data['title'] ?? context.read<SettingsProvider>().t("Tiada Tajuk"),
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            color: Colors.white,
+                            color: Theme.of(context).textTheme.titleMedium?.color,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           data['description'] ?? "",
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                             fontSize: 12,
                           ),
                           maxLines: 2,
