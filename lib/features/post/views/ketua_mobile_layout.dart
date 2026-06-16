@@ -77,6 +77,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
 
     setState(() => _isSosBroadcasting = true);
 
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -97,6 +98,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
     );
 
     try {
+      if (!mounted) return;
       final String reporterId =
           context.read<AuthProvider>().userId ?? "UNKNOWN";
 
@@ -123,6 +125,8 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
         title: 'KECEMASAN / SOS DIHANTAR',
         description: 'Peronda ini memerlukan bantuan SEGERA di koordinat ini.',
         category: 'Kecemasan',
+        locationName: 'Lokasi GPS Semasa',
+        reportedTo: 'Polis',
         imageFiles: [],
         location: currentPosition,
       );

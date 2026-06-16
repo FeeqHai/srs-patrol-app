@@ -230,7 +230,7 @@ class ResponsiveShell extends StatelessWidget {
                       ),
                       const SizedBox(width: 16),
                     ],
-                    if (actions != null) ...actions!,
+                    ...?actions,
                   ],
                 ),
               ),

@@ -2,42 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale('ms');
 
   SettingsProvider() {
     _loadSettings();
   }
 
-  ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
   bool get isEnglish => _locale.languageCode == 'en';
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Load Theme
-    final String? themeStr = prefs.getString('themeMode');
-    if (themeStr == 'light') _themeMode = ThemeMode.light;
-    else if (themeStr == 'dark') _themeMode = ThemeMode.dark;
-    else _themeMode = ThemeMode.system;
 
     // Load Language
     final String? langStr = prefs.getString('languageCode');
-    if (langStr == 'en') _locale = const Locale('en');
-    else _locale = const Locale('ms');
+    if (langStr == 'en') {
+      _locale = const Locale('en');
+    } else {
+      _locale = const Locale('ms');
+    }
 
     notifyListeners();
   }
 
-  Future<void> setThemeMode(ThemeMode mode) async {
-    _themeMode = mode;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    if (mode == ThemeMode.light) prefs.setString('themeMode', 'light');
-    else if (mode == ThemeMode.dark) prefs.setString('themeMode', 'dark');
-    else prefs.setString('themeMode', 'system');
-  }
+
 
   Future<void> setLanguage(String langCode) async {
     _locale = Locale(langCode);
@@ -115,7 +104,6 @@ class SettingsProvider extends ChangeNotifier {
       'Tamatkan Shif Awal': 'End Shift Early',
       'Lokasi Diperlukan': 'Location Required',
       'Faham & Tutup': 'Understood & Close',
-      'Tutup': 'Close',
       // SOS Strings
       'AMARAN SOS': 'SOS WARNING',
       'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?': 'Are you sure you want to trigger an EMERGENCY alert? This will send your location immediately to all patrollers.',
@@ -304,7 +292,6 @@ class SettingsProvider extends ChangeNotifier {
       'Tamatkan Shif Awal': 'Tamatkan Shif Awal',
       'Lokasi Diperlukan': 'Lokasi Diperlukan',
       'Faham & Tutup': 'Faham & Tutup',
-      'Tutup': 'Tutup',
       // SOS Strings
       'AMARAN SOS': 'AMARAN SOS',
       'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?': 'Adakah anda pasti mahu mencetuskan penggera KECEMASAN? Tindakan ini akan menghantar lokasi anda serta-merta kepada semua peronda.',

@@ -1,44 +1,74 @@
 // File: lib/features/attendance/services/attendance_service.dart
 
+import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/utils/logger.dart';
 
 class AttendanceService {
   final Uuid _uuid = const Uuid();
 
-  Future<String?> clockIn(String userId, String qrPayload) async {
+  Future<Map<String, dynamic>> clockIn(String userId, String qrPayload) async {
     try {
-      // 1. Hardware Interrogation: Bounded Execution
       Position currentPos = await _determinePosition();
-
-      // 2. Cryptographic Generation: Local Primary Key
       final String attendanceId = _uuid.v4();
-
-      // 3. Payload Construction: Strict Backend Alignment
       final Map<String, String> payload = {
         'id': attendanceId,
         'user_id': userId,
-        'checkpoint_id': qrPayload, // FIXED: Aligned with $_POST['checkpoint_id']
+        'checkpoint_id': qrPayload,
         'latitude': currentPos.latitude.toString(),
         'longitude': currentPos.longitude.toString(),
       };
 
-      // 4. Network Transmission
       final response = await ApiClient.postData("attendance/clock_in.php", payload);
 
-      // 5. Evaluation Phase
       if (response['status'] == 'success') {
-        return null; // Pipeline successful
+        return {'success': true, 'attendance_id': response['attendance_id'] ?? attendanceId};
       } else {
-        return response['message']; // Explicit failure output
+        return {'success': false, 'message': response['message']};
       }
     } catch (e, stackTrace) {
-      // Diagnostic Exposure
-      print('=== ATTENDANCE HARDWARE/NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      print('Stack Trace: $stackTrace');
-      print('=============================================');
+      appLogger.e('=== ATTENDANCE HARDWARE/NETWORK EXCEPTION ===\nException: $e', error: e, stackTrace: stackTrace);
+      return {'success': false, 'message': "System Exception: $e"};
+    }
+  }
+
+  Future<String?> clockOut(String userId) async {
+    try {
+      Position currentPos = await _determinePosition();
+      final Map<String, String> payload = {
+        'user_id': userId,
+        'latitude': currentPos.latitude.toString(),
+        'longitude': currentPos.longitude.toString(),
+      };
+      
+      final response = await ApiClient.postData("attendance/clock_out.php", payload);
+      if (response['status'] == 'success') {
+        return null;
+      } else {
+        return response['message'];
+      }
+    } catch (e, stackTrace) {
+      appLogger.e('Clock Out Exception', error: e, stackTrace: stackTrace);
+      return "System Exception: $e";
+    }
+  }
+
+  Future<String?> logEquipment(String attendanceId, List<String> equipmentIds) async {
+    try {
+      final Map<String, String> payload = {
+        'attendance_id': attendanceId,
+        'equipment': json.encode(equipmentIds),
+      };
+      final response = await ApiClient.postData("attendance/log_equipment.php", payload);
+      if (response['status'] == 'success') {
+        return null;
+      } else {
+        return response['message'];
+      }
+    } catch (e, stackTrace) {
+      appLogger.e('Log Equipment Exception', error: e, stackTrace: stackTrace);
       return "System Exception: $e";
     }
   }

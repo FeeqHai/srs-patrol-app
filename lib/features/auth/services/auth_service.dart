@@ -3,6 +3,7 @@
 import 'package:uuid/uuid.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/utils/logger.dart';
 
 class AuthService {
   // Instantiate the UUID generator
@@ -49,15 +50,7 @@ class AuthService {
 
    } catch (e, stackTrace) {
       // 1. Print the exact exception token
-      print('=== CRITICAL NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      
-      // 2. Print the exact URL being targeted to verify typos
-      print('Target URI: ${ApiConstants.registerEndpoint}');
-      
-      // 3. Print the raw execution stack to trace the exact line of failure
-      print('Stack Trace: $stackTrace');
-      print('==================================');
+      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.registerEndpoint}\n==================================', error: e, stackTrace: stackTrace);
       
       return "Network Exception: Unable to communicate with the server.";
     }

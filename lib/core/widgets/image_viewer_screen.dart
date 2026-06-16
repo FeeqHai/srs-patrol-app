@@ -107,9 +107,8 @@ class _ZoomableImagePageState extends State<_ZoomableImagePage> with SingleTicke
     if (_transformationController.value != Matrix4.identity()) {
       endMatrix = Matrix4.identity();
     } else {
-      endMatrix = Matrix4.identity()
-        ..translate(-position.dx, -position.dy)
-        ..scale(2.5); // Zoom factor
+      endMatrix = Matrix4.translationValues(-position.dx, -position.dy, 0.0)
+        ..multiply(Matrix4.diagonal3Values(2.5, 2.5, 1.0)); // Zoom factor
     }
 
     _animation = Matrix4Tween(

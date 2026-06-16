@@ -11,7 +11,7 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
 
@@ -20,13 +20,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  
   bool _obscurePassword = true;
-
+  bool _isHoveringBtn = false;
   String? _selectedZone;
   bool _isLoading = false;
 
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // SRS/KRT Brand Colors
   final Color _royalBlue = const Color(0xFF0F3D87);
   final Color _goldenYellow = const Color(0xFFFFD100);
+  final Color _charcoal = const Color(0xFF2C3E50);
 
   final List<String> _zones = [
     'Zon Utara',
@@ -37,12 +44,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _animController.forward();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _icController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -55,9 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            context.read<SettingsProvider>().t(
-              'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.',
-            ),
+            context.read<SettingsProvider>().t('Borang tidak lengkap atau zon tidak dipilih.'),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.orange.shade800,
@@ -85,13 +100,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: Text(
-            context.read<SettingsProvider>().t('Pendaftaran Selesai'),
-          ),
+          title: Text(context.read<SettingsProvider>().t('Pendaftaran Berjaya')),
           content: Text(
-            context.read<SettingsProvider>().t(
-              'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.',
-            ),
+            context.read<SettingsProvider>().t('Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.'),
             style: const TextStyle(height: 1.5),
           ),
           actions: [
@@ -100,9 +111,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Navigator.pop(context);
                 Navigator.pop(context);
               },
-              child: Text(
-                context.read<SettingsProvider>().t('Kembali ke Log Masuk'),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: _royalBlue, foregroundColor: Colors.white),
+              child: Text(context.read<SettingsProvider>().t('Kembali ke Log Masuk')),
             ),
           ],
         ),
@@ -110,10 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            error,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          content: Text(error, style: const TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -124,7 +131,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 800;
@@ -132,34 +138,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
             return Row(
               children: [
                 Expanded(child: _buildBrandSide()),
-                Expanded(child: _buildFormSide(isLargeScreen: true)),
-              ],
-            );
-          } else {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                _buildMobileHeader(),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                  child: _buildFormSide(isLargeScreen: false),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 550),
+                        child: _buildFormContent(isLargeScreen: true),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             );
+          } else {
+            return _buildMobileLayout();
           }
         },
       ),
     );
   }
 
+  // ---------------------------------------------------------
+  // Branding Side (Web/Tablet Left Side)
+  // ---------------------------------------------------------
   Widget _buildBrandSide() {
     final settings = context.watch<SettingsProvider>();
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [_royalBlue, _royalBlue.withValues(alpha: 0.8)],
+          colors: [_royalBlue, const Color(0xFF0A295A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -167,116 +174,162 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(48.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  child: Image.asset('assets/icon.png', height: 90),
                 ),
-                child: Image.asset('assets/icon.png', height: 80),
-              ),
-              const SizedBox(height: 40),
-              Text(
-                settings.t('Join Our Patrol\nNetwork.'),
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.2,
-                  letterSpacing: -1,
+                const SizedBox(height: 48),
+                Text(
+                  settings.t('Sertai Rangkaian\nPeronda Kami.'),
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.1,
+                    letterSpacing: -1,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                settings.t(
-                  'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.',
+                const SizedBox(height: 24),
+                Container(width: 60, height: 4, color: _goldenYellow),
+                const SizedBox(height: 24),
+                Text(
+                  settings.t('Daftar sebagai peronda SRS untuk membantu menjaga keselamatan dan keharmonian komuniti setempat.'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    height: 1.6,
+                  ),
                 ),
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white.withValues(alpha: 0.8),
-                  height: 1.5,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  // ---------------------------------------------------------
+  // Mobile Layout (Bottom Sheet style that slides up)
+  // ---------------------------------------------------------
+  Widget _buildMobileLayout() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  _buildMobileHeader(),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 30,
+                            offset: const Offset(0, -10),
+                          ),
+                        ],
+                      ),
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: _buildFormContent(isLargeScreen: false),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------
+  // Mobile Header (Top background for small screens)
+  // ---------------------------------------------------------
   Widget _buildMobileHeader() {
     final settings = context.watch<SettingsProvider>();
     return Container(
-      height:
-          MediaQuery.of(context).size.height *
-          0.35, // Shorter for register to give form more room
       width: double.infinity,
+      padding: const EdgeInsets.only(top: 60.0, bottom: 40.0, left: 16.0, right: 16.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [_royalBlue, _royalBlue.withValues(alpha: 0.8)],
+          colors: [_royalBlue, const Color(0xFF0A295A)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        settings.t('Pendaftaran'),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        settings.t('Daftar Peronda Baru'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFFFFD100),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+        bottom: false,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    settings.t('PENDAFTARAN'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    settings.t('Daftar Peronda Baru'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: _goldenYellow,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 48), // Balance for back button
-            ],
-          ),
+            ),
+            const SizedBox(width: 48), // Balance for back button
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFormSide({required bool isLargeScreen}) {
+  // ---------------------------------------------------------
+  // Form Content
+  // ---------------------------------------------------------
+  Widget _buildFormContent({required bool isLargeScreen}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final settings = context.watch<SettingsProvider>();
+    final textColor = theme.textTheme.bodyLarge?.color ?? _charcoal;
 
-    Widget formContent = SingleChildScrollView(
-      padding: EdgeInsets.symmetric(
-        horizontal: isLargeScreen ? 64.0 : 32.0,
-        vertical: 40.0,
-      ),
+    return Padding(
+      padding: EdgeInsets.all(isLargeScreen ? 64.0 : 32.0),
       child: Form(
         key: _formKey,
         child: Column(
@@ -287,44 +340,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: theme.textTheme.bodyLarge?.color,
-                  ),
+                  icon: Icon(Icons.arrow_back, color: textColor),
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   alignment: Alignment.centerLeft,
                 ),
               ),
               const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.person_add, color: _royalBlue, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    settings.t('Pendaftaran Peronda'),
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                settings.t('Lengkapkan butiran di bawah untuk mendaftar.'),
+                style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.6), height: 1.5),
+              ),
+              const SizedBox(height: 40),
             ],
-            Text(
-              settings.t('Create Account'),
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: theme.textTheme.bodyLarge?.color,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              settings.t(
-                'Fill in the details below to register as a patroller.',
-              ),
-              style: TextStyle(
-                fontSize: 16,
-                color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 40),
 
-            _buildSectionTitle(settings.t('Maklumat Identiti'), theme),
+            _buildSectionTitle(settings.t('Maklumat Identiti')),
             const SizedBox(height: 16),
             _buildTextField(
               _nameController,
-              settings.t('Nama Penuh (Mengikut Kad Pengenalan)'),
-              Icons.person,
+              settings.t('Nama Penuh (Mengikut MyKad)'),
+              Icons.person_outline,
               TextInputType.name,
               isDark,
             ),
@@ -332,18 +383,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildTextField(
               _icController,
               settings.t('No. Kad Pengenalan (Tanpa Sengkang)'),
-              Icons.badge,
+              Icons.badge_outlined,
               TextInputType.number,
               isDark,
             ),
             const SizedBox(height: 32),
 
-            _buildSectionTitle(settings.t('Maklumat Operasi'), theme),
+            _buildSectionTitle(settings.t('Maklumat Operasi')),
             const SizedBox(height: 16),
             _buildTextField(
               _phoneController,
               settings.t('No. Telefon (Kecemasan)'),
-              Icons.phone,
+              Icons.phone_outlined,
               TextInputType.phone,
               isDark,
             ),
@@ -351,39 +402,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             // Dropdown
             DropdownButtonFormField<String>(
-              value: _selectedZone,
-              icon: Icon(
-                Icons.arrow_drop_down,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-              ),
+              initialValue: _selectedZone,
+              icon: Icon(Icons.arrow_drop_down, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
               dropdownColor: theme.cardColor,
-              style: TextStyle(
-                color: theme.textTheme.bodyLarge?.color,
-                fontSize: 16,
+              style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w500),
+              decoration: _inputDecoration(
+                hintText: settings.t('Pilih Zon Rondaan'),
+                icon: Icons.map_outlined,
+                isDark: isDark,
               ),
-              decoration: InputDecoration(
-                hintText: settings.t('Pilih Sektor / Zon Rondaan'),
-                prefixIcon: Icon(
-                  Icons.map_outlined,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              items: _zones
-                  .map(
-                    (zone) => DropdownMenuItem(value: zone, child: Text(zone)),
-                  )
-                  .toList(),
+              items: _zones.map((zone) => DropdownMenuItem(value: zone, child: Text(zone))).toList(),
               onChanged: (val) => setState(() => _selectedZone = val),
-              validator: (val) =>
-                  val == null ? settings.t('Zon rondaan wajib dipilih') : null,
+              validator: (val) => val == null ? settings.t('Sila pilih zon') : null,
             ),
             const SizedBox(height: 32),
 
-            _buildSectionTitle(settings.t('Kredensial Sistem'), theme),
+            _buildSectionTitle(settings.t('Kredensial Sistem')),
             const SizedBox(height: 16),
             _buildTextField(
               _emailController,
-              settings.t('Alamat E-mel'),
+              settings.t('E-mel'),
               Icons.email_outlined,
               TextInputType.emailAddress,
               isDark,
@@ -395,77 +433,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
               controller: _passwordController,
               obscureText: _obscurePassword,
               keyboardType: TextInputType.visiblePassword,
-              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-              decoration: InputDecoration(
+              style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
+              decoration: _inputDecoration(
                 hintText: settings.t('Kata Laluan'),
-                prefixIcon: Icon(
-                  Icons.lock_outline,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
+                icon: Icons.lock_outline,
+                isDark: isDark,
+              ).copyWith(
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
                   ),
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
-              validator: (value) => value == null || value.isEmpty
-                  ? settings.t('Ruangan ini wajib diisi')
-                  : null,
+              validator: (value) => value == null || value.isEmpty ? settings.t('Ruangan ini wajib diisi') : null,
             ),
             const SizedBox(height: 48),
 
-            SizedBox(
-              height: 56,
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _submitRegistration,
-                      child: Text(settings.t('HANTAR PERMOHONAN')),
-                    ),
+            // Register Button (Interactive)
+            MouseRegion(
+              onEnter: (_) => setState(() => _isHoveringBtn = true),
+              onExit: (_) => setState(() => _isHoveringBtn = false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 56,
+                transform: Matrix4.diagonal3Values(_isHoveringBtn ? 1.02 : 1.0, _isHoveringBtn ? 1.02 : 1.0, 1.0),
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitRegistration,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _royalBlue,
+                    foregroundColor: Colors.white,
+                    elevation: _isHoveringBtn ? 8 : 2,
+                    shadowColor: _royalBlue.withValues(alpha: 0.6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.person_add_alt_1, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              settings.t('HANTAR PERMOHONAN'),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
-
-    if (isLargeScreen) {
-      return Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: formContent,
-        ),
-      );
-    } else {
-      return Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: formContent,
-      );
-    }
   }
 
-  Widget _buildSectionTitle(String title, ThemeData theme) {
+  Widget _buildSectionTitle(String title) {
     return Text(
       title,
       style: TextStyle(
         color: _royalBlue,
-        fontWeight: FontWeight.bold,
-        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
         letterSpacing: 1,
       ),
     );
@@ -479,20 +510,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
     bool isDark,
   ) {
     final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? _charcoal;
+    
     return TextFormField(
       controller: controller,
       keyboardType: type,
-      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-      decoration: InputDecoration(
+      style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
+      decoration: _inputDecoration(
         hintText: hint,
-        prefixIcon: Icon(
-          icon,
-          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-        ),
+        icon: icon,
+        isDark: isDark,
       ),
       validator: (value) => value == null || value.isEmpty
           ? context.read<SettingsProvider>().t('Ruangan ini wajib diisi')
           : null,
+    );
+  }
+
+  InputDecoration _inputDecoration({required String hintText, required IconData icon, required bool isDark}) {
+    final fillColor = isDark ? const Color(0xFF1A1A1A) : Colors.grey.shade50;
+    
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, fontSize: 14),
+      prefixIcon: Icon(icon, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+      filled: true,
+      fillColor: fillColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: _royalBlue, width: 2),
+      ),
     );
   }
 }

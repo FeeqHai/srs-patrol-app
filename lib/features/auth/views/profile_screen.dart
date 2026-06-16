@@ -7,6 +7,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
+import '../../../core/utils/logger.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -62,11 +63,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print("=== CRITICAL NETWORK EXCEPTION ===");
-      print("Exception: $e");
-      print("Target URI: ${ApiConstants.baseUrl}auth/get_profile.php");
-      print("==================================");
+    } catch (e, stackTrace) {
+      appLogger.e("=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.baseUrl}auth/get_profile.php\n==================================", error: e, stackTrace: stackTrace);
       setState(() {
         _error = settings.t('Ralat Rangkaian');
         _isLoading = false;

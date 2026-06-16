@@ -132,56 +132,21 @@ class _SettingsDialogContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              settings.t('Tema'),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            RadioListTile<ThemeMode>(
-              title: Text(settings.t('Sistem')),
-              value: ThemeMode.system,
-              groupValue: settings.themeMode,
-              onChanged: (val) {
-                if (val != null) settings.setThemeMode(val);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: Text(settings.t('Cerah')),
-              value: ThemeMode.light,
-              groupValue: settings.themeMode,
-              onChanged: (val) {
-                if (val != null) settings.setThemeMode(val);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: Text(settings.t('Gelap')),
-              value: ThemeMode.dark,
-              groupValue: settings.themeMode,
-              onChanged: (val) {
-                if (val != null) settings.setThemeMode(val);
-              },
-            ),
-            const Divider(),
+
             Text(
               settings.t('Bahasa'),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            RadioListTile<String>(
+            ListTile(
               title: Text(settings.t('Bahasa Melayu')),
-              value: 'ms',
-              groupValue: settings.locale.languageCode,
-              onChanged: (val) {
-                if (val != null) settings.setLanguage(val);
-              },
+              trailing: settings.locale.languageCode == 'ms' ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+              onTap: () => settings.setLanguage('ms'),
             ),
-            RadioListTile<String>(
+            ListTile(
               title: Text(settings.t('English')),
-              value: 'en',
-              groupValue: settings.locale.languageCode,
-              onChanged: (val) {
-                if (val != null) settings.setLanguage(val);
-              },
+              trailing: settings.locale.languageCode == 'en' ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+              onTap: () => settings.setLanguage('en'),
             ),
           ],
         ),

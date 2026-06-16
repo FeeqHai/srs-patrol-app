@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/utils/logger.dart';
 
 class IncidentService {
   final String _uploadEndpoint = '${ApiConstants.baseUrl}incidents/upload_incident.php';
@@ -13,6 +14,8 @@ class IncidentService {
     required String title,
     required String description,
     required String category,
+    required String locationName,
+    required String reportedTo,
     required List<File> imageFiles,
     required Position location,
   }) async {
@@ -29,6 +32,8 @@ class IncidentService {
       request.fields['title'] = title;
       request.fields['description'] = description;
       request.fields['category'] = category;
+      request.fields['location_name'] = locationName;
+      request.fields['reported_to'] = reportedTo;
       request.fields['latitude'] = location.latitude.toString();
       request.fields['longitude'] = location.longitude.toString();
 
@@ -54,11 +59,7 @@ class IncidentService {
         return "Server Protocol Error: ${response.statusCode}";
       }
     } catch (e, stackTrace) {
-      print('=== CRITICAL NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      print('Target URI: $_uploadEndpoint');
-      print('Stack Trace: $stackTrace');
-      print('==================================');
+      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $_uploadEndpoint\n==================================', error: e, stackTrace: stackTrace);
       return "Network Exception: Could not reach the command center. Raw error: $e";
     }
   }
@@ -83,11 +84,7 @@ class IncidentService {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      print('=== CRITICAL NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      print('Target URI: ${ApiConstants.baseUrl}incidents/get_incidents.php');
-      print('Stack Trace: $stackTrace');
-      print('==================================');
+      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.baseUrl}incidents/get_incidents.php\n==================================', error: e, stackTrace: stackTrace);
       throw Exception("Network Exception: $e");
     }
   }

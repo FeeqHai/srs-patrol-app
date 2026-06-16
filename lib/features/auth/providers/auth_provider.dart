@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart'; // INJECTED: The centralized network layer
+import '../../../core/utils/logger.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -63,9 +64,7 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e, stackTrace) {
       // 4. Expose the raw exception to the IDE console for engineering review
-      print('=== LOGIN NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      print('Stack Trace: $stackTrace');
+      appLogger.e('=== LOGIN NETWORK EXCEPTION ===\nException: $e', error: e, stackTrace: stackTrace);
       
       _errorMessage = "Network Exception: Unable to communicate with the server.";
       _isLoading = false;

@@ -41,7 +41,7 @@ class TrackingProvider with ChangeNotifier {
 
       // 2. Get Location
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       // 3. Send SOS

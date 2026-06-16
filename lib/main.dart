@@ -13,15 +13,14 @@ import 'features/post/views/ketua_mobile_layout.dart';
 import 'core/providers/settings_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'core/services/sos_alert_service.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-  await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
+  await SosAlertService().initialize();
   
   runApp(const SRSPatrolApp());
 }
@@ -32,19 +31,20 @@ class SRSPatrolApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-providers: [
+      providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => IncidentProvider()),
-        ChangeNotifierProvider(create: (_) => AttendanceProvider()), // INJECTED: The missing dependency
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()), 
         ChangeNotifierProvider(create: (_) => TrackingProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
           return MaterialApp(
+            navigatorKey: SosAlertService.navigatorKey,
             title: 'SRS Patrol System',
             debugShowCheckedModeBanner: false,
-            themeMode: settings.themeMode, 
+            themeMode: ThemeMode.light, 
             locale: settings.locale,
             supportedLocales: const [Locale('ms'), Locale('en')],
             localizationsDelegates: const [
@@ -213,6 +213,7 @@ class RootRouter extends StatelessWidget {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         if (authProvider.isAuthenticated) {
+          SosAlertService().startPolling(context);
           if (authProvider.role == 'ketua_krt' || authProvider.role == 'ketua') {
             return const AdminShell(); // Responsive Admin Shell
           } else if (authProvider.role == 'ketua_peronda') {
@@ -220,8 +221,10 @@ class RootRouter extends StatelessWidget {
           } else {
             return const MainShell(); // Responsive Patroller Shell
           }
+        } else {
+          SosAlertService().stopPolling();
+          return const LoginScreen();
         }
-        return const LoginScreen();
       },
     );
   }

@@ -88,6 +88,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       });
 
     } catch (e) {
+      if (!mounted) return;
       _currentLocation = '${context.read<SettingsProvider>().t('Gagal mengesan lokasi')}: $e';
       _qrData = null;
       if (mounted) {

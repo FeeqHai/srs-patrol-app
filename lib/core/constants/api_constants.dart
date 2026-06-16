@@ -7,5 +7,4 @@ class ApiConstants {
   static const String registerEndpoint = "auth/register.php";
   static const String getIncidentsEndpoint = "incidents/get_incidents.php";
   static const String uploadIncidentEndpoint = "incidents/upload_incident.php";
-
 }

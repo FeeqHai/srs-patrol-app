@@ -10,6 +10,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../incident/services/incident_service.dart';
 import '../../incident/views/incident_detail_screen.dart';
+import '../../incident/views/lampiran_6_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onNavigateToScan;
@@ -77,6 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
+    if (!mounted) return;
     final currentUserId = context.read<AuthProvider>().userId;
     if (currentUserId == null) return;
     try {
@@ -192,6 +194,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = Theme.of(context);
+    final authProvider = context.read<AuthProvider>();
+    final isAdminOrKetua = authProvider.role == 'admin' || 
+                           authProvider.role == 'ketua' || 
+                           authProvider.role == 'ketua_krt' || 
+                           authProvider.role == 'ketua_peronda';
 
     return Scaffold(
       body: SafeArea(
@@ -384,6 +391,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
+              if (isAdminOrKetua) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const Lampiran6Screen()),
+                      );
+                    },
+                    icon: const Icon(Icons.analytics),
+                    label: Text(
+                      settings.t('JANA LAPORAN LAMPIRAN 6'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

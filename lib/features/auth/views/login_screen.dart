@@ -11,19 +11,45 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+  
   bool _obscurePassword = true;
+  bool _isHoveringBtn = false;
+  
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
-  // SRS/KRT Brand Colors
+  // SRS/KRT Brand Colors (Formal Government Style)
   final Color _royalBlue = const Color(0xFF0F3D87);
   final Color _goldenYellow = const Color(0xFFFFD100);
+  final Color _charcoal = const Color(0xFF2C3E50);
+
+  @override
+  void initState() {
+    super.initState();
+    // Interactive focus listeners
+    _emailFocus.addListener(() => setState(() {}));
+    _passwordFocus.addListener(() => setState(() {}));
+
+    // Entrance Animation
+    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _animController.forward();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -44,7 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 800;
@@ -52,22 +77,20 @@ class _LoginScreenState extends State<LoginScreen> {
             return Row(
               children: [
                 Expanded(child: _buildBrandSide()),
-                Expanded(child: _buildFormSide(isLargeScreen: true)),
-              ],
-            );
-          } else {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                _buildMobileHeader(),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                  child: _buildFormSide(isLargeScreen: false),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: _buildFormContent(isLargeScreen: true),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             );
+          } else {
+            return _buildMobileLayout();
           }
         },
       ),
@@ -82,10 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            _royalBlue,
-            _royalBlue.withValues(alpha: 0.8),
-          ],
+          colors: [_royalBlue, const Color(0xFF0A295A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -93,42 +113,93 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(48.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  child: Image.asset('assets/icon.png', height: 90),
                 ),
-                child: Image.asset('assets/icon.png', height: 80),
-              ),
-              const SizedBox(height: 40),
-              Text(
-                settings.t('Securing Our Community\nTogether.'),
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.2,
-                  letterSpacing: -1,
+                const SizedBox(height: 48),
+                Text(
+                  settings.t('Portal Rasmi\nSkim Rondaan Sukarela.'),
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.1,
+                    letterSpacing: -1,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                settings.t('Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.'),
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white.withValues(alpha: 0.8),
-                  height: 1.5,
+                const SizedBox(height: 24),
+                Container(width: 60, height: 4, color: _goldenYellow),
+                const SizedBox(height: 24),
+                Text(
+                  settings.t('Akses kawalan keselamatan khas untuk peronda berdaftar.'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    height: 1.6,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  // ---------------------------------------------------------
+  // Mobile Layout (Bottom Sheet style that slides up)
+  // ---------------------------------------------------------
+  Widget _buildMobileLayout() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  _buildMobileHeader(),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 30,
+                            offset: const Offset(0, -10),
+                          ),
+                        ],
+                      ),
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: _buildFormContent(isLargeScreen: false),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -138,145 +209,162 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildMobileHeader() {
     final settings = context.watch<SettingsProvider>();
     return Container(
-      height: MediaQuery.of(context).size.height * 0.45,
       width: double.infinity,
+      padding: const EdgeInsets.only(top: 70.0, bottom: 50.0, left: 24.0, right: 24.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            _royalBlue,
-            _royalBlue.withValues(alpha: 0.8),
-          ],
+          colors: [_royalBlue, const Color(0xFF0A295A)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset('assets/icon.png', height: 60),
-              const SizedBox(height: 16),
-              Text(
-                settings.t('SRS Patrol Portal'),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                settings.t('Securing Our Community'),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _goldenYellow,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset('assets/icon.png', height: 65),
+          const SizedBox(height: 20),
+          Text(
+            settings.t('PORTAL RASMI SRS'),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: 1.5,
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: _goldenYellow.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _goldenYellow.withValues(alpha: 0.5)),
+            ),
+            child: Text(
+              settings.t('Akses Keselamatan Terhad'),
+              style: TextStyle(
+                fontSize: 12,
+                color: _goldenYellow,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // ---------------------------------------------------------
-  // Form Side (Web Right Side / Mobile Bottom Card)
+  // Form Content (Used in both Web and Mobile)
   // ---------------------------------------------------------
-  Widget _buildFormSide({required bool isLargeScreen}) {
+  Widget _buildFormContent({required bool isLargeScreen}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final authProvider = context.watch<AuthProvider>();
     final settings = context.watch<SettingsProvider>();
+    final textColor = theme.textTheme.bodyLarge?.color ?? _charcoal;
 
-    Widget formContent = SingleChildScrollView(
-      padding: EdgeInsets.symmetric(
-        horizontal: isLargeScreen ? 64.0 : 32.0,
-        vertical: 40.0,
-      ),
+    return Padding(
+      padding: EdgeInsets.all(isLargeScreen ? 64.0 : 36.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (isLargeScreen) ...[
-            Image.asset('assets/icon.png', height: 60, alignment: Alignment.centerLeft),
+            Image.asset('assets/icon.png', height: 70, alignment: Alignment.centerLeft),
             const SizedBox(height: 32),
           ],
-          Text(
-            settings.t('Welcome Back'),
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color,
-              letterSpacing: -0.5,
-            ),
+          Row(
+            mainAxisAlignment: isLargeScreen ? MainAxisAlignment.start : MainAxisAlignment.center,
+            children: [
+              Icon(Icons.shield, color: _royalBlue, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                settings.t('Log Masuk Sistem'),
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 32 : 26,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            settings.t('Enter your credentials to access your account'),
-            style: TextStyle(
-              fontSize: 16,
-              color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 32),
 
           // Email Field
           Text(
-            settings.t('Email Address'),
-            style: TextStyle(fontWeight: FontWeight.w600, color: theme.textTheme.bodyLarge?.color, fontSize: 14),
+            settings.t('E-mel'),
+            style: TextStyle(fontWeight: FontWeight.w700, color: textColor, fontSize: 13, letterSpacing: 0.5),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: _inputDecoration(
-              hintText: 'hello@srs.gov.my',
-              icon: Icons.email_outlined,
-              isDark: isDark,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: _emailFocus.hasFocus ? [BoxShadow(color: _royalBlue.withValues(alpha: 0.15), blurRadius: 10, spreadRadius: 2)] : [],
+            ),
+            child: TextField(
+              controller: _emailController,
+              focusNode: _emailFocus,
+              keyboardType: TextInputType.emailAddress,
+              style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
+              decoration: _inputDecoration(
+                hintText: 'pengguna@srs.gov.my',
+                icon: Icons.email_outlined,
+                isDark: isDark,
+                isFocused: _emailFocus.hasFocus,
+              ),
             ),
           ),
           const SizedBox(height: 24),
 
           // Password Field
           Text(
-            settings.t('Password'),
-            style: TextStyle(fontWeight: FontWeight.w600, color: theme.textTheme.bodyLarge?.color, fontSize: 14),
+            settings.t('Kata Laluan'),
+            style: TextStyle(fontWeight: FontWeight.w700, color: textColor, fontSize: 13, letterSpacing: 0.5),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            decoration: _inputDecoration(
-              hintText: '••••••••',
-              icon: Icons.lock_outline,
-              isDark: isDark,
-            ).copyWith(
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: _passwordFocus.hasFocus ? [BoxShadow(color: _royalBlue.withValues(alpha: 0.15), blurRadius: 10, spreadRadius: 2)] : [],
+            ),
+            child: TextField(
+              controller: _passwordController,
+              focusNode: _passwordFocus,
+              obscureText: _obscurePassword,
+              style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
+              decoration: _inputDecoration(
+                hintText: '••••••••',
+                icon: Icons.lock_outline,
+                isDark: isDark,
+                isFocused: _passwordFocus.hasFocus,
+              ).copyWith(
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: _passwordFocus.hasFocus ? _royalBlue : (isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-          // Forgot Password (Placeholder)
+          // Forgot Password
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {},
               style: TextButton.styleFrom(
-                foregroundColor: isDark ? Colors.blueAccent : _royalBlue,
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
+                foregroundColor: isDark ? _goldenYellow : _royalBlue,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               ),
-              child: Text(settings.t('Forgot password?')),
+              child: Text(settings.t('Lupa kata laluan?'), style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 32),
@@ -284,120 +372,120 @@ class _LoginScreenState extends State<LoginScreen> {
           // Error Message Display
           if (authProvider.errorMessage != null)
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.only(bottom: 24),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withValues(alpha: 0.1),
+                color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)),
+                border: Border.all(color: Colors.red.shade200),
+                boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.05), blurRadius: 8)],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+                  Icon(Icons.gpp_bad, color: Colors.red.shade700, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       authProvider.errorMessage!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                      style: TextStyle(color: Colors.red.shade900, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
               ),
             ),
 
-          // Login Button
-          SizedBox(
-            height: 56,
-            child: authProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _royalBlue,
-                      foregroundColor: Colors.white,
-                      elevation: 4,
-                      shadowColor: _royalBlue.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+          // Login Button (Interactive)
+          MouseRegion(
+            onEnter: (_) => setState(() => _isHoveringBtn = true),
+            onExit: (_) => setState(() => _isHoveringBtn = false),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 56,
+              transform: Matrix4.diagonal3Values(_isHoveringBtn ? 1.02 : 1.0, _isHoveringBtn ? 1.02 : 1.0, 1.0),
+              child: ElevatedButton(
+                onPressed: authProvider.isLoading ? null : _handleLogin,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _royalBlue,
+                  foregroundColor: Colors.white,
+                  elevation: _isHoveringBtn ? 8 : 2,
+                  shadowColor: _royalBlue.withValues(alpha: 0.6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: authProvider.isLoading
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.fingerprint, size: 22),
+                          const SizedBox(width: 12),
+                          Text(
+                            settings.t('LOG MASUK'),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Text(
-                      settings.t('SECURE LOGIN'),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
-                    ),
-                  ),
+              ),
+            ),
           ),
           const SizedBox(height: 32),
 
           // Register Link
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                settings.t("Don't have an account?"),
-                style: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/register'),
-                style: TextButton.styleFrom(foregroundColor: isDark ? _goldenYellow : _royalBlue),
-                child: Text(
-                  settings.t('Register Here'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  settings.t("Belum mendaftar?"),
+                  style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 13),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, '/register'),
+                  style: TextButton.styleFrom(foregroundColor: isDark ? _goldenYellow : _royalBlue),
+                  icon: const Icon(Icons.person_add_alt_1, size: 18),
+                  label: Text(
+                    settings.t('Daftar Peronda Baru'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
-
-    if (isLargeScreen) {
-      return Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: formContent,
-        ),
-      );
-    } else {
-      return Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: formContent,
-      );
-    }
   }
 
-  InputDecoration _inputDecoration({required String hintText, required IconData icon, required bool isDark}) {
-    final fillColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100;
-    final borderColor = isDark ? Colors.white12 : Colors.grey.shade300;
+  InputDecoration _inputDecoration({required String hintText, required IconData icon, required bool isDark, required bool isFocused}) {
+    final fillColor = isDark ? const Color(0xFF1A1A1A) : (isFocused ? Colors.white : Colors.grey.shade50);
+    final borderColor = isFocused 
+        ? _royalBlue 
+        : (isDark ? Colors.white24 : Colors.grey.shade300);
 
     return InputDecoration(
       hintText: hintText,
       hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-      prefixIcon: Icon(icon, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+      prefixIcon: Icon(
+        icon, 
+        color: isFocused ? _royalBlue : (isDark ? Colors.grey.shade500 : Colors.grey.shade400)
+      ),
       filled: true,
       fillColor: fillColor,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: borderColor, width: 1),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: _royalBlue, width: 2),
       ),
     );

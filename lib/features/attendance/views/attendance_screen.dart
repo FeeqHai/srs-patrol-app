@@ -58,7 +58,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  Future<void> _clearShiftData() async {
+  Future<void> _clearShiftData({bool callApi = true}) async {
+    if (callApi) {
+      final String? currentUserId = context.read<AuthProvider>().userId;
+      if (currentUserId != null) {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.redAccent)),
+        );
+        await context.read<AttendanceProvider>().clockOut(currentUserId);
+        if (mounted) Navigator.pop(context);
+      }
+    }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('shiftActive');
     await prefs.remove('activeCheckpoint');
@@ -131,41 +145,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         Navigator.pop(context);
 
         if (success) {
-          Position? position = await Geolocator.getLastKnownPosition();
-          String locationString = "GPS Data Secured";
+          // Fetch equipment before showing dialog
+          await provider.fetchEquipment();
+          if (!mounted) return;
           
-          if (position != null) {
-            try {
-              List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-              if (placemarks.isNotEmpty) {
-                final place = placemarks.first;
-                locationString = '${place.locality}, ${place.administrativeArea}';
-              } else {
-                locationString = "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
-              }
-            } catch (e) {
-              locationString = "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
-            }
-          }
-
-          final DateTime now = DateTime.now();
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('shiftActive', true);
-          await prefs.setString('activeCheckpoint', 'Pos Utama KRT');
-          await prefs.setString('activeLocation', locationString);
-          await prefs.setString('shiftStartTime', now.toIso8601String());
-
-          setState(() {
-            _shiftActive = true;
-            _activeCheckpoint = 'Pos Utama KRT';
-            _activeLocation = locationString;
-            _shiftStartTime = now;
-            _isProcessing = false;
-          });
-          
-          _scannerController?.dispose();
-          _scannerController = null;
-
+          await _showEquipmentSelectionDialog(provider);
         } else {
           
           if (provider.errorMessage!.contains('Sila aktifkan') || provider.errorMessage!.contains('kebenaran lokasi')) {
@@ -205,7 +189,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         children: [
                           Expanded(
                             child: TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                setState(() => _isProcessing = false);
+                                _scannerController?.start();
+                              },
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 foregroundColor: Colors.white54,
@@ -219,6 +207,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               onPressed: () async {
                                 Navigator.pop(context);
                                 await Geolocator.openLocationSettings();
+                                setState(() => _isProcessing = false);
+                                _scannerController?.start();
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.lightBlueAccent,
@@ -258,7 +248,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               modalColor = Colors.orange;
             } else if (friendlyError.contains('terlalu jauh')) {
               // Extract the distance from the backend message if possible
-              friendlyError = friendlyError.replaceAll('Clock-in ditolak: ', '') + "\n\nSistem Anti-Penipuan mengesan anda tidak berada berdekatan dengan Ketua (Pos Utama).";
+              friendlyError = "${friendlyError.replaceAll('Clock-in ditolak: ', '')}\n\nSistem Anti-Penipuan mengesan anda tidak berada berdekatan dengan Ketua (Pos Utama).";
               modalTitle = 'Lokasi Tidak Sah';
               modalIcon = Icons.location_off;
               modalColor = Colors.redAccent;
@@ -366,7 +356,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                   const SizedBox(height: 32),
                   OutlinedButton.icon(
-                    onPressed: () => _clearShiftData(),
+                    onPressed: () => _clearShiftData(callApi: true),
                     icon: const Icon(Icons.stop_circle_outlined, color: Colors.redAccent),
                     label: const Text('Tamatkan Shif Awal', style: TextStyle(color: Colors.redAccent)),
                     style: OutlinedButton.styleFrom(
@@ -479,5 +469,140 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _showEquipmentSelectionDialog(AttendanceProvider provider) async {
+    List<String> selectedEquipment = [];
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: const Color(0xFF1E1E1E),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.inventory_2_outlined, color: Colors.lightBlueAccent, size: 48),
+                    const SizedBox(height: 16),
+                    const Text('Pilih Peralatan', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 8),
+                    const Text('Tandakan peralatan yang anda ambil dari Pos Utama.', 
+                      style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+                    const SizedBox(height: 24),
+                    
+                    if (provider.availableEquipment.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text('Tiada peralatan direkodkan.', style: TextStyle(color: Colors.white54)),
+                      )
+                    else
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: provider.availableEquipment.map((eq) {
+                              final bool isSelected = selectedEquipment.contains(eq['id']);
+                              final int available = int.parse(eq['available_quantity'].toString());
+                              final bool outOfStock = available <= 0;
+                              return CheckboxListTile(
+                                title: Text(eq['item_name'], style: TextStyle(color: outOfStock ? Colors.white30 : Colors.white)),
+                                subtitle: Text('Tinggal: $available', style: TextStyle(color: outOfStock ? Colors.redAccent : Colors.white54)),
+                                value: isSelected,
+                                activeColor: Colors.lightBlueAccent,
+                                checkColor: Colors.black,
+                                selectedTileColor: Colors.lightBlueAccent.withValues(alpha: 0.1),
+                                onChanged: outOfStock ? null : (bool? val) {
+                                  setDialogState(() {
+                                    if (val == true) {
+                                      selectedEquipment.add(eq['id']);
+                                    } else {
+                                      selectedEquipment.remove(eq['id']);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.lightBlueAccent,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: provider.isLoading ? null : () async {
+                          // Capture navigator to avoid use_build_context_synchronously
+                          final navigator = Navigator.of(context);
+                          
+                          // Submit equipment
+                          bool ok = await provider.submitEquipmentSelection(selectedEquipment);
+                          if (ok && mounted) {
+                            navigator.pop(); // Close dialog
+                            _finalizeShiftStart();
+                          }
+                        },
+                        child: provider.isLoading 
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                            : const Text('Sahkan & Mula Shif', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        );
+      }
+    );
+  }
+
+  Future<void> _finalizeShiftStart() async {
+    Position? position = await Geolocator.getLastKnownPosition();
+    String locationString = "GPS Data Secured";
+    
+    if (position != null) {
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          locationString = '${place.locality}, ${place.administrativeArea}';
+        } else {
+          locationString = "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
+        }
+      } catch (e) {
+        locationString = "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
+      }
+    }
+
+    final DateTime now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('shiftActive', true);
+    await prefs.setString('activeCheckpoint', 'Pos Utama KRT');
+    await prefs.setString('activeLocation', locationString);
+    await prefs.setString('shiftStartTime', now.toIso8601String());
+
+    if (mounted) {
+      setState(() {
+        _shiftActive = true;
+        _activeCheckpoint = 'Pos Utama KRT';
+        _activeLocation = locationString;
+        _shiftStartTime = now;
+        _isProcessing = false;
+      });
+    }
+    
+    _scannerController?.dispose();
+    _scannerController = null;
   }
 }

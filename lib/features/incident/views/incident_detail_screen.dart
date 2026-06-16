@@ -1,59 +1,18 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:uuid/uuid.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/constants/api_constants.dart';
 import '../../../core/widgets/image_viewer_screen.dart';
+import '../../../core/utils/logger.dart';
 
-class IncidentDetailScreen extends StatefulWidget {
+class IncidentDetailScreen extends StatelessWidget {
   final Map<String, dynamic> incident;
 
   const IncidentDetailScreen({super.key, required this.incident});
-
-  @override
-  State<IncidentDetailScreen> createState() => _IncidentDetailScreenState();
-}
-
-class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
-  List<dynamic> _addendums = [];
-  bool _isLoading = true;
-  final TextEditingController _addendumController = TextEditingController();
-  final List<File> _addendumImages = [];
-  final ImagePicker _picker = ImagePicker();
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAddendums();
-  }
-
-  Future<void> _fetchAddendums() async {
-    try {
-      final response = await http.get(Uri.parse('${ApiConstants.baseUrl}incidents/get_addendums.php?incident_id=${widget.incident['id']}'));
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> body = json.decode(response.body);
-        setState(() {
-          _addendums = body['data'];
-          _isLoading = false;
-        });
-      } else {
-        throw Exception('Failed to load addendums');
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _pickAddendumImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-    if (image != null) {
-      setState(() => _addendumImages.add(File(image.path)));
-    }
-  }
 
   List<String> _parseImages(dynamic imageUrlData) {
     if (imageUrlData == null || imageUrlData.toString().isEmpty) return [];
@@ -62,218 +21,328 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
         List<dynamic> parsed = json.decode(imageUrlData);
         return parsed.map((e) => e.toString()).toList();
       }
-    } catch (e) {}
+    } catch (e) {
+      appLogger.w('Failed to parse image URL array, falling back to string: $e');
+    }
     return [imageUrlData.toString()];
   }
 
-  Future<void> _submitAddendum() async {
-    if (_addendumController.text.trim().isEmpty && _addendumImages.isEmpty) return;
-
+  Future<pw.Document> _buildPdf() async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.baseUrl}incidents/addendum.php'));
-      request.fields['id'] = const Uuid().v4();
-      request.fields['incident_id'] = widget.incident['id'];
-      request.fields['text_content'] = _addendumController.text.trim();
+      final pdf = pw.Document();
 
-      for (var file in _addendumImages) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'images[]',
-          file.path,
-        ));
-      }
+      final String namaPeronda = incident['full_name'] ?? '-';
 
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        _addendumController.clear();
-        setState(() => _addendumImages.clear());
-        _fetchAddendums(); // Refresh list
-      }
-    } catch (e) {
+      String tarikh = '-';
+      String masa = '-';
+      try {
+        if (incident['created_at'] != null) {
+          final dt = DateTime.parse(incident['created_at'].toString());
+          tarikh = DateFormat('dd MMMM yyyy').format(dt);
+          masa = DateFormat('hh:mm a').format(dt);
+        }
+      } catch (_) {}
+
+      final String lokasi = incident['location_name'] ?? '-';
+      final String peristiwa = incident['description'] ?? '-';
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Title
+                pw.Center(
+                  child: pw.Text(
+                    'BUKU NOTA HARIAN',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                      decoration: pw.TextDecoration.underline,
+                    ),
+                  ),
+                ),
+                pw.SizedBox(height: 24),
+
+                // Main bordered box matching exact Lampiran 4
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(20),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 1.0),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _pdfField('NAMA PERONDA', namaPeronda),
+                      pw.SizedBox(height: 20),
+                      _pdfField('TARIKH RONDAAN', tarikh),
+                      pw.SizedBox(height: 20),
+                      _pdfField('MASA RONDAAN', masa),
+                      pw.SizedBox(height: 20),
+                      _pdfField('LOKASI RONDAAN', lokasi),
+                      pw.SizedBox(height: 24),
+
+                      // Peristiwa section
+                      pw.Text(
+                        'PERISTIWA BERLAKU\nSEMASA RONDAAN:',
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      pw.SizedBox(height: 16),
+                      // Text representation of the lines
+                      pw.Container(
+                        width: double.infinity,
+                        constraints: const pw.BoxConstraints(minHeight: 200),
+                        child: pw.Text(
+                          peristiwa,
+                          style: const pw.TextStyle(fontSize: 12, lineSpacing: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      return pdf;
+    } catch (e, stackTrace) {
+      final errorPdf = pw.Document();
+      errorPdf.addPage(pw.Page(
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('ERROR GENERATING PDF:', style: pw.TextStyle(color: PdfColors.red, fontSize: 18)),
+            pw.SizedBox(height: 16),
+            pw.Text(e.toString()),
+            pw.SizedBox(height: 16),
+            pw.Text(stackTrace.toString(), style: const pw.TextStyle(fontSize: 8)),
+          ]
+        )
+      ));
+      return errorPdf;
     }
+  }
+
+  pw.Widget _pdfField(String label, String value) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(
+          width: 160,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+          ),
+        ),
+        pw.Text(' : '),
+        pw.SizedBox(width: 12),
+        pw.Expanded(
+          child: pw.Text(value, style: const pw.TextStyle(fontSize: 12)),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     final settings = context.watch<SettingsProvider>();
+    final images = _parseImages(incident['image_url']);
+
+    final String namaPeronda = incident['full_name'] ?? '-';
+    final String tarikh = incident['created_at'] != null
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(incident['created_at']))
+        : '-';
+    final String lokasi = incident['location_name'] ?? '-';
+    final String kategori = incident['category'] ?? '-';
+    final String peristiwa = incident['description'] ?? '-';
+    final String agensiDirujuk = incident['reported_to'] ?? 'Tiada';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(settings.t('Butiran Insiden')),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (_parseImages(widget.incident['image_url']).isNotEmpty)
-                  SizedBox(
-                    height: 200,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: _parseImages(widget.incident['image_url']).asMap().entries.map((entry) {
-                        int index = entry.key;
-                        String url = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => ImageViewerScreen(
-                                imageUrls: _parseImages(widget.incident['image_url']),
-                                initialIndex: index,
-                              )));
+        title: Text(settings.t('Buku Nota Harian')),
+        actions: [
+          // PDF Preview & Print button
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: settings.t('Pratonton PDF Lampiran 4'),
+            onPressed: () {
+              if (context.mounted) {
+                if (MediaQuery.of(context).size.width > 600) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => Dialog(
+                      backgroundColor: Colors.transparent,
+                      insetPadding: const EdgeInsets.all(40),
+                      child: Container(
+                        width: 800,
+                        height: 700,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Scaffold(
+                          appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                          body: PdfPreview(
+                            build: (format) async {
+                              final doc = await _buildPdf();
+                              return doc.save();
                             },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(url, fit: BoxFit.cover, width: 250),
-                            ),
+                            canChangeOrientation: false,
+                            canChangePageFormat: false,
+                            pdfFileName: 'buku_nota_harian_${incident['id']}.pdf',
                           ),
-                        );
-                      }).toList(),
+                        ),
+                      ),
                     ),
-                  ),
-                const SizedBox(height: 16),
-                Text(widget.incident['title'], style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(widget.incident['description'] ?? '', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8))),
-                Divider(color: theme.dividerColor.withValues(alpha: 0.2), height: 32),
-                Text(settings.t('Catatan Tambahan'), style: TextStyle(color: theme.primaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
-                if (_isLoading)
-                  Center(child: CircularProgressIndicator(color: theme.primaryColor))
-                else if (_addendums.isEmpty)
-                  Text(settings.t('Tiada catatan tambahan direkodkan.'), style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)))
-                else
-                  ..._addendums.map((a) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (a['text_content'] != null && a['text_content'].isNotEmpty)
-                          Text(a['text_content'], style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
-                        if (_parseImages(a['image_url']).isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: SizedBox(
-                              height: 120,
-                              child: ListView(
-                                scrollDirection: Axis.horizontal,
-                                children: _parseImages(a['image_url']).asMap().entries.map((entry) {
-                                  int index = entry.key;
-                                  String url = entry.value;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(context, MaterialPageRoute(builder: (_) => ImageViewerScreen(
-                                          imageUrls: _parseImages(a['image_url']),
-                                          initialIndex: index,
-                                        )));
-                                      },
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(url, height: 120, width: 120, fit: BoxFit.cover),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 4),
-                        Text(a['created_at'], style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6), fontSize: 12)),
-                      ],
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                        appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                        body: PdfPreview(
+                          build: (format) async {
+                            final doc = await _buildPdf();
+                            return doc.save();
+                          },
+                          canChangeOrientation: false,
+                          canChangePageFormat: false,
+                          pdfFileName: 'buku_nota_harian_${incident['id']}.pdf',
+                        ),
+                      ),
                     ),
-                  )),
-              ],
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ─── Evidence Images ───
+          if (images.isNotEmpty) ...[
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: images.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => ImageViewerScreen(imageUrls: images, initialIndex: index),
+                      )),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(images[index], fit: BoxFit.cover, width: 250),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // ─── Title ───
+          Text(
+            incident['title'] ?? settings.t('Tiada Tajuk'),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: theme.textTheme.titleLarge?.color,
             ),
           ),
+          const SizedBox(height: 16),
+
+          // ─── Formal Record Card ───
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: theme.cardColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                )
-              ]
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
             ),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  if (_addendumImages.isNotEmpty)
-                    Container(
-                      height: 80,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: _addendumImages.map((file) => Stack(
-                          children: [
-                            Container(
-                              height: 80,
-                              width: 80,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                image: DecorationImage(image: FileImage(file), fit: BoxFit.cover),
-                              ),
-                            ),
-                            Positioned(
-                              right: 12,
-                              top: 4,
-                              child: GestureDetector(
-                                onTap: () => setState(() => _addendumImages.remove(file)),
-                                child: Container(
-                                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withValues(alpha: 0.6)),
-                                  padding: const EdgeInsets.all(2),
-                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )).toList(),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.camera_alt, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.6)),
-                        onPressed: _pickAddendumImage,
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: _addendumController,
-                          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                          decoration: InputDecoration(
-                            hintText: settings.t('Tambah catatan...'),
-                            hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.4)),
-                            filled: true,
-                            fillColor: theme.inputDecorationTheme.fillColor,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.send, color: theme.primaryColor),
-                        onPressed: _submitAddendum,
-                      )
-                    ],
-                  ),
-                ],
+            child: Column(
+              children: [
+                _buildInfoRow(context, Icons.person, settings.t('Nama Peronda'), namaPeronda),
+                const Divider(height: 20),
+                _buildInfoRow(context, Icons.calendar_today, settings.t('Tarikh & Masa'), tarikh),
+                const Divider(height: 20),
+                _buildInfoRow(context, Icons.location_on, settings.t('Lokasi Rondaan'), lokasi),
+                const Divider(height: 20),
+                _buildInfoRow(context, Icons.category, settings.t('Kategori'), kategori),
+                const Divider(height: 20),
+                _buildInfoRow(context, Icons.account_balance, settings.t('Agensi Dirujuk'), agensiDirujuk),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ─── Peristiwa Berlaku ───
+          Text(
+            settings.t('Peristiwa Berlaku Semasa Rondaan'),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: theme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
+            ),
+            child: Text(
+              peristiwa,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.6,
+                color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.85),
               ),
             ),
-          )
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: theme.primaryColor),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

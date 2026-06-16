@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
+import '../utils/logger.dart';
 
 class ApiClient {
   /// Sends a POST request to your PHP server.
@@ -15,11 +16,7 @@ class ApiClient {
       // http.post automatically encodes Map<String, String> so PHP's $_POST can read it
       final response = await http.post(url, body: body);
       // 1. INJECT THIS DEBUG LINE:
-      print('=== RAW HTTP NETWORK DATA ===');
-      print('Target URI Hit: ${response.request?.url}');
-      print('HTTP Status Code: ${response.statusCode}');
-      print('Raw Body Response: "${response.body}"');
-      print('=============================');
+      appLogger.d('=== RAW HTTP NETWORK DATA ===\nTarget URI Hit: ${response.request?.url}\nHTTP Status Code: ${response.statusCode}\nRaw Body Response: "${response.body}"\n=============================');
       // Prevent the crash if the server returns a blank response
       if (response.body.isEmpty) {
         throw Exception(
@@ -34,11 +31,7 @@ class ApiClient {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      print('=== CRITICAL NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      print('Target URI: $url');
-      print('Stack Trace: $stackTrace');
-      print('==================================');
+      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================', error: e, stackTrace: stackTrace);
       throw Exception("Network connection failed: $e");
     }
   }
@@ -57,11 +50,7 @@ class ApiClient {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      print('=== CRITICAL NETWORK EXCEPTION ===');
-      print('Exception: $e');
-      print('Target URI: $url');
-      print('Stack Trace: $stackTrace');
-      print('==================================');
+      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================', error: e, stackTrace: stackTrace);
       throw Exception("Network connection failed: $e");
     }
   }

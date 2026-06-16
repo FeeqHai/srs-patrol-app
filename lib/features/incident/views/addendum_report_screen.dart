@@ -89,7 +89,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -123,7 +123,7 @@ class _AddendumReportScreenState extends State<AddendumReportScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => Dialog(
-            backgroundColor: Theme.of(context).dialogBackgroundColor,
+            backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
