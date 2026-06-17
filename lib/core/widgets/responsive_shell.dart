@@ -65,7 +65,7 @@ class ResponsiveShell extends StatelessWidget {
           ),
           endDrawer: endDrawer,
           body: isLargeScreen ? _buildLargeScreen(context) : _buildSmallScreen(context),
-          extendBody: !isLargeScreen,
+          extendBody: false,
           bottomNavigationBar: isLargeScreen ? null : _buildGlassBottomBar(context),
         );
       },

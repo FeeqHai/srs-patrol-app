@@ -49,9 +49,14 @@ class AuthProvider extends ChangeNotifier {
       if (data['status'] == 'success') {
         _userId = data['data']['id'];
         _role = data['data']['role'];
+        final String? token = data['token'];
+        
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', _userId!);
         await prefs.setString('user_role', _role!);
+        if (token != null) {
+          await prefs.setString('jwt_token', token);
+        }
 
         _isLoading = false;
         notifyListeners();
@@ -77,6 +82,7 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_id');
     await prefs.remove('user_role');
+    await prefs.remove('jwt_token');
     _userId = null;
     _role = null;
     notifyListeners();

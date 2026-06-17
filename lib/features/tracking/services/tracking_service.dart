@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 
 class TrackingService {
@@ -11,9 +12,18 @@ class TrackingService {
     required double longitude,
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
       final response = await http.post(
         Uri.parse(_sosEndpoint),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: json.encode({
           'user_id': userId,
           'latitude': latitude,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../utils/logger.dart';
 
@@ -13,8 +14,15 @@ class ApiClient {
     final url = Uri.parse(ApiConstants.baseUrl + endpoint);
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
       // http.post automatically encodes Map<String, String> so PHP's $_POST can read it
-      final response = await http.post(url, body: body);
+      final response = await http.post(url, headers: headers, body: body);
       // 1. INJECT THIS DEBUG LINE:
       appLogger.d('=== RAW HTTP NETWORK DATA ===\nTarget URI Hit: ${response.request?.url}\nHTTP Status Code: ${response.statusCode}\nRaw Body Response: "${response.body}"\n=============================');
       // Prevent the crash if the server returns a blank response
@@ -42,7 +50,14 @@ class ApiClient {
     final url = Uri.parse(ApiConstants.baseUrl + endpoint);
 
     try {
-      final response = await http.get(url);
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -42,7 +43,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      final response = await http.get(Uri.parse('${ApiConstants.baseUrl}auth/get_profile.php?user_id=$userId'));
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}auth/get_profile.php'),
+        headers: headers,
+      );
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = json.decode(response.body);
@@ -53,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         } else {
           setState(() {
-            _error = body['message'] ?? 'Gagal memuat turun profil.';
+            _error = body['message'] ?? settings.t('Gagal memuat turun profil.');
             _isLoading = false;
           });
         }
@@ -121,13 +132,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                children: [
                    CircleAvatar(radius: 48, backgroundColor: Theme.of(context).primaryColor, child: const Icon(Icons.person, size: 48, color: Colors.white)),
                    const SizedBox(height: 16),
-                   Text(_user!.fullName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color), textAlign: TextAlign.center),
-                   const SizedBox(height: 8),
-                   Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                     decoration: BoxDecoration(color: const Color(0xFFFFD100).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-                     child: Text(_user!.role.toUpperCase(), style: const TextStyle(color: Color(0xFF0F3D87), fontWeight: FontWeight.bold, letterSpacing: 1)),
-                   ),
+                    Text(_user!.fullName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color), textAlign: TextAlign.center),
+                    const SizedBox(height: 8),
+                    Builder(
+                      builder: (context) {
+                        final theme = Theme.of(context);
+                        String roleDisplay = _user!.role;
+                        if (roleDisplay == 'peronda') {
+                          roleDisplay = settings.t('Peronda');
+                        } else if (roleDisplay == 'ketua_peronda') {
+                          roleDisplay = settings.t('Ketua Peronda');
+                        } else if (roleDisplay == 'ketua_krt' || roleDisplay == 'ketua') {
+                          roleDisplay = settings.t('Ketua KRT');
+                        }
+                        
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            roleDisplay.toUpperCase(),
+                            style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, letterSpacing: 1),
+                          ),
+                        );
+                      },
+                    ),
                ]
             )
           ),
@@ -147,8 +178,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Divider(height: 1),
                   _buildInfoRow(settings.t('E-mel'), _user!.email ?? settings.t('Tiada'), Icons.email_outlined),
                   const Divider(height: 1),
-                  _buildInfoRow(settings.t('Status Akaun'), _user!.accountStatus?.toUpperCase() ?? 'PENDING', Icons.verified_user_outlined, 
-                    valueColor: _user!.accountStatus == 'active' ? Colors.green : Colors.orange),
+                  Builder(
+                    builder: (context) {
+                      String statusDisplay = _user!.accountStatus ?? 'pending';
+                      if (statusDisplay == 'active') {
+                        statusDisplay = settings.t('Aktif');
+                      } else if (statusDisplay == 'inactive') {
+                        statusDisplay = settings.t('Nyahaktif');
+                      } else {
+                        statusDisplay = settings.t('Menunggu');
+                      }
+
+                      return _buildInfoRow(
+                        settings.t('Status Akaun'),
+                        statusDisplay.toUpperCase(),
+                        Icons.verified_user_outlined,
+                        valueColor: _user!.accountStatus == 'active' ? Colors.green : Colors.orange,
+                      );
+                    },
+                  ),
                ]
             )
           )

@@ -46,7 +46,7 @@ class AttendanceProvider extends ChangeNotifier {
   Future<void> fetchEquipment() async {
     try {
       final response = await ApiClient.getData('equipment/get_inventory.php');
-      if (response['success'] == true) {
+      if (response['status'] == 'success') {
         _availableEquipment = response['data'] ?? [];
         notifyListeners();
       }

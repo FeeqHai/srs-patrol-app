@@ -175,7 +175,13 @@ class _MainShellState extends State<MainShell> {
         },
       ),
       const IncidentScreen(),
-      const AttendanceScreen(),
+      AttendanceScreen(
+        onNavigateToDashboard: () {
+          setState(() {
+            _currentIndex = 0;
+          });
+        },
+      ),
     ];
 
     final settings = context.watch<SettingsProvider>();

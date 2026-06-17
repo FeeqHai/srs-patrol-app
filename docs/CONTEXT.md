@@ -686,10 +686,14 @@ $conn->close();
    - `AlertDialog` with `CheckboxListTile` items from `equipment_inventory`.
    - Selected equipment logged via `attendance/log_equipment.php`.
 5. Shift state persisted in `SharedPreferences`: `shiftActive`, `activeCheckpoint`, `shiftStartTime`.
+6. Active shift state UI simplified: shows read-only summary logs with a "KEMBALI KE PAPAN PEMUKA" callback to switch the shell tab index back to Dashboard (`0`), removing redundancy.
 
 **Clock-Out** (Patroller → `dashboard_screen.dart`):
 1. "End Shift Early" button on dashboard.
-2. Calls `attendance/clock_out.php` → marks `clock_out_time` and `returned_at` on equipment logs.
+2. Calls unified `AttendanceProvider.clockOut()`:
+   - Secures current GPS location lock.
+   - Invokes POST to `attendance/clock_out.php` to log coordinates (`clock_out_latitude`, `clock_out_longitude`) and timestamp.
+   - Auto-returns all checked-out equipment logs (`returned_at` set to current time).
 3. Clears shift state from `SharedPreferences`.
 
 ### 6.2 Incident Reporting
@@ -749,19 +753,16 @@ $conn->close();
 
 ### 6.5 Analytics Dashboard
 
-**Current state** (`analytics_screen.dart`, 514 lines):
+**Current state** (`analytics_screen.dart`):
+- Time-of-day greetings and initials-based user avatar.
 - 3 KPI cards: Weekly Incidents, Active Shifts, Registered Patrollers.
-- `LineChart` (7-day incident trend) via `fl_chart`.
-- Live patrol feed: list of currently active patrollers with animated pulsing green dot.
+- `LineChart` (Weekly 7-day or Monthly 30-day incident trend) with M3 `SegmentedButton` toggle.
+- Interactive `PieChart` representing JPNIN crime category breakdowns (Violent, Property, Narcotics & Social, Others) with touch responses and list-based legend.
+- `BarChart` representing Zone Heatmap Comparison across the 5 deployment zones.
+- Top Hotspot Zones Ranked List displaying zones with incident badges and progress density bars.
+- Severity & Stats Breakdown card rendering colored linear progress bars.
+- Live patrol feed: list of active patrollers with initials avatars and animated pulsing green dot.
 - "Generate Lampiran 6" button → navigates to Lampiran 6 screen.
-
-**Planned comprehensive analytics**:
-- **Weekly/Monthly crime trends** — line chart with period toggle.
-- **Category breakdown** — pie/donut chart showing distribution of 24 JPNIN categories.
-- **Zone heatmap comparison** — bar chart comparing incident counts across 5 zones.
-- **Top 5 hotspot zones** — ranked list with incident count badges.
-- **Severity distribution** — breakdown by crime group (A: Violent, B: Property, C: Other, D: Misc).
-- **Patrol effectiveness** — correlation metric: incidents per patrol hour.
 
 ### 6.6 Squad & Schedule Management
 
@@ -800,10 +801,13 @@ Create new screen for equipment tracking with QR scanner to check in and check o
 
 ### 6.8 Dashboard — Patroller Home
 
-**Current state** (`dashboard_screen.dart`, 19KB):
-- 7-day incident trend bar chart (`fl_chart` BarChart).
-- SOS alert feed with "Open in Maps" action.
-- "Start Shift" / "End Shift Early" toggle buttons.
+**Current state** (`dashboard_screen.dart`):
+- Time-of-day greetings and initials-based user avatar.
+- 3 KPI/Stat Cards (Zon Rondaan, Laporan Saya, Shif Aktif) with solid Material 3 surfaces (no glassmorphism).
+- Active Shift CTA Widget: Prominent state-aware container displaying shift clock-in state or elapsed time with a pulsing monospace digital timer.
+- M3 SegmentedButton to toggle between Daily, Weekly, and Monthly incident filters.
+- 7-day incident trend line chart (`fl_chart` LineChart) with smooth gradient underlay.
+- SOS alert feed banner with "LIHAT LOKASI" (Google Maps link) action.
 - GPS location permission handling with custom dialog.
 - `RefreshIndicator` for pull-to-refresh.
 - Responsive layout via `LayoutBuilder`.

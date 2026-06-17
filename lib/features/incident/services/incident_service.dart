@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/logger.dart';
 
@@ -22,6 +23,12 @@ class IncidentService {
     try {
       var uri = Uri.parse(_uploadEndpoint);
       var request = http.MultipartRequest('POST', uri);
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
 
       // 1. Generate unique ID for the report
       String incidentId = const Uuid().v4();
@@ -71,7 +78,15 @@ class IncidentService {
       if (patrollerId != null && patrollerId.isNotEmpty) {
         url += '?user_id=$patrollerId';
       }
-      final response = await http.get(Uri.parse(url));
+      
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(Uri.parse(url), headers: headers);
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -88,6 +103,4 @@ class IncidentService {
       throw Exception("Network Exception: $e");
     }
   }
-
-  
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/constants/api_constants.dart';
@@ -28,7 +29,17 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
 
   Future<void> _fetchPatrollers() async {
     try {
-      final response = await http.get(Uri.parse('${ApiConstants.baseUrl}auth/get_patrollers.php'));
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}auth/get_patrollers.php'),
+        headers: headers,
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {

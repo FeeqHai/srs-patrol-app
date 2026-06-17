@@ -181,7 +181,13 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
       ),
       const IncidentScreen(),
       const AdminIncidentScreen(),
-      const AttendanceScreen(),
+      AttendanceScreen(
+        onNavigateToDashboard: () {
+          setState(() {
+            _currentIndex = 0;
+          });
+        },
+      ),
     ];
 
     final settings = context.watch<SettingsProvider>();

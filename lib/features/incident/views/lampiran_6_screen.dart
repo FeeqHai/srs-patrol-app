@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -42,10 +43,17 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
       final url = '${ApiConstants.baseUrl}incidents/get_lampiran_6_summary.php'
           '?month_offset=$_monthOffset&user_id=$userId&level=$_selectedLevel';
 
-      final response = await http.get(Uri.parse(url));
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(Uri.parse(url), headers: headers);
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
-        if (body['success']) {
+        if (body['status'] == 'success') {
           setState(() {
             _data = body['data'] ?? {};
             _monthLabel = body['month_label'] ?? '';

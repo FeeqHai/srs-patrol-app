@@ -41,9 +41,7 @@ dependencies:
 
   # Hardware & Location
   geolocator: ^14.0.2      # For your GPS background tracking
-  google_mlkit_face_detection: ^0.12.0  # For PDPA blurring
   camera: ^0.11.0          # For snapping incident photos
-  flutter_webrtc: ^0.12.2  # For the Walkie-Talkie PTT feature
 
 
   # The following adds the Cupertino Icons font to your application.

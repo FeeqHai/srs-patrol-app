@@ -28,13 +28,14 @@ class _AdminSquadScheduleScreenState extends State<AdminSquadScheduleScreen> wit
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
     return Column(
       children: [
         TabBar(
           controller: _tabController,
-          labelColor: Colors.lightBlueAccent,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.lightBlueAccent,
+          labelColor: theme.colorScheme.primary,
+          unselectedLabelColor: theme.disabledColor,
+          indicatorColor: theme.colorScheme.primary,
           tabs: [
             Tab(text: settings.t('Kumpulan')),
             Tab(text: settings.t('Penjadualan')),
@@ -65,6 +66,8 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
   List<dynamic> _squads = [];
   bool _isLoading = true;
 
+  SettingsProvider get settings => Provider.of<SettingsProvider>(context, listen: false);
+
   @override
   void initState() {
     super.initState();
@@ -91,14 +94,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'action': 'create_squad',
         'name': name,
       });
-      if (response['success'] == true) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kumpulan berjaya dicipta!')));
+      if (response['success'] == true || response['status'] == 'success') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Kumpulan berjaya dicipta!'))));
         _fetchSquads();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Ralat mencipta kumpulan')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t(response['message'] ?? 'Ralat mencipta kumpulan'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
     }
   }
 
@@ -109,14 +112,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'squad_id': squadId,
         'user_id': userId,
       });
-      if (response['success'] == true) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ahli berjaya ditambah!')));
+      if (response['success'] == true || response['status'] == 'success') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Ahli berjaya ditambah!'))));
         _fetchSquads();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Ralat menambah ahli')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t(response['message'] ?? 'Ralat menambah ahli'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
     }
   }
 
@@ -127,14 +130,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'squad_id': squadId,
         'user_id': userId,
       });
-      if (response['success'] == true) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ahli berjaya dikeluarkan!')));
+      if (response['success'] == true || response['status'] == 'success') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Ahli berjaya dikeluarkan!'))));
         _fetchSquads();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Ralat mengeluarkan ahli')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t(response['message'] ?? 'Ralat mengeluarkan ahli'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
     }
   }
 
@@ -144,23 +147,24 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'action': 'delete_squad',
         'squad_id': squadId,
       });
-      if (response['success'] == true) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kumpulan dipadam!')));
+      if (response['success'] == true || response['status'] == 'success') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Kumpulan dipadam!'))));
         _fetchSquads();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Ralat memadam kumpulan')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t(response['message'] ?? 'Ralat memadam kumpulan'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ralat memadam kumpulan')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Ralat memadam kumpulan'))));
     }
   }
 
   void _showCreateSquadDialog() {
     final TextEditingController nameController = TextEditingController();
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return Padding(
@@ -169,14 +173,19 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Cipta Kumpulan Baru', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F3D87))),
+              Text(
+                settings.t('Cipta Kumpulan Baru'),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.primaryColor),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: nameController,
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
-                  labelText: 'Nama Kumpulan',
+                  labelText: settings.t('Nama Kumpulan'),
+                  labelStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0F3D87))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -184,7 +193,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F3D87),
+                    backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -195,7 +204,10 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                       _createSquad(nameController.text);
                     }
                   },
-                  child: const Text('Simpan Kumpulan', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    settings.t('Simpan Kumpulan'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -207,8 +219,13 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
   }
 
   void _showAddMemberDialog(String squadId) async {
+    final theme = Theme.of(context);
     // Show loading dialog
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(child: CircularProgressIndicator(color: theme.primaryColor)),
+    );
     
     try {
       final response = await ApiClient.getData('auth/get_patrollers.php');
@@ -218,10 +235,11 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
       if (response['status'] == 'success') {
         final List<dynamic> patrollers = response['data'] ?? [];
         
+        if (!mounted) return;
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          backgroundColor: Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           builder: (context) {
             return Container(
@@ -230,11 +248,19 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Pilih Peronda', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F3D87))),
+                  Text(
+                    settings.t('Pilih Peronda'),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.primaryColor),
+                  ),
                   const SizedBox(height: 16),
                   Expanded(
                     child: patrollers.isEmpty
-                      ? const Center(child: Text('Tiada peronda dijumpai'))
+                      ? Center(
+                          child: Text(
+                            settings.t('Tiada peronda dijumpai'),
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        )
                       : ListView.builder(
                           itemCount: patrollers.length,
                           itemBuilder: (context, index) {
@@ -244,46 +270,51 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
 
                             return Card(
                               elevation: 0,
-                              color: isAssigned ? Colors.grey.shade100 : Colors.grey.shade50,
+                              color: isAssigned ? theme.disabledColor.withValues(alpha: 0.1) : theme.cardColor,
                               margin: const EdgeInsets.only(bottom: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(color: isAssigned ? Colors.grey.shade300 : Colors.grey.shade200)
+                                side: BorderSide(color: theme.dividerColor),
                               ),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: isAssigned ? Colors.grey : const Color(0xFF0F3D87),
+                                  backgroundColor: isAssigned ? theme.disabledColor : theme.primaryColor,
                                   child: const Icon(Icons.person, color: Colors.white, size: 20),
                                 ),
                                 title: Text(
                                   p['full_name'],
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: isAssigned ? Colors.grey : Colors.black87
-                                  )
+                                    color: isAssigned ? theme.disabledColor : theme.textTheme.bodyLarge?.color,
+                                  ),
                                 ),
                                 subtitle: Text(
-                                  isAssigned ? 'Telah ditugaskan ke: $squadName' : 'Zon: ${p['district_zone'] ?? '-'}',
+                                  isAssigned 
+                                      ? '${settings.t("Telah ditugaskan ke:")} $squadName' 
+                                      : '${settings.t("Zon")}: ${p['zone'] ?? p['district_zone'] ?? '-'}',
                                   style: TextStyle(
-                                    color: isAssigned ? Colors.redAccent.shade700 : Colors.grey.shade600,
-                                    fontWeight: isAssigned ? FontWeight.w500 : FontWeight.normal
-                                  )
+                                    color: isAssigned ? Colors.redAccent.shade700 : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                                    fontWeight: isAssigned ? FontWeight.w500 : FontWeight.normal,
+                                  ),
                                 ),
                                 trailing: isAssigned
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 90,
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.end,
                                         children: [
-                                          Icon(Icons.lock_outline, color: Colors.grey, size: 16),
-                                          SizedBox(width: 4),
-                                          Text('Terkunci', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                          Icon(Icons.lock_outline, color: theme.disabledColor, size: 16),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            settings.t('Terkunci'),
+                                            style: TextStyle(color: theme.disabledColor, fontSize: 12),
+                                          ),
                                         ],
                                       ),
                                     )
                                   : ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFFFD100),
+                                        backgroundColor: theme.colorScheme.secondary,
                                         foregroundColor: Colors.black,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -292,7 +323,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                         Navigator.pop(context);
                                         _addMember(squadId, p['id'].toString());
                                       },
-                                      child: const Text('Pilih'),
+                                      child: Text(settings.t('Pilih')),
                                     ),
                               ),
                             );
@@ -308,16 +339,18 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat memuat senarai: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat memuat senarai:")} $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    final settings = Provider.of<SettingsProvider>(context);
+    final theme = Theme.of(context);
+    if (_isLoading) return Center(child: CircularProgressIndicator(color: theme.primaryColor));
 
     return Container(
-      color: Colors.grey.shade50,
+      color: theme.scaffoldBackgroundColor,
       child: Column(
         children: [
           Padding(
@@ -325,13 +358,13 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
             child: ElevatedButton.icon(
               onPressed: _showCreateSquadDialog,
               icon: const Icon(Icons.add_circle),
-              label: const Text('Cipta Kumpulan Baru'),
+              label: Text(settings.t('Cipta Kumpulan Baru')),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                backgroundColor: const Color(0xFF0F3D87),
+                backgroundColor: theme.primaryColor,
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shadowColor: const Color(0xFF0F3D87).withValues(alpha: 0.4),
+                shadowColor: theme.primaryColor.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -343,9 +376,12 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.group_off, size: 64, color: Colors.grey.shade300),
+                        Icon(Icons.group_off, size: 64, color: theme.disabledColor),
                         const SizedBox(height: 16),
-                        Text('Tiada Kumpulan Direkodkan', style: TextStyle(color: Colors.grey.shade500, fontSize: 16, fontWeight: FontWeight.w500)),
+                        Text(
+                          settings.t('Tiada Kumpulan Direkodkan'),
+                          style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6), fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
                       ],
                     ),
                   )
@@ -359,35 +395,45 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                       return Card(
                         elevation: 2,
                         shadowColor: Colors.black.withValues(alpha: 0.05),
-                        color: Colors.white,
+                        color: theme.cardColor,
                         margin: const EdgeInsets.only(bottom: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.grey.shade200),
+                          side: BorderSide(color: theme.dividerColor),
                         ),
                         child: Theme(
                           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
                             tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            iconColor: const Color(0xFF0F3D87),
+                            iconColor: theme.primaryColor,
                             title: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF0F3D87).withValues(alpha: 0.1),
+                                    color: theme.primaryColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(Icons.group, color: Color(0xFF0F3D87)),
+                                  child: Icon(Icons.group, color: theme.primaryColor),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(squad['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                                      Text(
+                                        squad['name'],
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: theme.textTheme.bodyLarge?.color,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      Text('${members.length} Ahli', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                                      Text(
+                                        '${members.length} ${settings.t("Ahli")}',
+                                        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6), fontSize: 14),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -397,17 +443,25 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Padam Kumpulan'),
-                                        content: Text('Adakah anda pasti untuk memadam kumpulan "${squad['name']}"? Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.'),
+                                        title: Text(settings.t('Padam Kumpulan')),
+                                        content: Text(
+                                          '${settings.t("Adakah anda pasti untuk memadam kumpulan")} "${squad['name']}"? ${settings.t("Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.")}',
+                                        ),
                                         actions: [
-                                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: Text(settings.t('Batal')),
+                                          ),
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                                             onPressed: () {
                                               Navigator.pop(context);
                                               _deleteSquad(squad['id']);
                                             },
-                                            child: const Text('Padam', style: TextStyle(color: Colors.white)),
+                                            child: Text(
+                                              settings.t('Padam'),
+                                              style: const TextStyle(color: Colors.white),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -419,43 +473,60 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                             children: [
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
+                                  color: theme.scaffoldBackgroundColor,
                                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                                 ),
                                 child: Column(
                                   children: [
                                     if (members.isEmpty)
-                                      const Padding(
-                                        padding: EdgeInsets.all(24.0),
-                                        child: Text('Belum ada ahli.', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+                                      Padding(
+                                        padding: const EdgeInsets.all(24.0),
+                                        child: Text(
+                                          settings.t('Belum ada ahli.'),
+                                          style: TextStyle(color: theme.disabledColor, fontStyle: FontStyle.italic),
+                                        ),
                                       )
                                     else
                                       ...members.map((m) => ListTile(
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                                        leading: const CircleAvatar(
+                                        leading: CircleAvatar(
                                           radius: 16,
-                                          backgroundColor: Colors.white,
-                                          child: Icon(Icons.person, size: 16, color: Colors.grey),
+                                          backgroundColor: theme.cardColor,
+                                          child: Icon(Icons.person, size: 16, color: theme.disabledColor),
                                         ),
-                                        title: Text(m['full_name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                                        subtitle: Text(m['ic_number'] ?? '', style: const TextStyle(fontSize: 12)),
+                                        title: Text(
+                                          m['full_name'],
+                                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: theme.textTheme.bodyLarge?.color),
+                                        ),
+                                        subtitle: Text(
+                                          m['ic_number'] ?? '',
+                                          style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+                                        ),
                                         trailing: IconButton(
                                           icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
                                           onPressed: () {
                                             showDialog(
                                               context: context,
                                               builder: (context) => AlertDialog(
-                                                title: const Text('Keluarkan Ahli'),
-                                                content: Text('Adakah anda pasti untuk mengeluarkan "${m['full_name']}" daripada kumpulan?'),
+                                                title: Text(settings.t('Keluarkan Ahli')),
+                                                content: Text(
+                                                  '${settings.t("Adakah anda pasti untuk mengeluarkan")} "${m['full_name']}" ${settings.t("daripada kumpulan?")}',
+                                                ),
                                                 actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: Text(settings.t('Batal')),
+                                                  ),
                                                   ElevatedButton(
                                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                                                     onPressed: () {
                                                       Navigator.pop(context);
                                                       _removeMember(squad['id'], m['user_id'].toString());
                                                     },
-                                                    child: const Text('Keluarkan', style: TextStyle(color: Colors.white)),
+                                                    child: Text(
+                                                      settings.t('Keluarkan'),
+                                                      style: const TextStyle(color: Colors.white),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -468,10 +539,10 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                       child: OutlinedButton.icon(
                                         onPressed: () => _showAddMemberDialog(squad['id']),
                                         icon: const Icon(Icons.person_add),
-                                        label: const Text('Tambah Ahli'),
+                                        label: Text(settings.t('Tambah Ahli')),
                                         style: OutlinedButton.styleFrom(
-                                          foregroundColor: const Color(0xFF0F3D87),
-                                          side: const BorderSide(color: Color(0xFF0F3D87)),
+                                          foregroundColor: theme.primaryColor,
+                                          side: BorderSide(color: theme.primaryColor),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                           minimumSize: const Size(double.infinity, 44),
                                         ),
@@ -502,6 +573,8 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   List<dynamic> _schedules = [];
   bool _isLoading = true;
 
+  SettingsProvider get settings => Provider.of<SettingsProvider>(context, listen: false);
+
   @override
   void initState() {
     super.initState();
@@ -531,14 +604,14 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
         'start_time': startTime,
         'end_time': endTime,
       });
-      if (response['success'] == true) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jadual berjaya ditetap!')));
+      if (response['success'] == true || response['status'] == 'success') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Jadual berjaya ditetap!'))));
         _fetchSchedules();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Ralat menetapkan jadual')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t(response['message'] ?? 'Ralat menetapkan jadual'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
     }
   }
 
@@ -548,22 +621,23 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
         'action': 'delete_schedule',
         'schedule_id': scheduleId,
       });
-      if (response['success'] == true) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jadual berjaya dipadam!')));
+      if (response['success'] == true || response['status'] == 'success') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Jadual berjaya dipadam!'))));
         _fetchSchedules();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Ralat memadam jadual')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t(response['message'] ?? 'Ralat memadam jadual'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
     }
   }
 
   void _showCreateScheduleDialog() async {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => Center(child: CircularProgressIndicator(color: theme.primaryColor)),
     );
     
     List<dynamic> squads = [];
@@ -578,13 +652,13 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat memuatkan kumpulan: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${settings.t("Ralat memuatkan kumpulan:")} $e')));
       return;
     }
 
     if (squads.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sila cipta kumpulan terlebih dahulu!')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(settings.t('Sila cipta kumpulan terlebih dahulu!'))));
       return;
     }
 
@@ -598,7 +672,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return StatefulBuilder(
@@ -609,13 +683,19 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tetapkan Jadual Rondaan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F3D87))),
+                  Text(
+                    settings.t('Tetapkan Jadual Rondaan'),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.primaryColor),
+                  ),
                   const SizedBox(height: 16),
                   
                   DropdownButtonFormField<String>(
                     initialValue: selectedSquadId,
+                    dropdownColor: theme.cardColor,
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                     decoration: InputDecoration(
-                      labelText: 'Pilih Kumpulan',
+                      labelText: settings.t('Pilih Kumpulan'),
+                      labelStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     items: squads.map<DropdownMenuItem<String>>((s) {
@@ -632,13 +712,17 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
 
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_today, color: Color(0xFF0F3D87)),
-                    title: const Text('Tarikh Rondaan', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                    leading: Icon(Icons.calendar_today, color: theme.primaryColor),
+                    title: Text(settings.t('Tarikh Rondaan'), style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
                     subtitle: Text(
                       "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}",
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
                     ),
                     trailing: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.primaryColor,
+                        side: BorderSide(color: theme.primaryColor),
+                      ),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -650,20 +734,24 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                           setModalState(() => selectedDate = picked);
                         }
                       },
-                      child: const Text('Pilih'),
+                      child: Text(settings.t('Pilih')),
                     ),
                   ),
                   const Divider(),
 
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time, color: Color(0xFF0F3D87)),
-                    title: const Text('Masa Mula Rondaan', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                    leading: Icon(Icons.access_time, color: theme.primaryColor),
+                    title: Text(settings.t('Masa Mula Rondaan'), style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
                     subtitle: Text(
                       startTime.format(context),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
                     ),
                     trailing: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.primaryColor,
+                        side: BorderSide(color: theme.primaryColor),
+                      ),
                       onPressed: () async {
                         final picked = await showTimePicker(
                           context: context,
@@ -673,7 +761,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                           setModalState(() => startTime = picked);
                         }
                       },
-                      child: const Text('Pilih'),
+                      child: Text(settings.t('Pilih')),
                     ),
                   ),
                   const Divider(),
@@ -681,12 +769,16 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.access_time, color: Colors.redAccent),
-                    title: const Text('Masa Tamat Rondaan', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                    title: Text(settings.t('Masa Tamat Rondaan'), style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
                     subtitle: Text(
                       endTime.format(context),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
                     ),
                     trailing: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.primaryColor,
+                        side: BorderSide(color: theme.primaryColor),
+                      ),
                       onPressed: () async {
                         final picked = await showTimePicker(
                           context: context,
@@ -696,7 +788,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                           setModalState(() => endTime = picked);
                         }
                       },
-                      child: const Text('Pilih'),
+                      child: Text(settings.t('Pilih')),
                     ),
                   ),
                   
@@ -705,7 +797,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F3D87),
+                        backgroundColor: theme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -720,7 +812,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                           _createSchedule(selectedSquadId!, dateStr, startStr, endStr);
                         }
                       },
-                      child: const Text('Simpan Jadual', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(settings.t('Simpan Jadual'), style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -735,10 +827,12 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    final settings = Provider.of<SettingsProvider>(context);
+    final theme = Theme.of(context);
+    if (_isLoading) return Center(child: CircularProgressIndicator(color: theme.primaryColor));
 
     return Container(
-      color: Colors.grey.shade50,
+      color: theme.scaffoldBackgroundColor,
       child: Column(
         children: [
           Padding(
@@ -746,13 +840,13 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
             child: ElevatedButton.icon(
               onPressed: _showCreateScheduleDialog,
               icon: const Icon(Icons.calendar_month),
-              label: const Text('Tetapkan Jadual Rondaan'),
+              label: Text(settings.t('Tetapkan Jadual Rondaan')),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                backgroundColor: const Color(0xFF0F3D87),
+                backgroundColor: theme.primaryColor,
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shadowColor: const Color(0xFF0F3D87).withValues(alpha: 0.4),
+                shadowColor: theme.primaryColor.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -764,11 +858,11 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey.shade300),
+                        Icon(Icons.calendar_today_outlined, size: 64, color: theme.disabledColor),
                         const SizedBox(height: 16),
                         Text(
-                          'Tiada Jadual Rondaan Direkodkan',
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 16, fontWeight: FontWeight.w500),
+                          settings.t('Tiada Jadual Rondaan Direkodkan'),
+                          style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6), fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -779,7 +873,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                     itemBuilder: (context, index) {
                       final schedule = _schedules[index];
                       final shiftDate = schedule['shift_date'] ?? '';
-                      final squadName = schedule['squad_name'] ?? 'Kumpulan Tanpa Nama';
+                      final squadName = schedule['squad_name'] ?? settings.t('Kumpulan Tanpa Nama');
                       final startTime = schedule['start_time'] ?? '';
                       final endTime = schedule['end_time'] ?? '';
                       
@@ -789,11 +883,11 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                       return Card(
                         elevation: 2,
                         shadowColor: Colors.black.withValues(alpha: 0.05),
-                        color: Colors.white,
+                        color: theme.cardColor,
                         margin: const EdgeInsets.only(bottom: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.grey.shade200),
+                          side: BorderSide(color: theme.dividerColor),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -805,7 +899,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                                   color: const Color(0xFFFFD100).withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.event_note, color: Color(0xFF0F3D87)),
+                                child: Icon(Icons.event_note, color: theme.primaryColor),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -814,20 +908,20 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                                   children: [
                                     Text(
                                       squadName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.textTheme.bodyLarge?.color),
                                     ),
                                     const SizedBox(height: 6),
                                     Row(
                                       children: [
-                                        const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                                        Icon(Icons.calendar_today, size: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                                         const SizedBox(width: 4),
-                                        Text(shiftDate, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                        Text(shiftDate, style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6), fontSize: 13)),
                                         const SizedBox(width: 12),
-                                        const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                                        Icon(Icons.access_time, size: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                                         const SizedBox(width: 4),
                                         Text(
                                           '$displayStart - $displayEnd',
-                                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                          style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6), fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -840,17 +934,19 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                                   showDialog(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: const Text('Padam Jadual'),
-                                      content: Text('Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan "$squadName" pada tarikh $shiftDate?'),
+                                      title: Text(settings.t('Padam Jadual')),
+                                      content: Text(
+                                        '${settings.t("Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan")} "$squadName" ${settings.t("pada tarikh")} $shiftDate?',
+                                      ),
                                       actions: [
-                                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                                        TextButton(onPressed: () => Navigator.pop(context), child: Text(settings.t('Batal'))),
                                         ElevatedButton(
                                           style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                                           onPressed: () {
                                             Navigator.pop(context);
                                             _deleteSchedule(schedule['id']);
                                           },
-                                          child: const Text('Padam', style: TextStyle(color: Colors.white)),
+                                          child: Text(settings.t('Padam'), style: const TextStyle(color: Colors.white)),
                                         ),
                                       ],
                                     ),
