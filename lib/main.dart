@@ -214,7 +214,9 @@ class RootRouter extends StatelessWidget {
       builder: (context, authProvider, child) {
         if (authProvider.isAuthenticated) {
           SosAlertService().startPolling(context);
-          if (authProvider.role == 'ketua_krt' || authProvider.role == 'ketua') {
+          if (authProvider.role == 'ketua_krt' ||
+              authProvider.role == 'ketua' ||
+              authProvider.role == 'super_admin') {
             return const AdminShell(); // Responsive Admin Shell
           } else if (authProvider.role == 'ketua_peronda') {
             return const KetuaMobileLayout(); // Responsive Squad Leader Shell
