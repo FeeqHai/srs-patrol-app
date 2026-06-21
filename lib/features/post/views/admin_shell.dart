@@ -5,6 +5,7 @@ import 'analytics_screen.dart';
 import 'admin_incident_screen.dart';
 import 'qr_generator_screen.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/app_notification_button.dart';
 import '../../../core/widgets/global_menu_button.dart';
 import 'admin_squad_schedule_screen.dart';
 import 'admin_member_screen.dart';
@@ -19,15 +20,7 @@ class AdminShell extends StatefulWidget {
 
 class _AdminShellState extends State<AdminShell> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = [
-    const AnalyticsScreen(),
-    const QrGeneratorScreen(),
-    const AdminEquipmentScreen(),
-    const AdminIncidentScreen(),
-    const AdminSquadScheduleScreen(),
-    const AdminMemberScreen(),
-  ];
+  bool _hideAppBar = false;
 
   final List<String> _pageTitles = [
     'Pantau Analitik',
@@ -42,14 +35,31 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
 
+    final List<Widget> screens = [
+      const AnalyticsScreen(),
+      const QrGeneratorScreen(),
+      const AdminEquipmentScreen(),
+      AdminIncidentScreen(
+        onSubViewChanged: (hide) {
+          setState(() {
+            _hideAppBar = hide;
+          });
+        },
+      ),
+      const AdminSquadScheduleScreen(),
+      const AdminMemberScreen(),
+    ];
+
     return ResponsiveShell(
       currentIndex: _currentIndex,
       onIndexChanged: (index) {
         setState(() {
           _currentIndex = index;
+          _hideAppBar = false;
         });
       },
-      screens: _screens,
+      screens: screens,
+      showAppBar: !_hideAppBar,
       items: [
         NavigationItem(icon: Icons.dashboard, label: settings.t('Pantau')),
         NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Jana QR')),
@@ -59,7 +69,7 @@ class _AdminShellState extends State<AdminShell> {
         NavigationItem(icon: Icons.people, label: settings.t('Ahli')),
       ],
       title: settings.t(_pageTitles[_currentIndex]),
-      actions: const [GlobalMenuButton()],
+      actions: const [AppNotificationButton(), GlobalMenuButton()],
     );
   }
 }

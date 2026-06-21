@@ -1,10 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/constants/api_constants.dart';
+import '../../auth/models/user_model.dart';
+
+/// Status-filter values used by the segmented control. `'all'` shows every
+/// member; the others constrain to a single [AccountStatus].
+const String _kFilterAll = 'all';
+const String _kFilterPending = 'pending';
+const String _kFilterActive = 'active';
+const String _kFilterInactive = 'inactive';
 
 class AdminMemberScreen extends StatefulWidget {
   const AdminMemberScreen({super.key});
@@ -14,51 +19,42 @@ class AdminMemberScreen extends StatefulWidget {
 }
 
 class _AdminMemberScreenState extends State<AdminMemberScreen> {
-  List<dynamic> _patrollers = [];
+  List<UserModel> _members = [];
   String _searchQuery = '';
   String _selectedZone = 'Semua Zon';
+  String _statusFilter = _kFilterAll;
   bool _isLoading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchPatrollers();
+    _fetchMembers();
   }
 
-  Future<void> _fetchPatrollers() async {
+  Future<void> _fetchMembers() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-      final Map<String, String> headers = {};
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}auth/get_patrollers.php'),
-        headers: headers,
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          setState(() {
-            _patrollers = data['data'];
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _error = data['message'];
-            _isLoading = false;
-          });
-        }
-      } else {
+      final data = await ApiClient.getData('auth/get_patrollers.php')
+          as Map<String, dynamic>;
+      if (data['status'] == 'success') {
+        final list = (data['data'] as List<dynamic>)
+            .map((j) => UserModel.fromJson(j as Map<String, dynamic>))
+            .toList();
+        if (!mounted) return;
         setState(() {
-          _error = 'Pelayan Gagal: ${response.statusCode}';
+          _members = list;
+          _isLoading = false;
+          _error = null;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _error = (data['message'] ?? 'Gagal memuatkan ahli.').toString();
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Ralat Rangkaian: $e';
         _isLoading = false;
@@ -66,23 +62,24 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     }
   }
 
-  Widget _buildStatusChip(String status, SettingsProvider settings) {
+  Widget _buildStatusChip(AccountStatus status, SettingsProvider settings) {
     Color bgColor;
     Color textColor;
     String text;
 
-    if (status == 'active' || status == 'approved') {
-      bgColor = Colors.green.withValues(alpha: 0.15);
-      textColor = Colors.green.shade800;
-      text = settings.t('Aktif');
-    } else if (status == 'pending') {
-      bgColor = Colors.orange.withValues(alpha: 0.15);
-      textColor = Colors.orange.shade800;
-      text = settings.t('Menunggu');
-    } else {
-      bgColor = Colors.red.withValues(alpha: 0.15);
-      textColor = Colors.red.shade800;
-      text = settings.t('Nyahaktif');
+    switch (status) {
+      case AccountStatus.active:
+        bgColor = Colors.green.withValues(alpha: 0.15);
+        textColor = Colors.green.shade800;
+        text = settings.t('Aktif');
+      case AccountStatus.pending:
+        bgColor = Colors.orange.withValues(alpha: 0.15);
+        textColor = Colors.orange.shade800;
+        text = settings.t('Menunggu');
+      case AccountStatus.inactive:
+        bgColor = Colors.red.withValues(alpha: 0.15);
+        textColor = Colors.red.shade800;
+        text = settings.t('Nyahaktif');
     }
 
     return Container(
@@ -134,8 +131,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     );
   }
 
-  void _showStatusBottomSheet(BuildContext context, Map<String, dynamic> patroller, SettingsProvider settings) {
-    String selectedStatus = patroller['account_status'] ?? 'pending';
+  void _showStatusBottomSheet(
+      BuildContext context, UserModel member, SettingsProvider settings) {
+    AccountStatus selected = member.accountStatusEnum;
 
     showModalBottomSheet(
       context: context,
@@ -164,33 +162,34 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                     ),
                   ),
                   Text(
-                    '${settings.t('Tukar Status')}: ${patroller['full_name']}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    '${settings.t('Tukar Status')}: ${member.fullName}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  SegmentedButton<String>(
+                  SegmentedButton<AccountStatus>(
                     segments: [
-                      ButtonSegment<String>(
-                        value: 'active',
+                      ButtonSegment<AccountStatus>(
+                        value: AccountStatus.active,
                         label: Text(settings.t('Aktif')),
                         icon: const Icon(Icons.check_circle_outline),
                       ),
-                      ButtonSegment<String>(
-                        value: 'pending',
+                      ButtonSegment<AccountStatus>(
+                        value: AccountStatus.pending,
                         label: Text(settings.t('Menunggu')),
                         icon: const Icon(Icons.hourglass_empty),
                       ),
-                      ButtonSegment<String>(
-                        value: 'inactive',
+                      ButtonSegment<AccountStatus>(
+                        value: AccountStatus.inactive,
                         label: Text(settings.t('Nyahaktif')),
                         icon: const Icon(Icons.block),
                       ),
                     ],
-                    selected: {selectedStatus},
-                    onSelectionChanged: (Set<String> newSelection) {
+                    selected: {selected},
+                    onSelectionChanged: (Set<AccountStatus> newSelection) {
                       setModalState(() {
-                        selectedStatus = newSelection.first;
+                        selected = newSelection.first;
                       });
                     },
                     style: SegmentedButton.styleFrom(
@@ -218,7 +217,7 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                         child: FilledButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            _updateUserStatus(patroller['id'], selectedStatus);
+                            _updateUserStatus(member.id, selected);
                           },
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -241,8 +240,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     );
   }
 
-  void _showRoleBottomSheet(BuildContext context, Map<String, dynamic> patroller, SettingsProvider settings) {
-    String selectedRole = patroller['role'] ?? 'peronda';
+  void _showRoleBottomSheet(
+      BuildContext context, UserModel member, SettingsProvider settings) {
+    String selectedRole = member.role;
 
     showModalBottomSheet(
       context: context,
@@ -271,8 +271,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                     ),
                   ),
                   Text(
-                    '${settings.t('Tukar Peranan')}: ${patroller['full_name']}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    '${settings.t('Tukar Peranan')}: ${member.fullName}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -320,7 +321,7 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                         child: FilledButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            _updateUserRole(patroller['id'], selectedRole);
+                            _updateUserRole(member.id, selectedRole);
                           },
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -343,194 +344,610 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     );
   }
 
-  Future<void> _updateUserStatus(String userId, String status) async {
-    setState(() => _isLoading = true);
+  Future<void> _updateUserStatus(String userId, AccountStatus status) async {
     final settings = context.read<SettingsProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-      final Map<String, String> headers = {};
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}admin/update_user.php'),
-        headers: headers,
-        body: {
+      final data = await ApiClient.postData(
+        'admin/update_user.php',
+        {
           'action': 'update_status',
           'user_id': userId,
-          'account_status': status,
+          'account_status': status.wireValue,
         },
       );
 
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(settings.t('Kemas kini berjaya')),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _fetchPatrollers();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message'] ?? settings.t('Kemas kini gagal')),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-          setState(() => _isLoading = false);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (data['status'] == 'success') {
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('${settings.t('Ralat Pelayan')}: ${response.statusCode}'),
+            content: Text(settings.t('Kemas kini berjaya')),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchMembers();
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? settings.t('Kemas kini gagal')),
             backgroundColor: Colors.redAccent,
           ),
         );
-        setState(() => _isLoading = false);
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('${settings.t('Ralat Rangkaian')}: $e'),
           backgroundColor: Colors.redAccent,
         ),
       );
-      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _updateUserRole(String userId, String role) async {
-    setState(() => _isLoading = true);
     final settings = context.read<SettingsProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-      final Map<String, String> headers = {};
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}admin/update_user.php'),
-        headers: headers,
-        body: {
+      final data = await ApiClient.postData(
+        'admin/update_user.php',
+        {
           'action': 'promote_role',
           'user_id': userId,
           'role': role,
         },
       );
 
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(settings.t('Kemas kini berjaya')),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _fetchPatrollers();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message'] ?? settings.t('Kemas kini gagal')),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-          setState(() => _isLoading = false);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (data['status'] == 'success') {
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('${settings.t('Ralat Pelayan')}: ${response.statusCode}'),
+            content: Text(settings.t('Kemas kini berjaya')),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchMembers();
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? settings.t('Kemas kini gagal')),
             backgroundColor: Colors.redAccent,
           ),
         );
-        setState(() => _isLoading = false);
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('${settings.t('Ralat Rangkaian')}: $e'),
           backgroundColor: Colors.redAccent,
         ),
       );
-      setState(() => _isLoading = false);
     }
+  }
+
+  /// Confirms rejection before setting the member to `inactive`. Approve is
+  /// reversible so it skips confirmation; reject feels destructive.
+  void _confirmReject(UserModel member) {
+    final settings = context.read<SettingsProvider>();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.person_remove_outlined, size: 40),
+        title: Text(settings.t('Tolak Pendaftaran')),
+        content: Text(settings.t(
+            'Adakah anda pasti ingin menolak pendaftaran ahli ini?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(settings.t('Batal')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _updateUserStatus(member.id, AccountStatus.inactive);
+            },
+            child: Text(settings.t('Ya, Tolak')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    final settings = context.read<SettingsProvider>();
+    final theme = Theme.of(context);
+    String tempStatus = _statusFilter;
+    String tempZone = _selectedZone;
+
+    final Set<String> zonesSet = {'Semua Zon'};
+    for (final m in _members) {
+      final z = m.districtZone;
+      if (z != null && z.isNotEmpty) zonesSet.add(z);
+    }
+    final List<String> zonesList = zonesSet.toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24.0,
+                16.0,
+                24.0,
+                24.0 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        settings.t("Tapis Pengurusan Ahli"),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  Text(
+                    settings.t("Status Akaun"),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: tempStatus,
+                    dropdownColor: theme.cardColor,
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: _kFilterAll,
+                        child: Text(settings.t('Semua')),
+                      ),
+                      DropdownMenuItem(
+                        value: _kFilterActive,
+                        child: Text(settings.t('Aktif')),
+                      ),
+                      DropdownMenuItem(
+                        value: _kFilterPending,
+                        child: Text(settings.t('Menunggu')),
+                      ),
+                      DropdownMenuItem(
+                        value: _kFilterInactive,
+                        child: Text(settings.t('Nyahaktif')),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setSheetState(() => tempStatus = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    settings.t("Zon Rondaan"),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: tempZone,
+                    dropdownColor: theme.cardColor,
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: zonesList.map((String zone) {
+                      return DropdownMenuItem(
+                        value: zone,
+                        child: Text(zone == 'Semua Zon' ? settings.t(zone) : zone),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setSheetState(() => tempZone = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _statusFilter = _kFilterAll;
+                              _selectedZone = 'Semua Zon';
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(settings.t('Reset')),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            setState(() {
+                              _statusFilter = tempStatus;
+                              _selectedZone = tempZone;
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: theme.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(settings.t('Tapis')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMemberCard(UserModel member, SettingsProvider settings) {
+    final theme = Theme.of(context);
+    final status = member.accountStatusEnum;
+    final isPending = status == AccountStatus.pending;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      color: theme.cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile Circle with status indicator dot
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor:
+                          theme.primaryColor.withValues(alpha: 0.1),
+                      child: Text(
+                        member.fullName.isNotEmpty
+                            ? member.fullName[0].toUpperCase()
+                            : 'P',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: status == AccountStatus.active
+                              ? Colors.green
+                              : status == AccountStatus.pending
+                                  ? Colors.orange
+                                  : Colors.grey,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        member.fullName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          _buildRoleChip(member.role, settings),
+                          _buildStatusChip(status, settings),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              '${settings.t('Zon')}: ${member.districtZone ?? settings.t('Tiada')}',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade600),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.badge_outlined,
+                              size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            'IC: ${member.icNumber ?? '-'}',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.phone_outlined,
+                              size: 14, color: theme.primaryColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            member.phoneNumber ?? '-',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Trailing Action Menu (status + role). Kept on every card so
+                // admins can still promote role / re-open a pending member.
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
+                  onSelected: (value) {
+                    if (value == 'status') {
+                      _showStatusBottomSheet(context, member, settings);
+                    } else if (value == 'role') {
+                      _showRoleBottomSheet(context, member, settings);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      value: 'status',
+                      child: Row(
+                        children: [
+                          Icon(Icons.shield_outlined,
+                              size: 18, color: theme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text(settings.t('Tukar Status')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'role',
+                      child: Row(
+                        children: [
+                          Icon(Icons.admin_panel_settings_outlined,
+                              size: 18, color: theme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text(settings.t('Tukar Peranan')),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            // Inline Approve/Reject actions for pending members.
+            if (isPending) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () =>
+                          _updateUserStatus(member.id, AccountStatus.active),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: Text(settings.t('Lulus')),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _confirmReject(member),
+                      icon: const Icon(Icons.close, size: 18),
+                      label: Text(settings.t('Tolak')),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
 
-    if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
+    // Full-screen initial load only; afterwards the filter bar stays visible
+    // so admins can retry / filter even on an empty (filtered) result set.
+    if (_isLoading && _members.isEmpty) {
+      return Center(
+          child: CircularProgressIndicator(color: theme.primaryColor));
     }
 
-    if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent)));
+    if (_error != null && _members.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 56, color: Colors.red.shade300),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () {
+                setState(() => _isLoading = true);
+                _fetchMembers();
+              },
+              icon: const Icon(Icons.refresh),
+              label: Text(settings.t('Cuba Lagi')),
+            ),
+          ],
+        ),
+      );
     }
 
-    if (_patrollers.isEmpty) {
-      return Center(child: Text(settings.t('Tiada peronda dijumpai.'), style: const TextStyle(color: Colors.white70)));
+    if (_members.isEmpty) {
+      return Center(
+        child: Text(settings.t('Tiada peronda dijumpai.'),
+            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+      );
     }
 
-    // Extract unique zones for the dropdown
+    // Build the zone dropdown values.
     final Set<String> zones = {'Semua Zon'};
-    for (var p in _patrollers) {
-      if (p['district_zone'] != null && p['district_zone'].toString().isNotEmpty) {
-        zones.add(p['district_zone']);
-      }
+    for (final m in _members) {
+      final z = m.districtZone;
+      if (z != null && z.isNotEmpty) zones.add(z);
     }
 
-    // Apply filtering
-    final filteredPatrollers = _patrollers.where((p) {
-      final matchesSearch = p['full_name'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesZone = _selectedZone == 'Semua Zon' || p['district_zone'] == _selectedZone;
-      return matchesSearch && matchesZone;
+    // Filter pipeline: search ∩ zone ∩ statusFilter.
+    final filtered = _members.where((m) {
+      final matchesSearch =
+          m.fullName.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesZone =
+          _selectedZone == 'Semua Zon' || m.districtZone == _selectedZone;
+      final matchesStatus = _statusFilter == _kFilterAll ||
+          m.accountStatusEnum.wireValue == _statusFilter;
+      return matchesSearch && matchesZone && matchesStatus;
     }).toList();
+
+    final bool isFilterActive = _statusFilter != _kFilterAll || _selectedZone != 'Semua Zon';
 
     return Column(
       children: [
-        // Search and Filter Bar
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
           child: Row(
             children: [
               Expanded(
-                flex: 2,
                 child: TextField(
-                  style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                  style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                   decoration: InputDecoration(
                     hintText: settings.t('Cari nama peronda...'),
                     hintStyle: TextStyle(color: Colors.grey.shade500),
-                    prefixIcon: Icon(Icons.search, color: Theme.of(context).primaryColor),
+                    prefixIcon: Icon(Icons.search, color: theme.primaryColor),
                     filled: true,
-                    fillColor: Theme.of(context).cardColor,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    fillColor: theme.cardColor,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                      borderSide:
+                          BorderSide(color: Colors.grey.shade200, width: 1),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                      borderSide:
+                          BorderSide(color: Colors.grey.shade200, width: 1),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                      borderSide:
+                          BorderSide(color: theme.primaryColor, width: 2),
                     ),
                   ),
                   onChanged: (value) {
@@ -539,218 +956,111 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                flex: 1,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200, width: 1),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedZone,
-                      dropdownColor: Theme.of(context).cardColor,
-                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
-                      icon: Icon(Icons.keyboard_arrow_down, color: Theme.of(context).primaryColor),
-                      isExpanded: true,
-                      items: zones.map((zone) => DropdownMenuItem(
-                        value: zone,
-                        child: Text(zone == 'Semua Zon' ? settings.t(zone) : zone, overflow: TextOverflow.ellipsis),
-                      )).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedZone = value!);
-                      },
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.filter_list,
+                      color: isFilterActive ? Colors.white : theme.primaryColor,
                     ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: isFilterActive ? theme.primaryColor : theme.cardColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isFilterActive ? Colors.transparent : Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                    ),
+                    onPressed: _showFilterBottomSheet,
                   ),
-                ),
+                  if (isFilterActive)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
         ),
-        
-        // List of filtered patrollers
+        // List (pull-to-refresh + empty states).
         Expanded(
-          child: filteredPatrollers.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.search_off, size: 64, color: Theme.of(context).disabledColor.withValues(alpha: 0.5)),
-                    const SizedBox(height: 16),
-                    Text(
-                      settings.t('Tiada padanan carian.'),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6)),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      settings.t('Cuba cari dengan e-mel atau no. kad pengenalan lain.'),
-                      style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.4)),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filteredPatrollers.length,
-                itemBuilder: (context, index) {
-                  final patroller = filteredPatrollers[index];
-                  final status = patroller['account_status'] ?? 'pending';
-                  
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    shadowColor: Colors.black.withValues(alpha: 0.05),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200, width: 1),
-                    ),
-                    color: Theme.of(context).cardColor,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Profile Circle with status indicator dot
-                          Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                                child: Text(
-                                  patroller['full_name'].toString().isNotEmpty
-                                      ? patroller['full_name'].toString()[0].toUpperCase()
-                                      : 'P',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  width: 14,
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    color: status == 'active' || status == 'approved'
-                                        ? Colors.green
-                                        : status == 'pending'
-                                            ? Colors.orange
-                                            : Colors.grey,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 16),
-                          // Details
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  patroller['full_name'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                // Chips
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children: [
-                                    _buildRoleChip(patroller['role'] ?? 'peronda', settings),
-                                    _buildStatusChip(status, settings),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                // Information Row Details
-                                Row(
-                                  children: [
-                                    Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        '${settings.t('Zon')}: ${patroller['district_zone'] ?? settings.t('Tiada')}',
-                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.badge_outlined, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'IC: ${patroller['ic_number']}',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.phone_outlined, size: 14, color: Theme.of(context).primaryColor),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      patroller['phone_number'] ?? '-',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                                    ),
-                                  ],
-                                ),
-                              ],
+          child: RefreshIndicator(
+            onRefresh: _fetchMembers,
+            color: theme.primaryColor,
+            child: filtered.isEmpty
+                ? ListView(
+                    // Keep RefreshIndicator working even when empty.
+                    children: [
+                      const SizedBox(height: 80),
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              _statusFilter == _kFilterPending
+                                  ? Icons.check_circle_outline
+                                  : _statusFilter == _kFilterInactive
+                                      ? Icons.block
+                                      : Icons.search_off,
+                              size: 64,
+                              color:
+                                  theme.disabledColor.withValues(alpha: 0.5),
                             ),
-                          ),
-                          // Trailing Action Menu
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
-                            onSelected: (value) {
-                              if (value == 'status') {
-                                _showStatusBottomSheet(context, patroller, settings);
-                              } else if (value == 'role') {
-                                _showRoleBottomSheet(context, patroller, settings);
-                              }
-                            },
-                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                              PopupMenuItem<String>(
-                                value: 'status',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.shield_outlined, size: 18, color: Theme.of(context).primaryColor),
-                                    const SizedBox(width: 8),
-                                    Text(settings.t('Tukar Status')),
-                                  ],
-                                ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _statusFilter == _kFilterPending
+                                  ? settings.t('Tiada ahli menunggu pengesahan.')
+                                  : _statusFilter == _kFilterInactive
+                                      ? settings.t('Tiada ahli nyahaktif.')
+                                      : settings.t('Tiada padanan carian.'),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: theme.textTheme.bodyLarge?.color
+                                    ?.withValues(alpha: 0.6),
                               ),
-                              PopupMenuItem<String>(
-                                value: 'role',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.admin_panel_settings_outlined, size: 18, color: Theme.of(context).primaryColor),
-                                    const SizedBox(width: 8),
-                                    Text(settings.t('Tukar Peranan')),
-                                  ],
-                                ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _statusFilter == _kFilterPending
+                                  ? settings.t(
+                                      'Semua pendaftaran baharu telah diluluskan.')
+                                  : _statusFilter == _kFilterInactive
+                                      ? settings.t(
+                                          'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.')
+                                      : settings.t(
+                                          'Cuba cari dengan e-mel atau no. kad pengenalan lain.'),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: theme.textTheme.bodyLarge?.color
+                                    ?.withValues(alpha: 0.4),
                               ),
-                            ],
-                          ),
-                        ],
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) =>
+                        _buildMemberCard(filtered[index], settings),
+                  ),
+          ),
         ),
       ],
     );

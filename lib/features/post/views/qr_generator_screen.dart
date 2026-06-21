@@ -5,6 +5,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/network/api_client.dart';
 
 class QrGeneratorScreen extends StatefulWidget {
   const QrGeneratorScreen({super.key});
@@ -17,10 +18,12 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
   static String? _savedQrData;
   static String _savedLocation = 'Sila jana kod QR.';
   static DateTime? _savedTime;
+  static String _savedQrMode = 'IN';
   static bool _hasBeenGenerated = false;
 
   String? _qrData;
   String _currentLocation = 'Sila jana kod QR.';
+  String _qrMode = 'IN';
   bool _isLoading = false;
   Timer? _timer;
   int _timeLeft = 60;
@@ -43,6 +46,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       if (elapsed < 60) {
         _qrData = _savedQrData;
         _currentLocation = _savedLocation;
+        _qrMode = _savedQrMode;
         _timeLeft = 60 - elapsed;
         _isLoading = false;
         _startTimer(_timeLeft);
@@ -109,12 +113,14 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
       // Generate secure payload
       final timestamp = DateTime.now().toUtc().toIso8601String();
-      _qrData = 'SRS_ATTENDANCE|${position.latitude}|${position.longitude}|$timestamp';
+      _qrData =
+          'SRS_ATTENDANCE|$_qrMode|${position.latitude}|${position.longitude}|$timestamp';
 
       // Save state to static variables
       _savedQrData = _qrData;
       _savedLocation = _currentLocation;
       _savedTime = DateTime.now();
+      _savedQrMode = _qrMode;
       _hasBeenGenerated = true;
 
       _startTimer(60);
@@ -134,6 +140,117 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     }
   }
 
+  Future<void> _showPendingReturns() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final response = await ApiClient.getData('attendance/get_pending_returns.php');
+    if (!mounted) return;
+
+    if (response['status'] != 'success') {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            response['message'] ??
+                context.read<SettingsProvider>().t('Gagal memuatkan pemulangan.'),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final pendingReturns = List<dynamic>.from(response['data'] ?? []);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final sheetSettings = sheetContext.watch<SettingsProvider>();
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sheetSettings.t('Pengesahan Pemulangan'),
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (pendingReturns.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(sheetSettings.t('Tiada pemulangan menunggu pengesahan.')),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: pendingReturns.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final pendingReturn = pendingReturns[index] as Map<String, dynamic>;
+                        final equipment = List<String>.from(
+                          pendingReturn['equipment'] ?? const [],
+                        );
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(pendingReturn['full_name'] ?? ''),
+                          subtitle: Text(
+                            equipment.isEmpty
+                                ? sheetSettings.t('Tiada peralatan dipinjam')
+                                : equipment.join(', '),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.task_alt_rounded),
+                            color: Theme.of(context).colorScheme.primary,
+                            tooltip: sheetSettings.t('Sahkan Pemulangan'),
+                            onPressed: () async {
+                              final acknowledgeResponse = await ApiClient.postData(
+                                'attendance/acknowledge_return.php',
+                                {'attendance_id': pendingReturn['id'].toString()},
+                              );
+                              if (!sheetContext.mounted) return;
+
+                              if (acknowledgeResponse['status'] == 'success') {
+                                Navigator.pop(sheetContext);
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      sheetSettings.t('Pemulangan peronda telah disahkan.'),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      acknowledgeResponse['message'] ??
+                                          sheetSettings.t('Gagal mengesahkan pemulangan.'),
+                                    ),
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -144,6 +261,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     final errorBg = isDark ? const Color(0xFF3F1919) : const Color(0xFFFEEBEE);
     final errorText = isDark ? const Color(0xFFFFB4AB) : const Color(0xFFC00010);
     final errorSubtext = isDark ? const Color(0xFFF5C2C2) : const Color(0xFF7A1C1C);
+    final isClockOut = _qrMode == 'OUT';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
@@ -158,7 +276,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            settings.t('Jana QR Kehadiran'),
+            settings.t(isClockOut ? 'Jana QR Clock Out' : 'Jana QR Kehadiran'),
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w800,
@@ -170,7 +288,11 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              settings.t('Papar kod QR ini kepada peronda untuk merekod kehadiran.'),
+              settings.t(
+                isClockOut
+                    ? 'Papar kod QR ini di pos untuk pengesahan pulang peronda.'
+                    : 'Papar kod QR ini kepada peronda untuk merekod kehadiran.',
+              ),
               style: TextStyle(
                 color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                 fontSize: 14,
@@ -179,7 +301,35 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 36),
+          const SizedBox(height: 20),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment<String>(
+                value: 'IN',
+                icon: const Icon(Icons.login_rounded),
+                label: Text(settings.t('Clock In')),
+              ),
+              ButtonSegment<String>(
+                value: 'OUT',
+                icon: const Icon(Icons.assignment_return_outlined),
+                label: Text(settings.t('Clock Out')),
+              ),
+            ],
+            selected: {_qrMode},
+            onSelectionChanged: _isLoading
+                ? null
+                : (selected) {
+                    final mode = selected.first;
+                    if (mode == _qrMode) return;
+                    _timer?.cancel();
+                    setState(() {
+                      _qrMode = mode;
+                      _qrData = null;
+                      _timeLeft = 60;
+                    });
+                  },
+          ),
+          const SizedBox(height: 28),
 
           // Main QR Code Card State
           if (_isLoading)
@@ -312,7 +462,11 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    settings.t('Sila jana semula kod QR untuk peronda seterusnya.'),
+                    settings.t(
+                      isClockOut
+                          ? 'Sila jana semula kod QR untuk pemulangan seterusnya.'
+                          : 'Sila jana semula kod QR untuk peronda seterusnya.',
+                    ),
                     style: TextStyle(
                       color: errorSubtext,
                       fontWeight: FontWeight.w500,
@@ -387,7 +541,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
               onPressed: _fetchLocationAndGenerateQR,
               icon: const Icon(Icons.refresh_rounded, size: 22),
               label: Text(
-                settings.t('Jana Semula QR'),
+                settings.t(isClockOut ? 'Jana QR Clock Out' : 'Jana Semula QR'),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -403,6 +557,12 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                 elevation: 2,
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _showPendingReturns,
+            icon: const Icon(Icons.fact_check_outlined),
+            label: Text(settings.t('Pengesahan Pemulangan')),
           ),
         ],
       ),

@@ -34,24 +34,28 @@ class AttendanceService {
     }
   }
 
-  Future<String?> clockOut(String userId) async {
+  Future<Map<String, dynamic>> requestClockOut(
+    String qrPayload,
+    List<String> returnedEquipmentIds,
+  ) async {
     try {
       Position currentPos = await _determinePosition();
       final Map<String, String> payload = {
-        'user_id': userId,
+        'checkpoint_id': qrPayload,
         'latitude': currentPos.latitude.toString(),
         'longitude': currentPos.longitude.toString(),
+        'returned_equipment': json.encode(returnedEquipmentIds),
       };
-      
+
       final response = await ApiClient.postData("attendance/clock_out.php", payload);
       if (response['status'] == 'success') {
-        return null;
+        return {'success': true, 'message': response['message']};
       } else {
-        return response['message'];
+        return {'success': false, 'message': response['message']};
       }
     } catch (e, stackTrace) {
       appLogger.e('Clock Out Exception', error: e, stackTrace: stackTrace);
-      return "System Exception: $e";
+      return {'success': false, 'message': 'System Exception: $e'};
     }
   }
 

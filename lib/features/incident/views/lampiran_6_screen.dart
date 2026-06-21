@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/utils/pdf_saver.dart';
 
 class Lampiran6Screen extends StatefulWidget {
   const Lampiran6Screen({super.key});
@@ -833,7 +834,22 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                                 },
                                 canChangeOrientation: false,
                                 canChangePageFormat: false,
+                                canDebug: false,
                                 pdfFileName: 'laporan_lampiran_d3c_$_monthLabel.pdf',
+                                actions: [
+                                  PdfPreviewAction(
+                                    icon: Tooltip(
+                                      message: settings.t('Muat Turun PDF'),
+                                      child: const Icon(Icons.download),
+                                    ),
+                                    onPressed: (context, build, pageFormat) async {
+                                      final bytes = await build(pageFormat);
+                                      if (context.mounted) {
+                                        await savePdf(context, bytes, 'laporan_lampiran_d3c_$_monthLabel.pdf');
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                           )

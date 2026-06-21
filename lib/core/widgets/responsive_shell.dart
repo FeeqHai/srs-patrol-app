@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
 
-class ResponsiveShell extends StatelessWidget {
+class ResponsiveShell extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onIndexChanged;
   final List<Widget> screens;
@@ -11,6 +13,7 @@ class ResponsiveShell extends StatelessWidget {
   final Widget? endDrawer;
   final List<Widget>? actions;
   final bool isSosBroadcasting;
+  final bool showAppBar;
 
   const ResponsiveShell({
     super.key,
@@ -23,30 +26,46 @@ class ResponsiveShell extends StatelessWidget {
     this.endDrawer,
     this.actions,
     this.isSosBroadcasting = false,
+    this.showAppBar = true,
   });
 
-  int get _sosIndex => items.length ~/ 2;
+  @override
+  State<ResponsiveShell> createState() => _ResponsiveShellState();
+}
 
-  int _getEffectiveCurrentIndex() {
-    if (onSosPressed != null && currentIndex >= _sosIndex) {
-      return currentIndex + 1;
-    }
-    return currentIndex;
-  }
+class _ResponsiveShellState extends State<ResponsiveShell> {
+  bool _isFabMenuOpen = false;
 
-  void _handleBottomTap(int index) {
-    if (onSosPressed != null) {
-      if (index == _sosIndex) {
-        if (!isSosBroadcasting) onSosPressed!();
-        return;
-      }
-      if (index > _sosIndex) {
-        onIndexChanged(index - 1);
-      } else {
-        onIndexChanged(index);
-      }
+  _BottomBarConfig _getBottomBarConfig() {
+    if (widget.items.length == 4 && widget.onSosPressed != null) {
+      return _BottomBarConfig(
+        leftItemIndices: [0, 3],
+        rightItemIndices: [2],
+        fabItemIndices: [1],
+        hasSos: true,
+      );
+    } else if (widget.items.length == 5 && widget.onSosPressed != null) {
+      return _BottomBarConfig(
+        leftItemIndices: [0, 4],
+        rightItemIndices: [2],
+        fabItemIndices: [1, 3],
+        hasSos: true,
+      );
+    } else if (widget.items.length == 6 && widget.onSosPressed == null) {
+      return _BottomBarConfig(
+        leftItemIndices: [0, 1],
+        rightItemIndices: [4, 5],
+        fabItemIndices: [3, 2],
+        hasSos: false,
+      );
     } else {
-      onIndexChanged(index);
+      // Fallback
+      return _BottomBarConfig(
+        leftItemIndices: [0, 1],
+        rightItemIndices: [2, 3],
+        fabItemIndices: [],
+        hasSos: false,
+      );
     }
   }
 
@@ -57,16 +76,20 @@ class ResponsiveShell extends StatelessWidget {
         final bool isLargeScreen = constraints.maxWidth > 800;
 
         return Scaffold(
-          appBar: isLargeScreen ? null : AppBar(
-            title: Text(title),
+          appBar: (isLargeScreen || !widget.showAppBar) ? null : AppBar(
+            title: Text(
+              widget.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18),
+            ),
             elevation: 0,
             centerTitle: true,
-            actions: actions,
+            actions: widget.actions,
           ),
-          endDrawer: endDrawer,
+          endDrawer: widget.endDrawer,
           body: isLargeScreen ? _buildLargeScreen(context) : _buildSmallScreen(context),
           extendBody: false,
-          bottomNavigationBar: isLargeScreen ? null : _buildGlassBottomBar(context),
         );
       },
     );
@@ -120,16 +143,21 @@ class ResponsiveShell extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(items.length, (index) {
-                  final item = items[index];
-                  final isSelected = currentIndex == index;
+                children: List.generate(widget.items.length, (index) {
+                  final item = widget.items[index];
+                  final isSelected = widget.currentIndex == index;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => onIndexChanged(index),
+                        onTap: () {
+                          setState(() {
+                            _isFabMenuOpen = false;
+                          });
+                          widget.onIndexChanged(index);
+                        },
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -178,17 +206,17 @@ class ResponsiveShell extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (onSosPressed != null) ...[
+                    if (widget.onSosPressed != null) ...[
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: isSosBroadcasting ? null : onSosPressed,
+                          onTap: widget.isSosBroadcasting ? null : widget.onSosPressed,
                           borderRadius: BorderRadius.circular(24),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                             decoration: BoxDecoration(
-                              color: isSosBroadcasting
+                              color: widget.isSosBroadcasting
                                   ? Colors.redAccent.withValues(alpha: 0.5)
                                   : Colors.redAccent,
                               borderRadius: BorderRadius.circular(24),
@@ -203,7 +231,7 @@ class ResponsiveShell extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                isSosBroadcasting
+                                widget.isSosBroadcasting
                                     ? const SizedBox(
                                         width: 18,
                                         height: 18,
@@ -230,7 +258,7 @@ class ResponsiveShell extends StatelessWidget {
                       ),
                       const SizedBox(width: 16),
                     ],
-                    ...?actions,
+                    ...?widget.actions,
                   ],
                 ),
               ),
@@ -243,7 +271,7 @@ class ResponsiveShell extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
-              child: screens[currentIndex],
+              child: widget.screens[widget.currentIndex],
             ),
           ),
         ),
@@ -252,53 +280,286 @@ class ResponsiveShell extends StatelessWidget {
   }
 
   // ─────────────────────────────────
-  //  MOBILE: Same as before
+  //  MOBILE: Floating Stack UI
   // ─────────────────────────────────
   Widget _buildSmallScreen(BuildContext context) {
-    return screens[currentIndex];
+    final theme = Theme.of(context);
+    final settings = Provider.of<SettingsProvider>(context);
+    final config = _getBottomBarConfig();
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Stack(
+      children: [
+        // Screen Content (shifted up slightly to clear custom bottom bar height)
+        Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: 75 + bottomPadding),
+            child: widget.screens[widget.currentIndex],
+          ),
+        ),
+
+        // Floating Card Menu (rendered directly above bottom bar)
+        if (_isFabMenuOpen && config.fabItemIndices.isNotEmpty)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 85 + bottomPadding,
+            child: Card(
+              elevation: 8,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              color: theme.cardColor.withValues(alpha: 0.95),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: config.fabItemIndices.map((index) {
+                        final item = widget.items[index];
+                        final isSelected = widget.currentIndex == index;
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isFabMenuOpen = false;
+                            });
+                            widget.onIndexChanged(index);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  item.icon,
+                                  color: isSelected ? theme.primaryColor : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                  size: 24,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.label,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? theme.primaryColor : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // Custom Bottom Navigation Bar
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _buildCustomBottomBar(context, config, settings, theme),
+        ),
+      ],
+    );
   }
 
-  Widget _buildGlassBottomBar(BuildContext context) {
-    List<BottomNavigationBarItem> barItems = [];
-    int itemIndex = 0;
-    
-    int totalItems = onSosPressed != null ? items.length + 1 : items.length;
-
-    for (int i = 0; i < totalItems; i++) {
-      if (onSosPressed != null && i == _sosIndex) {
-        barItems.add(BottomNavigationBarItem(
-          icon: isSosBroadcasting 
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2))
-            : const Icon(Icons.emergency, color: Colors.redAccent, size: 28),
-          label: 'SOS',
-        ));
-      } else {
-        barItems.add(BottomNavigationBarItem(
-          icon: Icon(items[itemIndex].icon),
-          activeIcon: items[itemIndex].selectedIcon != null ? Icon(items[itemIndex].selectedIcon) : null,
-          label: items[itemIndex].label,
-        ));
-        itemIndex++;
-      }
-    }
+  Widget _buildCustomBottomBar(
+    BuildContext context,
+    _BottomBarConfig config,
+    SettingsProvider settings,
+    ThemeData theme,
+  ) {
+    final colorScheme = theme.colorScheme;
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-          child: BottomNavigationBar(
-            backgroundColor: Colors.transparent,
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            currentIndex: _getEffectiveCurrentIndex(),
-            onTap: _handleBottomTap,
-            selectedItemColor: Theme.of(context).colorScheme.primary,
-            unselectedItemColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            selectedFontSize: 12,
-            unselectedFontSize: 11,
-            items: barItems,
+          height: 75 + bottomPadding,
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          decoration: BoxDecoration(
+            color: colorScheme.surface.withValues(alpha: 0.85),
+            border: Border(
+              top: BorderSide(
+                color: theme.dividerColor.withValues(alpha: 0.1),
+                width: 1.0,
+              ),
+            ),
           ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Left side item 1
+              _buildBottomBarItem(config.leftItemIndices[0], theme),
+              
+              // Left side item 2
+              _buildBottomBarItem(config.leftItemIndices[1], theme),
+
+              // Middle: FAB Toggle
+              _buildMiddleFab(theme, config),
+
+              // Right side item 1: SOS or Peralatan
+              config.hasSos 
+                  ? _buildSosItem(theme) 
+                  : _buildBottomBarItem(config.rightItemIndices[0], theme),
+
+              // Right side item 2: Incident or Ahli
+              config.hasSos 
+                  ? _buildBottomBarItem(config.rightItemIndices[0], theme) 
+                  : _buildBottomBarItem(config.rightItemIndices[1], theme),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBarItem(int index, ThemeData theme) {
+    final item = widget.items[index];
+    final isSelected = widget.currentIndex == index && !_isFabMenuOpen;
+    final color = isSelected 
+        ? theme.colorScheme.primary 
+        : theme.colorScheme.onSurface.withValues(alpha: 0.5);
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _isFabMenuOpen = false;
+            });
+            widget.onIndexChanged(index);
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSelected && item.selectedIcon != null ? item.selectedIcon : item.icon,
+                color: color,
+                size: 24,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSosItem(ThemeData theme) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _isFabMenuOpen = false;
+            });
+            if (widget.onSosPressed != null && !widget.isSosBroadcasting) {
+              widget.onSosPressed!();
+            }
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              widget.isSosBroadcasting
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2),
+                    )
+                  : const Icon(
+                      Icons.emergency,
+                      color: Colors.redAccent,
+                      size: 26,
+                    ),
+              const SizedBox(height: 4),
+              Text(
+                'SOS',
+                style: TextStyle(
+                  color: Colors.redAccent.withValues(alpha: 0.8),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiddleFab(ThemeData theme, _BottomBarConfig config) {
+    final colorScheme = theme.colorScheme;
+    final isFabItemSelected = config.fabItemIndices.contains(widget.currentIndex);
+    final isCurrentFabActive = _isFabMenuOpen || isFabItemSelected;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _isFabMenuOpen = !_isFabMenuOpen;
+          });
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: isCurrentFabActive
+                      ? [colorScheme.secondary, colorScheme.secondary.withValues(alpha: 0.8)]
+                      : [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isCurrentFabActive ? colorScheme.secondary : colorScheme.primary)
+                        .withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: AnimatedRotation(
+                duration: const Duration(milliseconds: 200),
+                turns: _isFabMenuOpen ? 0.125 : 0.0,
+                child: Icon(
+                  _isFabMenuOpen ? Icons.close : Icons.add,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -314,5 +575,19 @@ class NavigationItem {
     required this.label,
     required this.icon,
     this.selectedIcon,
+  });
+}
+
+class _BottomBarConfig {
+  final List<int> leftItemIndices;
+  final List<int> rightItemIndices;
+  final List<int> fabItemIndices;
+  final bool hasSos;
+
+  _BottomBarConfig({
+    required this.leftItemIndices,
+    required this.rightItemIndices,
+    required this.fabItemIndices,
+    required this.hasSos,
   });
 }

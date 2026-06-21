@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -11,11 +12,13 @@ import 'incident_detail_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/utils/logger.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
+import '../../../core/utils/pdf_saver.dart';
 
 class IncidentScreen extends StatefulWidget {
   final String? patrollerIdFilter;
+  final VoidCallback? onClose;
 
-  const IncidentScreen({super.key, this.patrollerIdFilter});
+  const IncidentScreen({super.key, this.patrollerIdFilter, this.onClose});
 
   @override
   State<IncidentScreen> createState() => _IncidentScreenState();
@@ -356,6 +359,25 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     final settings = context.read<SettingsProvider>();
     if (_selectedIncidentIds.isEmpty) return;
 
+    final hasSubmitted = _selectedIncidentIds.any((id) {
+      final incident = _incidents.firstWhere((inc) => inc['id'].toString() == id, orElse: () => null);
+      if (incident != null) {
+        final status = incident['status'] ?? 'Pending';
+        return status.toLowerCase() == 'submitted';
+      }
+      return false;
+    });
+
+    if (hasSubmitted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(settings.t("Terdapat laporan yang telah dihantar dalam pilihan anda.")),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
@@ -563,7 +585,17 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     final settings = context.watch<SettingsProvider>();
     final theme = Theme.of(context);
 
-    final displayIncidents = _incidents;
+    final authProvider = context.watch<AuthProvider>();
+    final isArchiveTab = _tabController.index == 1;
+    final isAdminOrSquadLeader = authProvider.role == 'ketua_krt' || authProvider.role == 'ketua_peronda';
+
+    final displayIncidents = _incidents.where((incident) {
+      if (isArchiveTab && isAdminOrSquadLeader) {
+        final status = (incident['status'] ?? '').toString().toLowerCase();
+        return status == 'submitted';
+      }
+      return true;
+    }).toList();
 
     return Scaffold(
       appBar: widget.patrollerIdFilter != null
@@ -571,7 +603,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
               title: Text(settings.t('Rekod Insiden')),
               leading: IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: widget.onClose ?? () => Navigator.of(context).pop(),
                 tooltip: 'Tutup',
               ),
               backgroundColor: theme.primaryColor,
@@ -647,15 +679,16 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                   ),
                   Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.checklist),
-                        tooltip: settings.t("Mod Batch"),
-                        onPressed: () {
-                          setState(() {
-                            _isBatchMode = true;
-                          });
-                        },
-                      ),
+                      if (widget.patrollerIdFilter == null)
+                        IconButton(
+                          icon: const Icon(Icons.checklist),
+                          tooltip: settings.t("Mod Batch"),
+                          onPressed: () {
+                            setState(() {
+                              _isBatchMode = true;
+                            });
+                          },
+                        ),
                       IconButton(
                         icon: const Icon(Icons.filter_alt_outlined),
                         tooltip: settings.t("Tapis"),
@@ -812,35 +845,39 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                 ),
 
               // 2. Left side Image Thumbnail
-              Container(
-                width: 75,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: theme.dividerColor.withValues(alpha: 0.05),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    bottomLeft: Radius.circular(12),
+              if (imageUrl != null)
+                Container(
+                  width: 75,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor.withValues(alpha: 0.05),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
                   ),
                 ),
-                child: imageUrl != null
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          bottomLeft: Radius.circular(12),
-                        ),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const Icon(Icons.broken_image, color: Colors.grey),
-                        ),
-                      )
-                    : const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
-              ),
 
               // 3. Centered Content area
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  padding: EdgeInsets.only(
+                    left: imageUrl != null ? 12.0 : 16.0,
+                    right: 12.0,
+                    top: 8.0,
+                    bottom: 8.0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -934,21 +971,96 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                         onSelected: (action) {
                           if (action == 'delete') {
                             _deleteIncident(id);
-                          } else if (action == 'edit') {
-                            // Show edit popup info
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(settings.t("Ciri kemas kini sedang dibangunkan."))),
-                            );
+                          } else if (action == 'preview') {
+                            if (context.mounted) {
+                              if (MediaQuery.of(context).size.width > 600) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => Dialog(
+                                    backgroundColor: Colors.transparent,
+                                    insetPadding: const EdgeInsets.all(40),
+                                    child: Container(
+                                      width: 800,
+                                      height: 700,
+                                      clipBehavior: Clip.antiAlias,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Scaffold(
+                                        appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                                        body: PdfPreview(
+                                          build: (format) async {
+                                            final doc = await IncidentDetailScreen.buildPdf(data);
+                                            return doc.save();
+                                          },
+                                          canChangeOrientation: false,
+                                          canChangePageFormat: false,
+                                          canDebug: false,
+                                          pdfFileName: 'buku_nota_harian_${data['id']}.pdf',
+                                          actions: [
+                                            PdfPreviewAction(
+                                              icon: Tooltip(
+                                                message: settings.t('Muat Turun PDF'),
+                                                child: const Icon(Icons.download),
+                                              ),
+                                              onPressed: (context, build, pageFormat) async {
+                                                final bytes = await build(pageFormat);
+                                                if (context.mounted) {
+                                                  await savePdf(context, bytes, 'buku_nota_harian_${data['id']}.pdf');
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Scaffold(
+                                      appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                                      body: PdfPreview(
+                                        build: (format) async {
+                                          final doc = await IncidentDetailScreen.buildPdf(data);
+                                          return doc.save();
+                                        },
+                                        canChangeOrientation: false,
+                                        canChangePageFormat: false,
+                                        canDebug: false,
+                                        pdfFileName: 'buku_nota_harian_${data['id']}.pdf',
+                                        actions: [
+                                          PdfPreviewAction(
+                                            icon: Tooltip(
+                                              message: settings.t('Muat Turun PDF'),
+                                              child: const Icon(Icons.download),
+                                            ),
+                                            onPressed: (context, build, pageFormat) async {
+                                              final bytes = await build(pageFormat);
+                                              if (context.mounted) {
+                                                await savePdf(context, bytes, 'buku_nota_harian_${data['id']}.pdf');
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
                           }
                         },
                         itemBuilder: (context) => [
                           PopupMenuItem(
-                            value: 'edit',
+                            value: 'preview',
                             child: Row(
                               children: [
-                                const Icon(Icons.edit, size: 18),
+                                const Icon(Icons.picture_as_pdf, size: 18),
                                 const SizedBox(width: 8),
-                                Text(settings.t("Kemas Kini")),
+                                Text(settings.t("Preview")),
                               ],
                             ),
                           ),
@@ -970,6 +1082,11 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                       ),
                     ],
                   ),
+                )
+              else if (status.toLowerCase() == 'submitted')
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Icon(Icons.check_circle_outline, color: Colors.blue, size: 18),
                 ),
             ],
           ),

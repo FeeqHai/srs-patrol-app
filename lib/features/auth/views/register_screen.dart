@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../models/location_option.dart';
 import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -23,7 +24,14 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   
   bool _obscurePassword = true;
   bool _isHoveringBtn = false;
-  String? _selectedZone;
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+  bool _isLoadingLocations = true;
+  String? _locationLoadError;
   bool _isLoading = false;
 
   late AnimationController _animController;
@@ -35,14 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   final Color _goldenYellow = const Color(0xFFFFD100);
   final Color _charcoal = const Color(0xFF2C3E50);
 
-  final List<String> _zones = [
-    'Zon Utara',
-    'Zon Selatan',
-    'Zon Timur',
-    'Zon Barat',
-    'Pusat Komersial',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -50,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
     _animController.forward();
+    _loadStates();
   }
 
   @override
@@ -68,11 +69,14 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
 
     final bool isFormValid = _formKey.currentState?.validate() ?? false;
 
-    if (!isFormValid || _selectedZone == null) {
+    if (!isFormValid ||
+        _selectedState == null ||
+        _selectedDistrict == null ||
+        _selectedZone == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            context.read<SettingsProvider>().t('Borang tidak lengkap atau zon tidak dipilih.'),
+            context.read<SettingsProvider>().t('Borang tidak lengkap atau lokasi rondaan belum dipilih.'),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.orange.shade800,
@@ -87,7 +91,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       fullName: _nameController.text.trim(),
       icNumber: _icController.text.trim(),
       phoneNumber: _phoneController.text.trim(),
-      districtZone: _selectedZone!,
+      stateId: _selectedState!.id,
+      districtId: _selectedDistrict!.id,
+      zoneId: _selectedZone!.id,
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
@@ -124,6 +130,74 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
           backgroundColor: Colors.redAccent,
         ),
       );
+    }
+  }
+
+  Future<void> _loadStates() async {
+    setState(() {
+      _isLoadingLocations = true;
+      _locationLoadError = null;
+    });
+
+    try {
+      final states = await _authService.fetchLocations(level: 'states');
+      if (!mounted) return;
+      setState(() {
+        _states = states;
+        _isLoadingLocations = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingLocations = false;
+        _locationLoadError = 'Tidak dapat memuatkan senarai negeri.';
+      });
+    }
+  }
+
+  Future<void> _selectState(LocationOption? state) async {
+    setState(() {
+      _selectedState = state;
+      _selectedDistrict = null;
+      _selectedZone = null;
+      _districts = const [];
+      _zones = const [];
+      _locationLoadError = null;
+    });
+    if (state == null) return;
+
+    try {
+      final districts = await _authService.fetchLocations(
+        level: 'districts',
+        parentId: state.id,
+      );
+      if (!mounted || _selectedState?.id != state.id) return;
+      setState(() => _districts = districts);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _locationLoadError = 'Tidak dapat memuatkan senarai daerah.');
+    }
+  }
+
+  Future<void> _selectDistrict(LocationOption? district) async {
+    setState(() {
+      _selectedDistrict = district;
+      _selectedZone = null;
+      _zones = const [];
+      _locationLoadError = null;
+    });
+    if (district == null) return;
+
+    try {
+      final zones = await _authService.fetchLocations(
+        level: 'zones',
+        parentId: district.id,
+      );
+      if (!mounted || _selectedDistrict?.id != district.id) return;
+      setState(() => _zones = zones);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _locationLoadError = 'Tidak dapat memuatkan senarai zon.');
     }
   }
 
@@ -223,44 +297,33 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   // Mobile Layout (Bottom Sheet style that slides up)
   // ---------------------------------------------------------
   Widget _buildMobileLayout() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                children: [
-                  _buildMobileHeader(),
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 30,
-                            offset: const Offset(0, -10),
-                          ),
-                        ],
-                      ),
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: _buildFormContent(isLargeScreen: false),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildMobileHeader(),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 30,
+                  offset: const Offset(0, -10),
+                ),
+              ],
+            ),
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: _buildFormContent(isLargeScreen: false),
               ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -400,7 +463,70 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
             ),
             const SizedBox(height: 16),
 
-            // Dropdown
+            _buildLocationDropdown(
+              value: _selectedState,
+              items: _states,
+              hint: _isLoadingLocations ? 'Memuatkan negeri...' : 'Pilih Negeri',
+              icon: Icons.map_outlined,
+              enabled: !_isLoadingLocations,
+              onChanged: _selectState,
+              validator: (value) => value == null ? settings.t('Sila pilih negeri') : null,
+              isDark: isDark,
+              textColor: textColor,
+            ),
+            const SizedBox(height: 16),
+            _buildLocationDropdown(
+              value: _selectedDistrict,
+              items: _districts,
+              hint: 'Pilih Daerah',
+              icon: Icons.account_tree_outlined,
+              enabled: _selectedState != null && _districts.isNotEmpty,
+              onChanged: _selectDistrict,
+              validator: (value) => value == null ? settings.t('Sila pilih daerah') : null,
+              isDark: isDark,
+              textColor: textColor,
+            ),
+            const SizedBox(height: 16),
+            _buildLocationDropdown(
+              value: _selectedZone,
+              items: _zones,
+              hint: 'Pilih Zon Rondaan',
+              icon: Icons.location_on_outlined,
+              enabled: _selectedDistrict != null && _zones.isNotEmpty,
+              onChanged: (value) => setState(() => _selectedZone = value),
+              validator: (value) => value == null ? settings.t('Sila pilih zon') : null,
+              isDark: isDark,
+              textColor: textColor,
+            ),
+            if (_locationLoadError != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _locationLoadError!,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _selectedState == null
+                        ? _loadStates
+                        : () => _selectDistrict(_selectedDistrict),
+                    child: const Text('Cuba lagi'),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 32),
+
+            /*
+             * The dependent State -> District -> Zone selections above prevent
+             * impossible combinations before submission; the PHP endpoint
+             * validates the same path again on the server.
+             */
+            /*
             DropdownButtonFormField<String>(
               initialValue: _selectedZone,
               icon: Icon(Icons.arrow_drop_down, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
@@ -416,6 +542,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               validator: (val) => val == null ? settings.t('Sila pilih zon') : null,
             ),
             const SizedBox(height: 32),
+            */
 
             _buildSectionTitle(settings.t('Kredensial Sistem')),
             const SizedBox(height: 16),
@@ -499,6 +626,41 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         fontSize: 13,
         letterSpacing: 1,
       ),
+    );
+  }
+
+  Widget _buildLocationDropdown({
+    required LocationOption? value,
+    required List<LocationOption> items,
+    required String hint,
+    required IconData icon,
+    required bool enabled,
+    required ValueChanged<LocationOption?> onChanged,
+    required FormFieldValidator<LocationOption> validator,
+    required bool isDark,
+    required Color textColor,
+  }) {
+    return DropdownButtonFormField<LocationOption>(
+      initialValue: value,
+      icon: Icon(
+        Icons.arrow_drop_down,
+        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+      ),
+      dropdownColor: Theme.of(context).cardColor,
+      style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w500),
+      decoration: _inputDecoration(
+        hintText: hint,
+        icon: icon,
+        isDark: isDark,
+      ),
+      items: items
+          .map((item) => DropdownMenuItem<LocationOption>(
+                value: item,
+                child: Text(item.name, overflow: TextOverflow.ellipsis),
+              ))
+          .toList(),
+      onChanged: enabled ? onChanged : null,
+      validator: validator,
     );
   }
 

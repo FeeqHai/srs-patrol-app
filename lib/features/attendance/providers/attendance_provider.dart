@@ -9,11 +9,13 @@ class AttendanceProvider extends ChangeNotifier {
   String? _errorMessage;
   String? _lastAttendanceId;
   List<dynamic> _availableEquipment = [];
+  List<dynamic> _borrowedEquipment = [];
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get lastAttendanceId => _lastAttendanceId;
   List<dynamic> get availableEquipment => _availableEquipment;
+  List<dynamic> get borrowedEquipment => _borrowedEquipment;
 
   Future<bool> processQrScan(String userId, String qrPayload) async {
     _isLoading = true;
@@ -74,16 +76,57 @@ class AttendanceProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> clockOut(String userId) async {
+  Future<bool> fetchBorrowedEquipment() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
-    
+
     try {
-      final String? errorResult = await _service.clockOut(userId);
+      final response = await ApiClient.getData('attendance/get_return_preview.php');
+      if (response['status'] == 'success') {
+        _borrowedEquipment = response['equipment'] ?? [];
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      _errorMessage = response['message'] ?? 'Unable to load borrowed equipment.';
       _isLoading = false;
       notifyListeners();
-      return errorResult == null;
+      return false;
     } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> requestClockOut(
+    String qrPayload,
+    List<String> returnedEquipmentIds,
+  ) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _service.requestClockOut(
+        qrPayload,
+        returnedEquipmentIds,
+      );
+      if (result['success'] == true) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      _errorMessage = result['message'];
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;

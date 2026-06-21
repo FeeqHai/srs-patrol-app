@@ -1,0 +1,12 @@
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 49581f9..a61adec 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -62,6 +62,7 @@ dependencies:
+   url_launcher: ^6.3.2
+   calendar_date_picker2: ^3.0.0
+   logger: ^2.7.0
++  path_provider: ^2.1.6
+ dev_dependencies:
+   flutter_test:
+     sdk: flutter

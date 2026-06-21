@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/image_viewer_screen.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/pdf_saver.dart';
 
 class IncidentDetailScreen extends StatelessWidget {
   final Map<String, dynamic> incident;
@@ -27,7 +28,7 @@ class IncidentDetailScreen extends StatelessWidget {
     return [imageUrlData.toString()];
   }
 
-  Future<pw.Document> _buildPdf() async {
+  static Future<pw.Document> buildPdf(Map<String, dynamic> incident) async {
     try {
       final pdf = pw.Document();
 
@@ -76,13 +77,13 @@ class IncidentDetailScreen extends StatelessWidget {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfField('NAMA PERONDA', namaPeronda),
+                      pdfField('NAMA PERONDA', namaPeronda),
                       pw.SizedBox(height: 20),
-                      _pdfField('TARIKH RONDAAN', tarikh),
+                      pdfField('TARIKH RONDAAN', tarikh),
                       pw.SizedBox(height: 20),
-                      _pdfField('MASA RONDAAN', masa),
+                      pdfField('MASA RONDAAN', masa),
                       pw.SizedBox(height: 20),
-                      _pdfField('LOKASI RONDAAN', lokasi),
+                      pdfField('LOKASI RONDAAN', lokasi),
                       pw.SizedBox(height: 24),
 
                       // Peristiwa section
@@ -112,6 +113,61 @@ class IncidentDetailScreen extends StatelessWidget {
         ),
       );
 
+      // Fetch and append evidence images if available
+      List<String> imageUrls = [];
+      final imageUrlData = incident['image_url'];
+      if (imageUrlData != null && imageUrlData.toString().isNotEmpty) {
+        try {
+          if (imageUrlData.toString().trim().startsWith('[')) {
+            List<dynamic> parsed = json.decode(imageUrlData.toString());
+            imageUrls = parsed.map((e) => e.toString()).toList();
+          } else {
+            imageUrls = [imageUrlData.toString()];
+          }
+        } catch (_) {
+          imageUrls = [imageUrlData.toString()];
+        }
+      }
+
+      for (final url in imageUrls) {
+        if (url.isNotEmpty) {
+          try {
+            final imageProvider = await networkImage(url);
+            pdf.addPage(
+              pw.Page(
+                pageFormat: PdfPageFormat.a4,
+                margin: const pw.EdgeInsets.all(40),
+                build: (pw.Context context) {
+                  return pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Center(
+                        child: pw.Text(
+                          'GAMBAR BUKTI / EVIDEN',
+                          style: pw.TextStyle(
+                            fontSize: 16,
+                            fontWeight: pw.FontWeight.bold,
+                            decoration: pw.TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      pw.SizedBox(height: 24),
+                      pw.Expanded(
+                        child: pw.Center(
+                          child: pw.Image(imageProvider, fit: pw.BoxFit.contain),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          } catch (e) {
+            appLogger.e("Failed to load image for PDF: $url, error: $e");
+          }
+        }
+      }
+
       return pdf;
     } catch (e, stackTrace) {
       final errorPdf = pw.Document();
@@ -131,7 +187,7 @@ class IncidentDetailScreen extends StatelessWidget {
     }
   }
 
-  pw.Widget _pdfField(String label, String value) {
+  static pw.Widget pdfField(String label, String value) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -150,6 +206,8 @@ class IncidentDetailScreen extends StatelessWidget {
       ],
     );
   }
+
+  Future<pw.Document> _buildPdf() => IncidentDetailScreen.buildPdf(incident);
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +248,7 @@ class IncidentDetailScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Scaffold(
+                         child: Scaffold(
                           appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
                           body: PdfPreview(
                             build: (format) async {
@@ -199,7 +257,22 @@ class IncidentDetailScreen extends StatelessWidget {
                             },
                             canChangeOrientation: false,
                             canChangePageFormat: false,
+                            canDebug: false,
                             pdfFileName: 'buku_nota_harian_${incident['id']}.pdf',
+                            actions: [
+                              PdfPreviewAction(
+                                icon: Tooltip(
+                                  message: settings.t('Muat Turun PDF'),
+                                  child: const Icon(Icons.download),
+                                ),
+                                onPressed: (context, build, pageFormat) async {
+                                  final bytes = await build(pageFormat);
+                                  if (context.mounted) {
+                                    await savePdf(context, bytes, 'buku_nota_harian_${incident['id']}.pdf');
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -218,7 +291,22 @@ class IncidentDetailScreen extends StatelessWidget {
                           },
                           canChangeOrientation: false,
                           canChangePageFormat: false,
+                          canDebug: false,
                           pdfFileName: 'buku_nota_harian_${incident['id']}.pdf',
+                          actions: [
+                            PdfPreviewAction(
+                              icon: Tooltip(
+                                message: settings.t('Muat Turun PDF'),
+                                child: const Icon(Icons.download),
+                              ),
+                              onPressed: (context, build, pageFormat) async {
+                                final bytes = await build(pageFormat);
+                                if (context.mounted) {
+                                  await savePdf(context, bytes, 'buku_nota_harian_${incident['id']}.pdf');
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),

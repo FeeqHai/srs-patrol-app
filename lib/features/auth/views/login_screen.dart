@@ -66,6 +66,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final settings = context.read<SettingsProvider>();
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(Icons.support_agent_outlined, color: _royalBlue, size: 40),
+        title: Text(settings.t('Password Assistance')),
+        content: Text(settings.t(
+          'Please contact Ketua KRT to reset your password or reactivate your account.',
+        )),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            style: FilledButton.styleFrom(backgroundColor: _royalBlue),
+            child: Text(settings.t('Tutup')),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -359,12 +381,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {},
+              onPressed: _showForgotPasswordDialog,
               style: TextButton.styleFrom(
                 foregroundColor: isDark ? _goldenYellow : _royalBlue,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               ),
-              child: Text(settings.t('Lupa kata laluan?'), style: const TextStyle(fontWeight: FontWeight.w600)),
+              child: Text(settings.t('Forgot password?'), style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 32),

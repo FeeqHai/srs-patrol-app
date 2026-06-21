@@ -116,12 +116,17 @@ class SosAlertService {
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     
-    await _localNotificationsPlugin.show(
-      id: DateTime.now().millisecond,
-      title: 'AMARAN KECEMASAN (SOS)',
-      body: message,
-      notificationDetails: platformChannelSpecifics,
-    );
+    try {
+      await _localNotificationsPlugin.show(
+        id: DateTime.now().millisecond,
+        title: 'AMARAN KECEMASAN (SOS)',
+        body: message,
+        notificationDetails: platformChannelSpecifics,
+      );
+    } catch (error) {
+      // Web notifications may be blocked until the user grants browser permission.
+      debugPrint('Unable to show SOS system notification: $error');
+    }
 
     // 3. App Dialog Overlay
     if (navigatorKey.currentContext != null) {
@@ -129,61 +134,148 @@ class SosAlertService {
         context: navigatorKey.currentContext!,
         barrierDismissible: false, // Must explicitly tap acknowledge
         builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: Colors.red.shade50,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: const BorderSide(color: Colors.red, width: 3)),
-            title: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 40),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'AMARAN KECEMASAN!',
-                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 22),
-                  ),
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            backgroundColor: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Material(
+                color: const Color(0xFFFFEEF0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: const BorderSide(color: Colors.redAccent, width: 2),
                 ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$name telah menekan butang SOS dan memerlukan bantuan segera.',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
-                ),
-                const SizedBox(height: 15),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Lokasi:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                      Text(location, style: const TextStyle(fontSize: 15, color: Colors.black)),
-                      const SizedBox(height: 8),
-                      const Text('Masa:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                      Text(time, style: const TextStyle(fontSize: 15, color: Colors.black)),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.redAccent,
+                            size: 34,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'AMARAN KECEMASAN!',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        '$name telah menekan butang SOS dan memerlukan bantuan segera.',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: [
+                            _SosDetailRow(
+                              icon: Icons.location_on_outlined,
+                              label: 'Lokasi',
+                              value: location,
+                            ),
+                            const Divider(height: 24),
+                            _SosDetailRow(
+                              icon: Icons.schedule_outlined,
+                              label: 'Masa',
+                              value: time,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text(
+                            'SAH & TUTUP',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                )
-              ],
-            ),
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Text('SAH / TUTUP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
-            ],
+            ),
           );
         },
       );
     }
+  }
+}
+
+class _SosDetailRow extends StatelessWidget {
+  const _SosDetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final mutedColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.redAccent),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: mutedColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -34,8 +34,12 @@ class _AdminSquadScheduleScreenState extends State<AdminSquadScheduleScreen> wit
         TabBar(
           controller: _tabController,
           labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: theme.disabledColor,
+          unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           indicatorColor: theme.colorScheme.primary,
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: theme.dividerColor.withValues(alpha: 0.1),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
           tabs: [
             Tab(text: settings.t('Kumpulan')),
             Tab(text: settings.t('Penjadualan')),
@@ -184,8 +188,21 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                 decoration: InputDecoration(
                   labelText: settings.t('Nama Kumpulan'),
                   labelStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor)),
+                  filled: true,
+                  fillColor: theme.dividerColor.withValues(alpha: 0.05),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: theme.primaryColor, width: 2),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -355,16 +372,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         children: [
           Padding(
             padding: const EdgeInsets.all(20.0),
-            child: ElevatedButton.icon(
+            child: FilledButton.icon(
               onPressed: _showCreateSquadDialog,
-              icon: const Icon(Icons.add_circle),
+              icon: const Icon(Icons.add_circle_outline),
               label: Text(settings.t('Cipta Kumpulan Baru')),
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
                 backgroundColor: theme.primaryColor,
                 foregroundColor: Colors.white,
-                elevation: 4,
-                shadowColor: theme.primaryColor.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -399,7 +414,10 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                         margin: const EdgeInsets.only(bottom: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: theme.dividerColor),
+                          side: BorderSide(
+                            color: theme.brightness == Brightness.dark ? Colors.white12 : Colors.grey.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Theme(
                           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -696,7 +714,21 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                     decoration: InputDecoration(
                       labelText: settings.t('Pilih Kumpulan'),
                       labelStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: theme.primaryColor, width: 2),
+                      ),
                     ),
                     items: squads.map<DropdownMenuItem<String>>((s) {
                       return DropdownMenuItem<String>(
@@ -837,16 +869,14 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
         children: [
           Padding(
             padding: const EdgeInsets.all(20.0),
-            child: ElevatedButton.icon(
+            child: FilledButton.icon(
               onPressed: _showCreateScheduleDialog,
-              icon: const Icon(Icons.calendar_month),
+              icon: const Icon(Icons.calendar_month_outlined),
               label: Text(settings.t('Tetapkan Jadual Rondaan')),
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
                 backgroundColor: theme.primaryColor,
                 foregroundColor: Colors.white,
-                elevation: 4,
-                shadowColor: theme.primaryColor.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -887,7 +917,10 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                         margin: const EdgeInsets.only(bottom: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: theme.dividerColor),
+                          side: BorderSide(
+                            color: theme.brightness == Brightness.dark ? Colors.white12 : Colors.grey.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),

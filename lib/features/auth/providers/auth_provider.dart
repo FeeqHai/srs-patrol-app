@@ -9,11 +9,17 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   String? _userId;
   String? _role;
+  String? _stateName;
+  String? _districtName;
+  String? _zoneName;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get userId => _userId;
   String? get role => _role;
+  String? get stateName => _stateName;
+  String? get districtName => _districtName;
+  String? get zoneName => _zoneName;
   bool get isAuthenticated => _userId != null;
 
   AuthProvider() {
@@ -24,6 +30,9 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('user_id');
     _role = prefs.getString('user_role');
+    _stateName = prefs.getString('user_state_name');
+    _districtName = prefs.getString('user_district_name');
+    _zoneName = prefs.getString('user_zone_name');
     notifyListeners();
   }
 
@@ -49,11 +58,17 @@ class AuthProvider extends ChangeNotifier {
       if (data['status'] == 'success') {
         _userId = data['data']['id'];
         _role = data['data']['role'];
+        _stateName = data['data']['state_name'] as String?;
+        _districtName = data['data']['district_name'] as String?;
+        _zoneName = data['data']['zone_name'] as String?;
         final String? token = data['token'];
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', _userId!);
         await prefs.setString('user_role', _role!);
+        await _saveOptionalString(prefs, 'user_state_name', _stateName);
+        await _saveOptionalString(prefs, 'user_district_name', _districtName);
+        await _saveOptionalString(prefs, 'user_zone_name', _zoneName);
         if (token != null) {
           await prefs.setString('jwt_token', token);
         }
@@ -83,8 +98,26 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove('user_id');
     await prefs.remove('user_role');
     await prefs.remove('jwt_token');
+    await prefs.remove('user_state_name');
+    await prefs.remove('user_district_name');
+    await prefs.remove('user_zone_name');
     _userId = null;
     _role = null;
+    _stateName = null;
+    _districtName = null;
+    _zoneName = null;
     notifyListeners();
+  }
+
+  Future<void> _saveOptionalString(
+    SharedPreferences prefs,
+    String key,
+    String? value,
+  ) async {
+    if (value == null || value.isEmpty) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setString(key, value);
+    }
   }
 }

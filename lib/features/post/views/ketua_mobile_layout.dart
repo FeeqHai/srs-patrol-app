@@ -6,10 +6,12 @@ import '../../auth/providers/auth_provider.dart';
 import '../../attendance/views/attendance_screen.dart';
 import '../../incident/views/incident_screen.dart';
 import '../../dashboard/views/dashboard_screen.dart';
+import '../../dashboard/views/schedule_screen.dart';
 import '../../incident/services/incident_service.dart';
 import 'admin_incident_screen.dart';
 import '../../../core/widgets/responsive_shell.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/app_notification_button.dart';
 import '../../../core/widgets/global_menu_button.dart';
 
 class KetuaMobileLayout extends StatefulWidget {
@@ -22,9 +24,11 @@ class KetuaMobileLayout extends StatefulWidget {
 class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
   int _currentIndex = 0;
   bool _isSosBroadcasting = false;
+  bool _hideAppBar = false;
 
   final List<String> _pageTitles = [
     'Dashboard',
+    'Jadual Rondaan',
     'Suapan Insiden',
     'Laporan Peronda',
     'Pengesahan Rondaan',
@@ -175,12 +179,19 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
       DashboardScreen(
         onNavigateToScan: () {
           setState(() {
-            _currentIndex = 3;
+            _currentIndex = 4;
           });
         },
       ),
+      const ScheduleScreen(),
       const IncidentScreen(),
-      const AdminIncidentScreen(),
+      AdminIncidentScreen(
+        onSubViewChanged: (hide) {
+          setState(() {
+            _hideAppBar = hide;
+          });
+        },
+      ),
       AttendanceScreen(
         onNavigateToDashboard: () {
           setState(() {
@@ -197,11 +208,14 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
       onIndexChanged: (index) {
         setState(() {
           _currentIndex = index;
+          _hideAppBar = false;
         });
       },
       screens: screens,
+      showAppBar: !_hideAppBar,
       items: [
         NavigationItem(icon: Icons.dashboard, label: settings.t('Dashboard')),
+        NavigationItem(icon: Icons.calendar_month, label: settings.t('Jadual Rondaan')),
         NavigationItem(icon: Icons.warning, label: settings.t('Insiden')),
         NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan Peronda')),
         NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Rondaan')),
@@ -209,7 +223,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
       onSosPressed: _triggerSOS,
       isSosBroadcasting: _isSosBroadcasting,
       title: settings.t(_pageTitles[_currentIndex]),
-      actions: const [GlobalMenuButton()],
+      actions: const [AppNotificationButton(), GlobalMenuButton()],
     );
   }
 }

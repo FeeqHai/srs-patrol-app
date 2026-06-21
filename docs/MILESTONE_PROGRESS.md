@@ -1,9 +1,9 @@
 # Skim Rondaan Sukarela (SRS) Digital Patrol System — Milestone & Codebase Progress Report
 
 > **Project**: Skim Rondaan Sukarela (SRS) Digital Patrol System
-> **Milestone Date**: 2026-06-17
+> **Milestone Date**: 2026-06-18
 > **Author**: Rafeeq (B032410536) — FYP, Universiti Teknikal Malaysia Melaka (UTeM)
-> **Status**: Completed Iteration 1 Refactoring & Cleanups — Ready for Next Phases
+> **Status**: Completed Iteration 2: Bottom Navigation Bar Redesign & Squad Card Interactivity — Clean Compile & Warning-Free
 
 This document provides a comprehensive log of codebase modifications, categorised into **Adjustments**, **Fixes**, and **Removals** across the Flutter client (`srs_app`) and raw PHP backend (`srs_api`). It also serves as a tracking reference for the remaining work (bugs, improvements, and new features).
 
@@ -12,8 +12,8 @@ This document provides a comprehensive log of codebase modifications, categorise
 ## 1. Codebase Modifications Summary
 
 ### 📊 Metric Overview
-* **Adjustments**: 9 Changes
-* **Fixes**: 6 Changes
+* **Adjustments**: 12 Changes
+* **Fixes**: 8 Changes
 * **Removals**: 7 Files/Features Deleted
 * **File Health**: Clean compile, 0 compiler warnings, 0 static analysis errors.
 
@@ -59,6 +59,18 @@ We refactored several screens to standardise typography, align spacing, and matc
    * **File(s)**: [update_status.php](file:///c:/xampp/htdocs/srs_api/incidents/update_status.php)
    * **Details**: Added an API endpoint to allow authorised roles to update the state (`status`) of incident reports.
 
+10. **Central FAB Bottom Navigation Bar**  
+    * **File(s)**: [responsive_shell.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/core/widgets/responsive_shell.dart)
+    * **Details**: Redesigned the main bottom navigation bar to features a central Floating Action Button (FAB) that opens a horizontal floating overlay menu containing secondary pages, resolving navigation bar spacing layout cramps on mobile.
+
+11. **Squad Member List Dialog Interactivity**  
+    * **File(s)**: [schedule_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/dashboard/views/schedule_screen.dart), [dashboard_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/dashboard/views/dashboard_screen.dart)
+    * **Details**: Encapsulated the squad banner cards inside clickable `InkWell` triggers to present an interactive, scrollable list modal of the squad members (displaying full names, phone numbers, and role badges).
+
+12. **OS Navigation Bar Safety Alignment**  
+    * **File(s)**: [responsive_shell.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/core/widgets/responsive_shell.dart)
+    * **Details**: Integrated safe area bottom padding via `MediaQuery.of(context).padding.bottom` to dynamically push up all custom bottom navigation controls and menu drawer overlays above the system keys.
+
 ---
 
 ### 1.2 Fixes (Bugs & Code Integrity)
@@ -88,6 +100,14 @@ We resolved several runtime bugs, warnings, and logical errors that caused incor
 6. **Hardcoded Color Refactor**  
    * **File(s)**: [attendance_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/attendance/views/attendance_screen.dart), [analytics_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/post/views/analytics_screen.dart)
    * **Details**: Replaced hardcoded black/white/grey styling properties with Theme context values (e.g. `Theme.of(context).colorScheme.surface`) to ensure theme integrity.
+
+7. **Redundant AppBar Cleanups**  
+   * **File(s)**: [schedule_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/dashboard/views/schedule_screen.dart)
+   * **Details**: Removed Scaffold's `appBar` property to eliminate secondary header bars from showing on top of the main shell header on mobile.
+
+8. **Translation Map Duplicate Keys**  
+   * **File(s)**: [settings_provider.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/core/providers/settings_provider.dart)
+   * **Details**: Resolved equal key map warnings by splitting the overlapping `'Ahli'` string into `'Ahli'` (plural category/navigation header) and `'Ahli (Peranan)'` (singular squad member role).
 
 ---
 
@@ -121,29 +141,33 @@ To clean up the codebase and align with the FYP scope boundaries, we purged seve
 
 ---
 
-## 2. Roadmap: Remaining Work & Backlog
+## 2. Project Timeline & Milestones
+
+Below is the structured project development timeline, tracking completed milestones and targeting submission deadlines for the FYP project.
+
+| Phase | Core Deliverables / Tasks | Target Period | Status |
+| :--- | :--- | :--- | :--- |
+| **Phase 1: Core Foundation** | Setup Flutter shell, core networking (`api_client.dart`), provider architecture, initial authentication flows, and raw PHP API backend. | Late April 2026 | **Completed** |
+| **Phase 2: JPNIN Form Features** | Implement Attendance (Lampiran C1/C2), Incident Reporting (Lampiran C3), SOS Emergency Polling, and Crime/Hotspot Analytics Dashboards. | Mid-May 2026 | **Completed** |
+| **Phase 3: Stabilization & Refactor (Iteration 1)** | Fix Critical/High Bugs (BUG-001 to BUG-006), security JWT hardening, drop redundant features, resolve color/theme/SDK compatibility warnings. | Early June 2026 | **Completed** |
+| **Phase 4: Navigation & Interactivity (Iteration 2)** | Custom central FAB bottom navigation bar, dynamic padding for system gesture keys, clickable squad cards displaying full modal rosters. | June 18, 2026 | **Completed** (Current) |
+| **Phase 5: Advanced Features & Backlog** | JPNIN Lampiran 6 Report Redesign, open calendar modals, local push notifications (10.4), and OpenStreetMap SOS locations (10.6). | Late June - Mid-July 2026 | *Scheduled* |
+| **Phase 6: Admin Panel & Cleanup** | User registration approval panel (10.1), bulk selections (10.2), HTTP call standardization (BUG-009), dynamic Base URL environment settings (BUG-010). | Mid-July - Late July 2026 | *Scheduled* |
+| **Phase 7: Testing, Documentation & Submission** | Comprehensive blackbox/whitebox testing, performance profiling, final FYP report compilation, video demo, and project submission. | Early August 2026 | *Scheduled* |
+
+---
+
+## 3. Roadmap: Remaining Work & Backlog
 
 This checklist summarizes **"how far and how many things we need to do"** to finalize the project for submission.
 
-### 🔴 Critical & High Priority Bugs
-- [ ] **BUG-001: Rewrite Equipment Inventory API**  
-  * *File*: [get_inventory.php](file:///c:/xampp/htdocs/srs_api/equipment/get_inventory.php)  
-  * *Issue*: Code attempts to call PDO methods (`fetchAll`) on a `mysqli` connection, which will crash at runtime. Needs to be rewritten using `mysqli` prepared statements.
-- [ ] **BUG-002: Resolve SOS Alert Endpoint**  
-  * *File*: `srs_api/tracking/sos_alert.php`  
-  * *Issue*: Referenced by the Flutter service but does not exist. Must create the endpoint or redirect SOS alerts to use the `incidents/upload_incident.php` file under the category `Kecemasan`.
-- [ ] **BUG-003: Replace DropdownButtonFormField**  
-  * *File*: [admin_squad_schedule_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/post/views/admin_squad_schedule_screen.dart)  
-  * *Issue*: Uses a non-existent parameter `initialValue` which throws layout compile issues on newer SDK versions. Replace with M3 `DropdownMenu`.
-- [ ] **BUG-004: Tighten JWT Token Verification**  
-  * *File*: Multiple PHP API endpoints  
-  * *Issue*: Several endpoints do not enforce JWT checks and trust the client-sent `user_id` parameter directly, which is a security risk. Add verification logic.
-- [ ] **BUG-005: Cascade Delete Incident Photos**  
-  * *File*: [delete_incident.php](file:///c:/xampp/htdocs/srs_api/incidents/delete_incident.php)  
-  * *Issue*: Deleting an incident record leaves stale images on the server filesystem. Add an `unlink()` operation.
-- [ ] **BUG-006: Server Sync for Active Shifts**  
-  * *File*: [dashboard_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/dashboard/views/dashboard_screen.dart)  
-  * *Issue*: Shift active flag is only stored in local SharedPreferences. If the app restarts, the local state is lost or becomes stale. Needs a query to sync shift status on launch.
+### 🔴 Critical & High Priority Bugs (All Solved)
+- [x] **BUG-001: Rewrite Equipment Inventory API**
+- [x] **BUG-002: Resolve SOS Alert Endpoint**
+- [x] **BUG-003: Replace DropdownButtonFormField**
+- [x] **BUG-004: Tighten JWT Token Verification**
+- [x] **BUG-005: Cascade Delete Incident Photos**
+- [x] **BUG-006: Server Sync for Active Shifts**
 
 ---
 
@@ -159,7 +183,8 @@ This checklist summarizes **"how far and how many things we need to do"** to fin
   * *Issue*: Storing full image URLs with hardcoded server IPs in the database makes links break when the server IP changes. Store relative paths and append the host URL dynamically during API responses.
 - [ ] **BUG-015: Implement Forgot Password Flow**  
   * *File*: [login_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/auth/views/login_screen.dart)  
-  * *Issue*: The link exists on the UI but does nothing. Needs a forgot password API flow (OTP, validation, and reset).
+  * *Demo Mitigation*: The link now opens a translated account assistance dialog that tells users to contact Ketua KRT for password reset or account reactivation.
+  * *Remaining*: Full OTP validation and password reset API flow is still future scope.
 - [ ] **BUG-016: Enable Profile Editing**  
   * *File*: [profile_screen.dart](file:///c:/Users/rafee/Documents/UTeM/FYP/srs_app/lib/features/auth/views/profile_screen.dart)  
   * *Issue*: Profile page is read-only. Need to allow users to update their name, email, or phone number.
@@ -187,11 +212,9 @@ This checklist summarizes **"how far and how many things we need to do"** to fin
 
 ---
 
-## 3. Recommended Next Steps
+## 4. Recommended Next Steps
 
-1. **Equipments & SOS Core Fixes (High Priority)**  
-   * Resolve `BUG-001` (mysqli syntax fix in [get_inventory.php](file:///c:/xampp/htdocs/srs_api/equipment/get_inventory.php)) and `BUG-002` (SOS routing) to ensure the core equipment inventory and SOS reception pipelines do not crash.
+1. **Advance to Scheduling & Notification Phase (10.4)**  
+   * Build the patroller calendar view modal and scheduling alerts.
 2. **User Management Panel Integration**  
    * Extend `admin_member_screen.dart` with a verification toggle so admins can approve pending accounts.
-3. **Advance to Scheduling & Notification Phase (10.4)**  
-   * Build the patroller calendar view modal and scheduling alerts.

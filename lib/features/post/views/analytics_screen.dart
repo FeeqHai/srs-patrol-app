@@ -237,6 +237,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final isWeekly = _chartPeriod == 'Weekly';
     final spotCount = isWeekly ? 7 : 30;
     final trendData = isWeekly ? _weeklyCounts : _monthlyCounts;
+    final periodTotal = trendData.isNotEmpty ? trendData.reduce((a, b) => a + b) : 0;
 
     final spots = List.generate(spotCount, (index) {
       return FlSpot(index.toDouble(), trendData[index].toDouble());
@@ -453,32 +454,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            isWeekly 
-                                ? settings.t('Trend Insiden (7 Hari Terakhir)') 
-                                : settings.t('Trend Insiden (30 Hari Terakhir)'),
-                            style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        _buildRectangularSegmentedToggle(
-                          selectedValue: _chartPeriod,
-                          options: {
-                            'Weekly': settings.t('Mingguan'),
-                            'Monthly': settings.t('Bulanan'),
-                          },
-                          onChanged: (value) {
-                            setState(() {
-                              _chartPeriod = value;
-                            });
-                          },
-                        ),
-                      ],
+                    Text(
+                      '${settings.t('Jumlah Insiden')}: $periodTotal',
+                      style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: _buildRectangularSegmentedToggle(
+                        selectedValue: _chartPeriod,
+                        options: {
+                          'Weekly': settings.t('Mingguan'),
+                          'Monthly': settings.t('Bulanan'),
+                        },
+                        width: double.infinity,
+                        onChanged: (value) {
+                          setState(() {
+                            _chartPeriod = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     SizedBox(
                       height: 200,
                       child: LineChart(
@@ -490,6 +487,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 32,
+                                interval: 1,
                                 getTitlesWidget: (value, meta) {
                                   final idx = value.toInt();
                                   if (idx >= 0 && idx < chartLabels.length) {
@@ -980,12 +978,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     required String selectedValue,
     required Map<String, String> options,
     required ValueChanged<String> onChanged,
+    double? width,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
     return SizedBox(
-      width: 153, // 85% of standard ~180 width
+      width: width ?? 153,
       height: 36,
       child: Container(
         decoration: BoxDecoration(

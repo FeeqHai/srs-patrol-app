@@ -7,6 +7,7 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/attendance/views/attendance_screen.dart';
 import '../../features/incident/views/incident_screen.dart';
 import '../../features/dashboard/views/dashboard_screen.dart';
+import '../../features/dashboard/views/schedule_screen.dart';
 import '../../features/incident/services/incident_service.dart';
 import '../providers/settings_provider.dart';
 import 'responsive_shell.dart';
@@ -25,6 +26,7 @@ class _MainShellState extends State<MainShell> {
   
   final List<String> _pageTitles = [
     'Dashboard',
+    'Jadual Rondaan',
     'Log Insiden',
     'Pengesahan Rondaan'
   ];
@@ -170,10 +172,11 @@ class _MainShellState extends State<MainShell> {
       DashboardScreen(
         onNavigateToScan: () {
           setState(() {
-            _currentIndex = 2;
+            _currentIndex = 3;
           });
         },
       ),
+      const ScheduleScreen(),
       const IncidentScreen(),
       AttendanceScreen(
         onNavigateToDashboard: () {
@@ -196,6 +199,7 @@ class _MainShellState extends State<MainShell> {
       screens: screens,
       items: [
         NavigationItem(icon: Icons.dashboard, label: settings.t('Dashboard')),
+        NavigationItem(icon: Icons.calendar_month, label: settings.t('Jadual Rondaan')),
         NavigationItem(icon: Icons.warning, label: settings.t('Insiden')),
         NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Rondaan')),
       ],

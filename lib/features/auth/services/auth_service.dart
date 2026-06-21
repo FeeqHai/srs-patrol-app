@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/logger.dart';
+import '../models/location_option.dart';
 
 class AuthService {
   // Instantiate the UUID generator
@@ -15,7 +16,9 @@ class AuthService {
     required String fullName,
     required String icNumber,       // NEW DATA
     required String phoneNumber,    // NEW DATA
-    required String districtZone,   // NEW DATA
+    required String stateId,
+    required String districtId,
+    required String zoneId,
     required String email,
     required String password,
   }) async {
@@ -29,7 +32,9 @@ class AuthService {
       'full_name': fullName,
       'ic_number': icNumber,        // NEW DATA
       'phone_number': phoneNumber,  // NEW DATA
-      'district_zone': districtZone,// NEW DATA
+      'state_id': stateId,
+      'district_id': districtId,
+      'zone_id': zoneId,
       'email': email,
       'password': password,
     };
@@ -54,5 +59,24 @@ class AuthService {
       
       return "Network Exception: Unable to communicate with the server.";
     }
+  }
+
+  Future<List<LocationOption>> fetchLocations({
+    required String level,
+    String? parentId,
+  }) async {
+    final endpoint = parentId == null
+        ? '${ApiConstants.locationsEndpoint}?level=$level'
+        : '${ApiConstants.locationsEndpoint}?level=$level&parent_id=$parentId';
+    final response = await ApiClient.getData(endpoint) as Map<String, dynamic>;
+
+    if (response['status'] != 'success') {
+      throw Exception(response['message'] ?? 'Unable to load location data.');
+    }
+
+    final data = response['data'] as List<dynamic>? ?? const [];
+    return data
+        .map((item) => LocationOption.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 }

@@ -5,11 +5,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../attendance/providers/attendance_provider.dart';
 import '../../incident/services/incident_service.dart';
 import '../../incident/views/incident_detail_screen.dart';
 import '../../incident/views/lampiran_6_screen.dart';
@@ -30,13 +30,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _elapsedTime = "00:00:00";
   int _incidentCount = 0;
   List<dynamic> _allIncidents = [];
-  String _incidentFilter = 'Semua';
   List<int> _weeklyCounts = List.filled(7, 0);
+  List<int> _monthlyCounts = List.filled(30, 0);
+  String _chartPeriod = 'Weekly';
   List<dynamic> _activeSosList = [];
   Timer? _sosDashboardTimer;
   String _fullName = 'Peronda';
   String _zoneName = '';
+  String _squadName = '';
+  Map<String, dynamic>? _squad;
   List<String> _activeEquipment = [];
+
+  Future<void> _fetchSquadInfo() async {
+    try {
+      final response = await ApiClient.getData('schedules/get_user_schedule.php');
+      if (response['status'] == 'success') {
+        final squadData = response['squad'];
+        if (mounted) {
+          setState(() {
+            _squad = squadData;
+            _squadName = squadData != null ? squadData['squad_name'] : '';
+          });
+        }
+      }
+    } catch (_) {}
+  }
 
   Future<void> _fetchUserProfile() async {
     try {
@@ -79,33 +97,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return initials.isEmpty ? "P" : initials.toUpperCase();
   }
 
-  int _calculateFilteredIncidents(List<dynamic> incidents, String filter) {
-    if (filter == 'Semua') return incidents.length;
-    
-    final now = DateTime.now();
-    int count = 0;
-    for (var inc in incidents) {
-      if (inc['created_at'] != null) {
-        try {
-          final date = DateTime.parse(inc['created_at']);
-          if (filter == 'Harian') {
-            if (date.year == now.year && date.month == now.month && date.day == now.day) count++;
-          } else if (filter == 'Mingguan') {
-            final diff = now.difference(date).inDays;
-            if (diff >= 0 && diff <= 7) count++;
-          } else if (filter == 'Bulanan') {
-            if (date.year == now.year && date.month == now.month) count++;
-          }
-        } catch (_) {}
-      }
-    }
-    return count;
-  }
-
   @override
   void initState() {
     super.initState();
     _fetchUserProfile();
+    _fetchSquadInfo();
     _loadShiftData();
     _fetchIncidentCount();
     _pollSOS();
@@ -162,7 +158,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      List<int> counts = List.filled(7, 0);
+      List<int> weeklyCounts = List.filled(7, 0);
+      List<int> monthlyCounts = List.filled(30, 0);
       
       for (var inc in incidents) {
         if (inc['created_at'] != null) {
@@ -171,8 +168,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final incDay = DateTime(date.year, date.month, date.day);
             final diff = today.difference(incDay).inDays;
             if (diff >= 0 && diff < 7) {
-              int index = 6 - diff;
-              counts[index]++;
+              weeklyCounts[6 - diff]++;
+            }
+            if (diff >= 0 && diff < 30) {
+              monthlyCounts[29 - diff]++;
             }
           } catch (_) {}
         }
@@ -181,8 +180,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         setState(() {
           _allIncidents = incidents;
-          _weeklyCounts = counts;
-          _incidentCount = _calculateFilteredIncidents(_allIncidents, _incidentFilter);
+          _weeklyCounts = weeklyCounts;
+          _monthlyCounts = monthlyCounts;
+          final isWeekly = _chartPeriod == 'Weekly';
+          final currentTrendData = isWeekly ? weeklyCounts : monthlyCounts;
+          _incidentCount = currentTrendData.isNotEmpty ? currentTrendData.reduce((a, b) => a + b) : 0;
         });
       }
     } catch (e) {
@@ -300,7 +302,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _updateElapsedTime();
     });
   }
-
   void _updateElapsedTime() {
     if (_shiftStartTime == null) return;
     final Duration diff = DateTime.now().difference(_shiftStartTime!);
@@ -312,6 +313,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  void _showSquadMembersDialog(BuildContext context, SettingsProvider settings) {
+    if (_squad == null || _squad!['members'] == null) return;
+    
+    final members = _squad!['members'] as List<dynamic>;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.people_outline, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _squad!['squad_name'] ?? settings.t('Kumpulan Rondaan Anda'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: members.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                    child: Text(
+                      settings.t('Tiada ahli dalam kumpulan ini.'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: members.length,
+                    separatorBuilder: (context, index) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final member = members[index];
+                      final name = member['full_name'] ?? '';
+                      final phone = member['phone_number'] ?? '';
+                      final isLeader = (member['squad_role'] ?? '').toString().toUpperCase() == 'LEADER';
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isLeader 
+                              ? colorScheme.secondary.withValues(alpha: 0.2) 
+                              : colorScheme.primary.withValues(alpha: 0.1),
+                          child: Icon(
+                            isLeader ? Icons.shield : Icons.person,
+                            color: isLeader ? colorScheme.secondary : colorScheme.primary,
+                          ),
+                        ),
+                        title: Text(
+                          name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(phone),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isLeader 
+                                ? colorScheme.secondary.withValues(alpha: 0.15) 
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isLeader 
+                                  ? colorScheme.secondary 
+                                  : theme.dividerColor.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Text(
+                            isLeader ? settings.t('Ketua') : settings.t('Ahli (Peranan)'),
+                            style: TextStyle(
+                              color: isLeader ? colorScheme.secondary : theme.textTheme.bodyMedium?.color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(settings.t('Tutup')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -321,6 +418,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                            authProvider.role == 'ketua' || 
                            authProvider.role == 'ketua_krt' || 
                            authProvider.role == 'ketua_peronda';
+    final isPatrollerOrSquadLeader = authProvider.role == 'peronda' || 
+                                     authProvider.role == 'ketua_peronda';
 
     final hour = DateTime.now().hour;
     String greetingKey = 'Selamat Pagi';
@@ -372,6 +471,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+
+              if (isPatrollerOrSquadLeader) ...[
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _squad != null ? () => _showSquadMembersDialog(context, settings) : null,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: theme.brightness == Brightness.dark
+                              ? [const Color(0xFF1E3A8A), const Color(0xFF1D4ED8)]
+                              : [theme.primaryColor, theme.primaryColor.withValues(alpha: 0.85)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.primaryColor.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _squad != null ? Icons.shield : Icons.shield_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  settings.t('Kumpulan Rondaan Anda'),
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.5),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  _squadName.isNotEmpty ? _squadName : settings.t('Tiada Kumpulan'),
+                                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.3),
+                                ),
+                                if (_squad != null && authProvider.role != null) ...[
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.5), width: 1),
+                                    ),
+                                    child: Text(
+                                      authProvider.role == 'ketua_peronda'
+                                          ? settings.t('Ketua Peronda')
+                                          : settings.t('Peronda'),
+                                      style: TextStyle(
+                                        color: theme.colorScheme.secondary,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    settings.t('Klik untuk melihat senarai ahli'),
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (_squad != null) ...[
+                            const SizedBox(width: 12),
+                            const Icon(
+                              Icons.chevron_right,
+                              color: Colors.white70,
+                              size: 24,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // KPI / Stats Section (3 Columns on Mobile, no Glassmorphism)
               Row(
@@ -556,7 +759,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: _shiftActive ? 32 : 14,
-                        fontFamily: _shiftActive ? 'Courier' : null,
                         fontWeight: _shiftActive ? FontWeight.bold : FontWeight.normal,
                         color: _shiftActive ? theme.textTheme.bodyLarge?.color : Colors.white.withValues(alpha: 0.8),
                       ),
@@ -583,62 +785,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                     const SizedBox(height: 20),
-                    // Clickable Button inside container
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _shiftActive
-                            ? () async {
-                                final auth = context.read<AuthProvider>();
-                                final currentUserId = auth.userId;
-                                final messenger = ScaffoldMessenger.of(context);
-                                final sProvider = context.read<SettingsProvider>();
-                                final attProvider = context.read<AttendanceProvider>();
-                                final navigator = Navigator.of(context);
-                                
-                                if (currentUserId != null) {
-                                  // Show progress indicator dialog
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (context) => const Center(
-                                      child: CircularProgressIndicator(color: Colors.redAccent),
-                                    ),
-                                  );
-                                  
-                                  final bool success = await attProvider.clockOut(currentUserId);
-                                  
-                                  if (mounted) {
-                                    navigator.pop(); // Close loading dialog
-                                  }
-                                  
-                                  if (success) {
-                                    final prefs = await SharedPreferences.getInstance();
-                                    await prefs.setBool('shiftActive', false);
-                                    await prefs.remove('activeCheckpoint');
-                                    await prefs.remove('shiftStartTime');
-                                    await prefs.remove('activeLocation');
-                                    await prefs.remove('activeEquipment');
-                                    if (mounted) {
-                                      setState(() {
-                                        _shiftActive = false;
-                                        _activeEquipment = [];
-                                      });
-                                      _timer?.cancel();
-                                      messenger.showSnackBar(
-                                        SnackBar(content: Text(sProvider.t('Shif rondaan ditamatkan.'))),
-                                      );
-                                    }
-                                  } else {
-                                    if (mounted) {
-                                      messenger.showSnackBar(
-                                        SnackBar(content: Text('${sProvider.t("Ralat")}: ${attProvider.errorMessage ?? "Gagal menamatkan shif."}')),
-                                      );
-                                    }
-                                  }
-                                }
-                              }
-                            : widget.onNavigateToScan,
+                        onPressed: widget.onNavigateToScan,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _shiftActive ? Colors.redAccent : theme.colorScheme.secondary,
                           foregroundColor: _shiftActive ? Colors.white : Colors.black87,
@@ -648,7 +798,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: Text(
-                          _shiftActive ? settings.t('Tamatkan Rondaan') : settings.t('MULAKAN SHIF'),
+                          _shiftActive
+                              ? settings.t('IMBAS QR PULANG')
+                              : settings.t('MULAKAN SHIF'),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5),
                         ),
                       ),
@@ -666,36 +818,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(value: 'Harian', label: Text(settings.t('Harian'), style: const TextStyle(fontSize: 12))),
-                    ButtonSegment(value: 'Mingguan', label: Text(settings.t('Mingguan'), style: const TextStyle(fontSize: 12))),
-                    ButtonSegment(value: 'Bulanan', label: Text(settings.t('Bulanan'), style: const TextStyle(fontSize: 12))),
-                    ButtonSegment(value: 'Semua', label: Text(settings.t('Semua'), style: const TextStyle(fontSize: 12))),
-                  ],
-                  selected: {_incidentFilter},
-                  onSelectionChanged: (newSelection) {
-                    setState(() {
-                      _incidentFilter = newSelection.first;
-                      _incidentCount = _calculateFilteredIncidents(_allIncidents, newSelection.first);
-                    });
-                  },
-                  showSelectedIcon: false,
-                  style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: theme.primaryColor,
-                    selectedForegroundColor: Colors.white,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               
               // Trend Insiden Graph
               Container(
-                height: 250,
+                height: 340,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: theme.cardColor,
@@ -708,14 +835,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(settings.t('Jumlah Insiden'), style: TextStyle(color: theme.textTheme.titleMedium?.color, fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text(_incidentCount.toString(), style: TextStyle(color: theme.primaryColor, fontSize: 24, fontWeight: FontWeight.bold)),
-                      ],
+                    Text(
+                      '${settings.t('Jumlah Insiden')}: $_incidentCount',
+                      style: TextStyle(color: theme.textTheme.titleMedium?.color, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: _buildRectangularSegmentedToggle(
+                        selectedValue: _chartPeriod,
+                        options: {
+                          'Weekly': settings.t('Mingguan'),
+                          'Monthly': settings.t('Bulanan'),
+                        },
+                        width: double.infinity,
+                        onChanged: (value) {
+                          setState(() {
+                            _chartPeriod = value;
+                            final isWeekly = _chartPeriod == 'Weekly';
+                            final currentTrendData = isWeekly ? _weeklyCounts : _monthlyCounts;
+                            _incidentCount = currentTrendData.isNotEmpty ? currentTrendData.reduce((a, b) => a + b) : 0;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     Expanded(
                       child: LineChart(
                         LineChartData(
@@ -726,22 +870,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 30,
+                                interval: 1,
                                 getTitlesWidget: (value, meta) {
-                                  final daysLabels = [
-                                    settings.t('Isn'), settings.t('Sel'), settings.t('Rab'), 
-                                    settings.t('Kha'), settings.t('Jum'), settings.t('Sab'), settings.t('Aha')
-                                  ];
-                                  final todayIndex = DateTime.now().weekday - 1;
-                                  final startDayIndex = (todayIndex - 6) % 7;
-                                  
-                                  int displayIndex = (startDayIndex + value.toInt()) % 7;
-                                  if (displayIndex < 0) displayIndex += 7;
-
-                                  if (value.toInt() >= 0 && value.toInt() < 7) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(daysLabels[displayIndex], style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7), fontSize: 10)),
-                                    );
+                                  final isWeekly = _chartPeriod == 'Weekly';
+                                  if (isWeekly) {
+                                    final daysLabels = [
+                                      settings.t('Isn'), settings.t('Sel'), settings.t('Rab'), 
+                                      settings.t('Kha'), settings.t('Jum'), settings.t('Sab'), settings.t('Aha')
+                                    ];
+                                    final todayIndex = DateTime.now().weekday - 1;
+                                    final startDayIndex = (todayIndex - 6) % 7;
+                                    
+                                    int displayIndex = (startDayIndex + value.toInt()) % 7;
+                                    if (displayIndex < 0) displayIndex += 7;
+                                    
+                                    if (value.toInt() >= 0 && value.toInt() < 7) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: Text(daysLabels[displayIndex], style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7), fontSize: 10)),
+                                      );
+                                    }
+                                  } else {
+                                    final today = DateTime.now();
+                                    final d = today.subtract(Duration(days: 29 - value.toInt()));
+                                    if (value.toInt() >= 0 && value.toInt() < 30) {
+                                      if (value.toInt() % 5 != 0 && value.toInt() != 29) {
+                                        return const SizedBox();
+                                      }
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: Text(DateFormat('d/M').format(d), style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7), fontSize: 10)),
+                                      );
+                                    }
                                   }
                                   return const Text('');
                                 },
@@ -754,7 +914,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           borderData: FlBorderData(show: false),
                           lineBarsData: [
                             LineChartBarData(
-                              spots: List.generate(7, (index) => FlSpot(index.toDouble(), _weeklyCounts[index].toDouble())),
+                              spots: List.generate(
+                                _chartPeriod == 'Weekly' ? 7 : 30,
+                                (index) => FlSpot(
+                                  index.toDouble(),
+                                  (_chartPeriod == 'Weekly' ? _weeklyCounts : _monthlyCounts)[index].toDouble(),
+                                ),
+                              ),
                               isCurved: true,
                               preventCurveOverShooting: true,
                               color: theme.primaryColor,
@@ -859,6 +1025,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           )
         ],
+      ),
+    );
+  }
+
+  Widget _buildRectangularSegmentedToggle({
+    required String selectedValue,
+    required Map<String, String> options,
+    required ValueChanged<String> onChanged,
+    double? width,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return SizedBox(
+      width: width ?? 153,
+      height: 36,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey.shade900 : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: isDark ? Colors.white30 : Colors.grey.shade400, width: 1),
+        ),
+        child: Row(
+          children: options.entries.map((entry) {
+            final isSelected = selectedValue == entry.key;
+            final index = options.keys.toList().indexOf(entry.key);
+            final isLast = index == options.length - 1;
+            
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(entry.key),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? (isDark ? theme.primaryColor.withValues(alpha: 0.2) : const Color(0xFFE8F0FE)) 
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.only(
+                      topLeft: index == 0 ? const Radius.circular(7) : Radius.zero,
+                      bottomLeft: index == 0 ? const Radius.circular(7) : Radius.zero,
+                      topRight: isLast ? const Radius.circular(7) : Radius.zero,
+                      bottomRight: isLast ? const Radius.circular(7) : Radius.zero,
+                    ),
+                    border: index > 0 
+                        ? Border(left: BorderSide(color: isDark ? Colors.white30 : Colors.grey.shade400, width: 1)) 
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (isSelected) ...[
+                        Icon(
+                          Icons.check, 
+                          size: 14, 
+                          color: isDark ? theme.primaryColor : const Color(0xFF0F3D87)
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        entry.value,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected 
+                              ? (isDark ? Colors.white : const Color(0xFF0F3D87)) 
+                              : (isDark ? Colors.white70 : Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
