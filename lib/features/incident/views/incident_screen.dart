@@ -98,7 +98,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       final String? effectiveFilter;
       if (widget.patrollerIdFilter != null) {
         effectiveFilter = widget.patrollerIdFilter;
-      } else if (authProvider.role == 'peronda' || authProvider.role == 'ketua_peronda') {
+      } else if (authProvider.role == 'peronda') {
         effectiveFilter = authProvider.userId;
       } else {
         effectiveFilter = null;
