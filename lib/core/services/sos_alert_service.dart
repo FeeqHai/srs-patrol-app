@@ -94,6 +94,7 @@ class SosAlertService {
     final String name = sos['full_name'] ?? 'Seseorang';
     final String location = sos['location_name'] ?? 'Lokasi tidak diketahui';
     final String time = sos['created_at'] ?? '';
+    final String sosId = sos['id']?.toString() ?? '';
     final latitude = double.tryParse(sos['latitude']?.toString() ?? '');
     final longitude = double.tryParse(sos['longitude']?.toString() ?? '');
     final mapsUri = latitude != null && longitude != null
@@ -230,7 +231,12 @@ class SosAlertService {
                             backgroundColor: Colors.redAccent,
                             foregroundColor: Colors.white,
                           ),
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () {
+                            if (sosId.isNotEmpty) {
+                              _acknowledgeSos(sosId);
+                            }
+                            Navigator.of(context).pop();
+                          },
                           icon: const Icon(Icons.check_circle_outline),
                           label: const Text(
                             'SAH & TUTUP',
@@ -254,6 +260,23 @@ class SosAlertService {
       await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
     } catch (error) {
       debugPrint('Unable to open SOS location: $error');
+    }
+  }
+
+  Future<void> _acknowledgeSos(String incidentId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      await http.post(
+        Uri.parse('${ApiConstants.baseUrl}incidents/acknowledge_sos.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'incident_id': incidentId}),
+      );
+    } catch (error) {
+      debugPrint('Unable to acknowledge SOS alert: $error');
     }
   }
 }
