@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../constants/api_constants.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
@@ -93,6 +94,13 @@ class SosAlertService {
     final String name = sos['full_name'] ?? 'Seseorang';
     final String location = sos['location_name'] ?? 'Lokasi tidak diketahui';
     final String time = sos['created_at'] ?? '';
+    final latitude = double.tryParse(sos['latitude']?.toString() ?? '');
+    final longitude = double.tryParse(sos['longitude']?.toString() ?? '');
+    final mapsUri = latitude != null && longitude != null
+        ? Uri.parse(
+            'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
+          )
+        : null;
     final String message = '$name memerlukan bantuan SEGERA di $location! ($time)';
 
     // 1. Vibrate (if available)
@@ -193,6 +201,17 @@ class SosAlertService {
                               label: 'Lokasi',
                               value: location,
                             ),
+                            if (mapsUri != null) ...[
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: () => _openGoogleMaps(mapsUri),
+                                  icon: const Icon(Icons.map_outlined),
+                                  label: const Text('Open Google Maps'),
+                                ),
+                              ),
+                            ],
                             const Divider(height: 24),
                             _SosDetailRow(
                               icon: Icons.schedule_outlined,
@@ -227,6 +246,14 @@ class SosAlertService {
           );
         },
       );
+    }
+  }
+
+  Future<void> _openGoogleMaps(Uri mapsUri) async {
+    try {
+      await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+    } catch (error) {
+      debugPrint('Unable to open SOS location: $error');
     }
   }
 }
