@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/image_viewer_screen.dart';
 import '../../../core/utils/logger.dart';
@@ -20,12 +21,16 @@ class IncidentDetailScreen extends StatelessWidget {
     try {
       if (imageUrlData.toString().trim().startsWith('[')) {
         List<dynamic> parsed = json.decode(imageUrlData);
-        return parsed.map((e) => e.toString()).toList();
+        return parsed
+            .map((e) => ApiConstants.resolveUploadUrl(e.toString()))
+            .whereType<String>()
+            .toList();
       }
     } catch (e) {
       appLogger.w('Failed to parse image URL array, falling back to string: $e');
     }
-    return [imageUrlData.toString()];
+    final imageUrl = ApiConstants.resolveUploadUrl(imageUrlData.toString());
+    return imageUrl == null ? [] : [imageUrl];
   }
 
   static Future<pw.Document> buildPdf(Map<String, dynamic> incident) async {
@@ -120,12 +125,17 @@ class IncidentDetailScreen extends StatelessWidget {
         try {
           if (imageUrlData.toString().trim().startsWith('[')) {
             List<dynamic> parsed = json.decode(imageUrlData.toString());
-            imageUrls = parsed.map((e) => e.toString()).toList();
+            imageUrls = parsed
+                .map((e) => ApiConstants.resolveUploadUrl(e.toString()))
+                .whereType<String>()
+                .toList();
           } else {
-            imageUrls = [imageUrlData.toString()];
+            final imageUrl = ApiConstants.resolveUploadUrl(imageUrlData.toString());
+            imageUrls = imageUrl == null ? [] : [imageUrl];
           }
         } catch (_) {
-          imageUrls = [imageUrlData.toString()];
+          final imageUrl = ApiConstants.resolveUploadUrl(imageUrlData.toString());
+          imageUrls = imageUrl == null ? [] : [imageUrl];
         }
       }
 

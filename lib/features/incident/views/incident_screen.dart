@@ -772,12 +772,14 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       try {
         if (data['image_url'].toString().trim().startsWith('[')) {
           List<dynamic> parsed = json.decode(data['image_url']);
-          if (parsed.isNotEmpty) imageUrl = parsed.first.toString();
+          if (parsed.isNotEmpty) {
+            imageUrl = ApiConstants.resolveUploadUrl(parsed.first.toString());
+          }
         } else {
-          imageUrl = data['image_url'];
+          imageUrl = ApiConstants.resolveUploadUrl(data['image_url'].toString());
         }
       } catch (e) {
-        imageUrl = data['image_url'];
+        imageUrl = ApiConstants.resolveUploadUrl(data['image_url'].toString());
       }
     }
 

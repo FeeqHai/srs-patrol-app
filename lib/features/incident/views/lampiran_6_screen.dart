@@ -19,6 +19,21 @@ class Lampiran6Screen extends StatefulWidget {
 }
 
 class _Lampiran6ScreenState extends State<Lampiran6Screen> {
+  static const List<String> _monthNames = [
+    'Januari',
+    'Februari',
+    'Mac',
+    'April',
+    'Mei',
+    'Jun',
+    'Julai',
+    'Ogos',
+    'September',
+    'Oktober',
+    'November',
+    'Disember',
+  ];
+
   int _monthOffset = 0; // 0 = Current Month, 1 = Previous Month
   DateTime _selectedDate = DateTime.now();
   String _selectedLevel = 'daerah'; // 'daerah' or 'negeri'
@@ -81,18 +96,92 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
   }
 
   Future<void> _selectMonth(BuildContext context) async {
-    final settings = context.read<SettingsProvider>();
-    final DateTime? picked = await showDatePicker(
+    final now = DateTime.now();
+    var selectedYear = _selectedDate.year;
+    var selectedMonth = _selectedDate.month;
+
+    final DateTime? picked = await showDialog<DateTime>(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDatePickerMode: DatePickerMode.year,
-      helpText: settings.t('PILIH BULAN & TAHUN'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Pilih Bulan dan Tahun'),
+          content: SizedBox(
+            width: 340,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  initialValue: selectedYear,
+                  decoration: const InputDecoration(labelText: 'Tahun'),
+                  items: List.generate(
+                    now.year - 2020 + 1,
+                    (index) {
+                      final year = now.year - index;
+                      return DropdownMenuItem(value: year, child: Text('$year'));
+                    },
+                  ),
+                  onChanged: (year) {
+                    if (year == null) return;
+                    setDialogState(() {
+                      selectedYear = year;
+                      if (selectedYear == now.year && selectedMonth > now.month) {
+                        selectedMonth = now.month;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.8,
+                  children: List.generate(12, (index) {
+                    final month = index + 1;
+                    final isFuture = selectedYear == now.year && month > now.month;
+                    final isSelected = month == selectedMonth;
+                    return FilledButton(
+                      onPressed: isFuture
+                          ? null
+                          : () => Navigator.pop(
+                                dialogContext,
+                                DateTime(selectedYear, month),
+                              ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isSelected
+                            ? Theme.of(context).primaryColor
+                            : Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                        foregroundColor: isSelected
+                            ? Colors.white
+                            : Theme.of(context).textTheme.bodyLarge?.color,
+                        disabledBackgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.04),
+                        disabledForegroundColor: Theme.of(context).disabledColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      child: Text(
+                        _monthNames[index].substring(0, 3),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
+          ],
+        ),
+      ),
     );
     if (picked != null) {
       setState(() {
-        _selectedDate = picked;
+        _selectedDate = DateTime(picked.year, picked.month);
         final now = DateTime.now();
         _monthOffset = (now.year - picked.year) * 12 + (now.month - picked.month);
       });
@@ -309,12 +398,6 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                       children: [
                         _pdfMiniCell('Pindaan :'),
                         _pdfMiniCell('06', isBold: true),
-                      ],
-                    ),
-                    pw.TableRow(
-                      children: [
-                        _pdfMiniCell('Tarikh :'),
-                        _pdfMiniCell('24.2.2015', isBold: true),
                       ],
                     ),
                   ],
