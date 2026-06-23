@@ -600,7 +600,16 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     return Scaffold(
       appBar: widget.patrollerIdFilter != null
           ? AppBar(
-              title: Text(settings.t('Rekod Insiden')),
+              title: Row(
+                children: [
+                  const Icon(Icons.assignment_outlined, size: 24),
+                  const SizedBox(width: 10),
+                  Text(
+                    settings.t('Rekod Insiden'),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: widget.onClose ?? () => Navigator.of(context).pop(),
@@ -672,8 +681,18 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                       tabAlignment: TabAlignment.start,
                       dividerColor: Colors.transparent,
                       tabs: [
-                        Tab(text: settings.t('Hari Ini')),
-                        Tab(text: settings.t('Arkib')),
+                        Tab(
+                          child: Text(
+                            settings.t('Hari Ini'),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Tab(
+                          child: Text(
+                            settings.t('Arkib'),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -784,9 +803,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 17, vertical: 8),
       color: theme.cardColor,
-      elevation: 2,
+      elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -824,7 +843,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                 }
               },
         child: SizedBox(
-          height: 96, // Fixed logical layout height representing premium spacing
+          height: 130,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -849,8 +868,8 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
               // 2. Left side Image Thumbnail
               if (imageUrl != null)
                 Container(
-                  width: 75,
-                  height: 96,
+                  width: 92,
+                  height: 130,
                   decoration: BoxDecoration(
                     color: theme.dividerColor.withValues(alpha: 0.05),
                     borderRadius: const BorderRadius.only(
@@ -875,10 +894,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(
-                    left: imageUrl != null ? 12.0 : 16.0,
-                    right: 12.0,
-                    top: 8.0,
-                    bottom: 8.0,
+                    left: imageUrl != null ? 15.0 : 19.0,
+                    right: 13.0,
+                    top: 13.0,
+                    bottom: 13.0,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,7 +907,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                         children: [
                           Flexible(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.redAccent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
@@ -897,7 +916,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                                 (data['category'] ?? "UMUM").toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.redAccent,
-                                  fontSize: 9,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -909,7 +928,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                             child: Text(
                               data['zone'] ?? data['district_zone'] ?? 'Zon Umum',
                               style: TextStyle(
-                                fontSize: 9,
+                                fontSize: 13,
                                 color: theme.primaryColor,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -918,18 +937,22 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
                         data['title'] ?? settings.t("Tiada Tajuk"),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                          height: 1.2,
+                        ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.access_time, size: 10, color: Colors.grey),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.access_time, size: 15, color: Colors.grey),
+                          const SizedBox(width: 6),
                           Text(
                             () {
                               try {
@@ -939,7 +962,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                                 return data['created_at'].toString();
                               }
                             }(),
-                            style: const TextStyle(fontSize: 9, color: Colors.grey),
+                            style: const TextStyle(fontSize: 13, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -958,18 +981,19 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                       // Status submit icon (separate submit icon)
                       if (status.toLowerCase() == 'pending' || status.toLowerCase() == 'draft')
                         IconButton(
-                          icon: const Icon(Icons.send_outlined, color: Colors.green, size: 20),
+                          icon: const Icon(Icons.send_outlined, color: Colors.green, size: 21),
                           tooltip: settings.t("Hantar Laporan"),
                           onPressed: () => _submitIncident(id),
+                          constraints: const BoxConstraints(minWidth: 50, minHeight: 50),
                         )
                       else
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Icon(Icons.check_circle_outline, color: Colors.blue, size: 18),
+                          child: Icon(Icons.check_circle_outline, color: Colors.blue, size: 19),
                         ),
                       // Three dot menu button
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
+                        icon: const Icon(Icons.more_vert, color: Colors.grey, size: 21),
                         onSelected: (action) {
                           if (action == 'delete') {
                             _deleteIncident(id);
