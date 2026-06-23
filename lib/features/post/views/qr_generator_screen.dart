@@ -127,17 +127,49 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
     } catch (e) {
       if (!mounted) return;
-      _currentLocation = '${context.read<SettingsProvider>().t('Gagal mengesan lokasi')}: $e';
+      final locationMessage = _friendlyLocationError(e);
+      debugPrint('Unable to detect QR location: $e');
+      _currentLocation = locationMessage;
       _qrData = null;
       _savedQrData = null;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${context.read<SettingsProvider>().t('Ralat GPS:')} $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(locationMessage), backgroundColor: Colors.red),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _friendlyLocationError(Object error) {
+    if (error is TimeoutException) {
+      return context.read<SettingsProvider>().t(
+        'Lokasi mengambil masa terlalu lama untuk dikesan. Sila cuba semula.',
+      );
+    }
+
+    final message = error.toString().toLowerCase();
+    if (message.contains('services are disabled') ||
+        message.contains('service disabled')) {
+      return context.read<SettingsProvider>().t(
+        'Servis lokasi telefon tidak aktif. Sila hidupkan fungsi lokasi dan cuba semula.',
+      );
+    }
+    if (message.contains('permanently denied') ||
+        message.contains('denied forever')) {
+      return context.read<SettingsProvider>().t(
+        'Kebenaran lokasi telah disekat. Sila benarkan akses lokasi melalui tetapan telefon.',
+      );
+    }
+    if (message.contains('permission') && message.contains('denied')) {
+      return context.read<SettingsProvider>().t(
+        'Kebenaran lokasi diperlukan untuk menjana QR. Sila benarkan akses lokasi.',
+      );
+    }
+    return context.read<SettingsProvider>().t(
+      'Lokasi tidak dapat dikesan. Sila cuba semula.',
+    );
   }
 
   Future<void> _showPendingReturns() async {

@@ -286,6 +286,16 @@ class SettingsProvider extends ChangeNotifier {
       'Tiada padanan carian.': 'No search match.',
       'Zon': 'Zone',
       'Gagal mengesan lokasi': 'Failed to detect location',
+      'Servis lokasi telefon tidak aktif. Sila hidupkan fungsi lokasi dan cuba semula.':
+          'Location services are disabled. Please enable location services and try again.',
+      'Kebenaran lokasi diperlukan untuk menjana QR. Sila benarkan akses lokasi.':
+          'Location permission is required to generate a QR code. Please allow location access.',
+      'Kebenaran lokasi telah disekat. Sila benarkan akses lokasi melalui tetapan telefon.':
+          'Location permission has been blocked. Please allow location access in your phone settings.',
+      'Lokasi mengambil masa terlalu lama untuk dikesan. Sila cuba semula.':
+          'Location is taking too long to detect. Please try again.',
+      'Lokasi tidak dapat dikesan. Sila cuba semula.':
+          'Unable to detect location. Please try again.',
       'Jana QR Kehadiran': 'Generate Attendance QR',
       'Papar kod QR ini kepada peronda untuk merekod kehadiran.': 'Show this QR code to patrollers to record attendance.',
       'Tamat Tempoh:': 'Expires:',

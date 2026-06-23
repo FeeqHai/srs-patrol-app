@@ -105,22 +105,65 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Text(context.read<SettingsProvider>().t('Pendaftaran Berjaya')),
-          content: Text(
-            context.read<SettingsProvider>().t('Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.'),
-            style: const TextStyle(height: 1.5),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: _royalBlue, foregroundColor: Colors.white),
-              child: Text(context.read<SettingsProvider>().t('Kembali ke Log Masuk')),
+        builder: (dialogContext) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(28, 30, 28, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_outline_rounded,
+                      color: Colors.green,
+                      size: 38,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    context.read<SettingsProvider>().t('Pendaftaran Berjaya'),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(dialogContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    context.read<SettingsProvider>().t('Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.'),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(height: 1.5),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        Navigator.pop(context);
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _royalBlue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        context.read<SettingsProvider>().t('Kembali ke Log Masuk'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       );
     } else {
@@ -205,6 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 800;
@@ -297,32 +341,39 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   // Mobile Layout (Bottom Sheet style that slides up)
   // ---------------------------------------------------------
   Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildMobileHeader(),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 30,
-                  offset: const Offset(0, -10),
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return SafeArea(
+      bottom: false,
+      child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.only(bottom: keyboardInset + 24),
+        child: Column(
+          children: [
+            _buildMobileHeader(),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
+              ),
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _buildFormContent(isLargeScreen: false),
                 ),
-              ],
-            ),
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: _buildFormContent(isLargeScreen: false),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
