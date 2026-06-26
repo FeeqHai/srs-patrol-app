@@ -11,7 +11,7 @@ class ApiClient {
     String endpoint,
     Map<String, String> body,
   ) async {
-    final url = Uri.parse(ApiConstants.baseUrl + endpoint);
+    final url = Uri.parse(ApiConstants.buildApiUrl(endpoint));
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -47,7 +47,7 @@ class ApiClient {
   /// Sends a GET request.
   /// Used for pulling the feed of incidents.
   static Future<dynamic> getData(String endpoint) async {
-    final url = Uri.parse(ApiConstants.baseUrl + endpoint);
+    final url = Uri.parse(ApiConstants.buildApiUrl(endpoint));
 
     try {
       final prefs = await SharedPreferences.getInstance();

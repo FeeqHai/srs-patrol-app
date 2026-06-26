@@ -60,7 +60,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         headers['Authorization'] = 'Bearer $token';
       }
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}auth/get_profile.php'),
+        Uri.parse(ApiConstants.buildApiUrl('auth/get_profile.php')),
         headers: headers,
       );
       if (response.statusCode == 200) {

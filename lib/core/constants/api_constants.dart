@@ -1,8 +1,8 @@
 class ApiConstants {
-  // Current development server address for the physical Android device.
-  // Override this at run/build time when the laptop changes Wi-Fi networks:
+  // Production/demo API on DigitalOcean. Override only when explicitly testing
+  // another backend, for example local XAMPP:
   // flutter run --dart-define=SRS_API_BASE_URL=http://<laptop-ip>/srs_api/
-  static const String _defaultBaseUrl = "http://10.131.73.229/srs_api/";
+  static const String _defaultBaseUrl = "http://157.245.53.82/srs_api/";
   static const String _configuredBaseUrl = String.fromEnvironment(
     'SRS_API_BASE_URL',
     defaultValue: _defaultBaseUrl,
@@ -11,7 +11,21 @@ class ApiConstants {
   static String get baseUrl {
     final trimmed = _configuredBaseUrl.trim();
     final normalized = trimmed.isEmpty ? _defaultBaseUrl : trimmed;
-    return normalized.endsWith('/') ? normalized : '$normalized/';
+    return '${normalized.replaceFirst(RegExp(r'/+$'), '')}/';
+  }
+
+  /// Joins the configured API base and an endpoint with exactly one slash.
+  static String buildApiUrl(String endpoint) {
+    final rawEndpoint = endpoint.trim();
+    final queryIndex = rawEndpoint.indexOf('?');
+    final path = queryIndex == -1
+        ? rawEndpoint
+        : rawEndpoint.substring(0, queryIndex);
+    final query = queryIndex == -1 ? '' : rawEndpoint.substring(queryIndex);
+    final normalizedPath = path
+        .replaceAll(RegExp(r'/+'), '/')
+        .replaceFirst(RegExp(r'^/+'), '');
+    return '$baseUrl$normalizedPath$query';
   }
 
   /// Resolves portable upload paths and legacy upload URLs against the
@@ -24,10 +38,10 @@ class ApiConstants {
     if (uri != null && uri.hasScheme) {
       final uploadIndex = uri.path.indexOf('/uploads/');
       if (uploadIndex == -1) return value;
-      return '$baseUrl${uri.path.substring(uploadIndex + 1)}';
+      return buildApiUrl(uri.path.substring(uploadIndex + 1));
     }
 
-    return '$baseUrl${value.replaceFirst(RegExp(r'^/+'), '')}';
+    return buildApiUrl(value);
   }
 
   static const String loginEndpoint = "auth/login.php";

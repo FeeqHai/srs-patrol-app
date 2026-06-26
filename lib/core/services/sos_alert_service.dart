@@ -67,7 +67,7 @@ class SosAlertService {
       }
 
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}incidents/check_sos.php?exclude_user=$currentUserId'),
+        Uri.parse(ApiConstants.buildApiUrl('incidents/check_sos.php?exclude_user=$currentUserId')),
         headers: headers,
       );
       
@@ -268,7 +268,7 @@ class SosAlertService {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       await http.post(
-        Uri.parse('${ApiConstants.baseUrl}incidents/acknowledge_sos.php'),
+        Uri.parse(ApiConstants.buildApiUrl('incidents/acknowledge_sos.php')),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',

@@ -10,7 +10,6 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../incident/services/incident_service.dart';
 import '../../incident/views/incident_detail_screen.dart';
 import '../../incident/views/lampiran_6_screen.dart';
 
@@ -28,8 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   DateTime? _shiftStartTime;
   Timer? _timer;
   String _elapsedTime = "00:00:00";
-  int _incidentCount = 0;
-  List<dynamic> _allIncidents = [];
+  int _noteCount = 0;
   List<int> _weeklyCounts = List.filled(7, 0);
   List<int> _monthlyCounts = List.filled(30, 0);
   String _chartPeriod = 'Weekly';
@@ -65,7 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         headers['Authorization'] = 'Bearer $token';
       }
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}auth/get_profile.php'),
+        Uri.parse(ApiConstants.buildApiUrl('auth/get_profile.php')),
         headers: headers,
       );
       if (response.statusCode == 200) {
@@ -103,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _fetchUserProfile();
     _fetchSquadInfo();
     _loadShiftData();
-    _fetchIncidentCount();
+    _fetchNoteStatistics();
     _pollSOS();
     _sosDashboardTimer = Timer.periodic(const Duration(seconds: 10), (_) => _pollSOS());
   }
@@ -132,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         headers['Authorization'] = 'Bearer $token';
       }
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}incidents/check_sos.php?exclude_user=$currentUserId'),
+        Uri.parse(ApiConstants.buildApiUrl('incidents/check_sos.php?exclude_user=$currentUserId')),
         headers: headers,
       );
       if (response.statusCode == 200) {
@@ -150,46 +148,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _fetchIncidentCount() async {
+  Future<void> _fetchNoteStatistics() async {
     try {
-      final currentUserId = context.read<AuthProvider>().userId;
-      final IncidentService service = IncidentService();
-      final incidents = await service.fetchAllIncidents(patrollerId: currentUserId);
-      
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      List<int> weeklyCounts = List.filled(7, 0);
-      List<int> monthlyCounts = List.filled(30, 0);
-      
-      for (var inc in incidents) {
-        if (inc['created_at'] != null) {
-          try {
-            final date = DateTime.parse(inc['created_at']);
-            final incDay = DateTime(date.year, date.month, date.day);
-            final diff = today.difference(incDay).inDays;
-            if (diff >= 0 && diff < 7) {
-              weeklyCounts[6 - diff]++;
-            }
-            if (diff >= 0 && diff < 30) {
-              monthlyCounts[29 - diff]++;
-            }
-          } catch (_) {}
-        }
-      }
+      final response = await ApiClient.getData('admin/get_stats.php');
+      if (response['status'] != 'success') return;
+
+      final data = response['data'] as Map<String, dynamic>;
+      final weeklyCounts = _toCountList(data['weekly_note_counts'], 7);
+      final monthlyCounts = _toCountList(data['monthly_note_counts'], 30);
 
       if (mounted) {
         setState(() {
-          _allIncidents = incidents;
           _weeklyCounts = weeklyCounts;
           _monthlyCounts = monthlyCounts;
           final isWeekly = _chartPeriod == 'Weekly';
           final currentTrendData = isWeekly ? weeklyCounts : monthlyCounts;
-          _incidentCount = currentTrendData.isNotEmpty ? currentTrendData.reduce((a, b) => a + b) : 0;
+          _noteCount = currentTrendData.fold(0, (sum, count) => sum + count);
         });
       }
-    } catch (e) {
+    } catch (_) {
       // Keep it as 0 if network fails
     }
+  }
+
+  List<int> _toCountList(dynamic values, int length) {
+    if (values is! List) return List.filled(length, 0);
+
+    final counts = values
+        .map((value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0)
+        .toList();
+    if (counts.length == length) return counts;
+
+    return List<int>.generate(
+      length,
+      (index) => index < counts.length ? counts[index] : 0,
+    );
   }
 
   @override
@@ -638,7 +631,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            settings.t('Laporan Saya'),
+                            settings.t('Jumlah Nota'),
                             style: TextStyle(fontSize: 11, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                             textAlign: TextAlign.center,
                             maxLines: 1,
@@ -646,7 +639,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_allIncidents.length}',
+                            '$_noteCount',
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
                             textAlign: TextAlign.center,
                             maxLines: 1,
@@ -836,7 +829,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${settings.t('Jumlah Insiden')}: $_incidentCount',
+                      '${settings.t('Jumlah Nota')}: $_noteCount',
                       style: TextStyle(color: theme.textTheme.titleMedium?.color, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
@@ -854,7 +847,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             _chartPeriod = value;
                             final isWeekly = _chartPeriod == 'Weekly';
                             final currentTrendData = isWeekly ? _weeklyCounts : _monthlyCounts;
-                            _incidentCount = currentTrendData.isNotEmpty ? currentTrendData.reduce((a, b) => a + b) : 0;
+                            _noteCount = currentTrendData.fold(0, (sum, count) => sum + count);
                           });
                         },
                       ),

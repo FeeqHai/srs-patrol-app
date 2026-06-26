@@ -9,6 +9,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/image_viewer_screen.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/malaysia_time.dart';
 import '../../../core/utils/pdf_saver.dart';
 
 class IncidentDetailScreen extends StatelessWidget {
@@ -43,7 +44,7 @@ class IncidentDetailScreen extends StatelessWidget {
       String masa = '-';
       try {
         if (incident['created_at'] != null) {
-          final dt = DateTime.parse(incident['created_at'].toString());
+          final dt = MalaysiaTime.fromUtcDatabase(incident['created_at']);
           tarikh = DateFormat('dd MMMM yyyy').format(dt);
           masa = DateFormat('hh:mm a').format(dt);
         }
@@ -227,7 +228,9 @@ class IncidentDetailScreen extends StatelessWidget {
 
     final String namaPeronda = incident['full_name'] ?? '-';
     final String tarikh = incident['created_at'] != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(incident['created_at']))
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(
+            MalaysiaTime.fromUtcDatabase(incident['created_at']),
+          )
         : '-';
     final String lokasi = incident['location_name'] ?? '-';
     final String kategori = incident['category'] ?? '-';

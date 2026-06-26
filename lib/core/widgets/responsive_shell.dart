@@ -58,6 +58,13 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
         fabItemIndices: [3, 2],
         hasSos: false,
       );
+    } else if (widget.items.length == 7 && widget.onSosPressed == null) {
+      return _BottomBarConfig(
+        leftItemIndices: [0, 1],
+        rightItemIndices: [5, 6],
+        fabItemIndices: [2, 3, 4],
+        hasSos: false,
+      );
     } else {
       // Fallback
       return _BottomBarConfig(
@@ -76,19 +83,23 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
         final bool isLargeScreen = constraints.maxWidth > 800;
 
         return Scaffold(
-          appBar: (isLargeScreen || !widget.showAppBar) ? null : AppBar(
-            title: Text(
-              widget.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 18),
-            ),
-            elevation: 0,
-            centerTitle: true,
-            actions: widget.actions,
-          ),
+          appBar: (isLargeScreen || !widget.showAppBar)
+              ? null
+              : AppBar(
+                  title: Text(
+                    widget.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  elevation: 0,
+                  centerTitle: true,
+                  actions: widget.actions,
+                ),
           endDrawer: widget.endDrawer,
-          body: isLargeScreen ? _buildLargeScreen(context) : _buildSmallScreen(context),
+          body: isLargeScreen
+              ? _buildLargeScreen(context)
+              : _buildSmallScreen(context),
           extendBody: false,
         );
       },
@@ -124,7 +135,11 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                 left: 24,
                 child: Row(
                   children: [
-                    Icon(Icons.local_police, color: colorScheme.primary, size: 28),
+                    Icon(
+                      Icons.local_police,
+                      color: colorScheme.primary,
+                      size: 28,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       'SRS App',
@@ -162,7 +177,10 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeInOut,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             color: isSelected
@@ -177,17 +195,23 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                                 size: 20,
                                 color: isSelected
                                     ? colorScheme.primary
-                                    : colorScheme.onSurface.withValues(alpha: 0.6),
+                                    : colorScheme.onSurface.withValues(
+                                        alpha: 0.6,
+                                      ),
                               ),
                               const SizedBox(width: 10),
                               Text(
                                 item.label,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                   color: isSelected
                                       ? colorScheme.primary
-                                      : colorScheme.onSurface.withValues(alpha: 0.7),
+                                      : colorScheme.onSurface.withValues(
+                                          alpha: 0.7,
+                                        ),
                                   letterSpacing: 0.3,
                                 ),
                               ),
@@ -210,11 +234,16 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: widget.isSosBroadcasting ? null : widget.onSosPressed,
+                          onTap: widget.isSosBroadcasting
+                              ? null
+                              : widget.onSosPressed,
                           borderRadius: BorderRadius.circular(24),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: widget.isSosBroadcasting
                                   ? Colors.redAccent.withValues(alpha: 0.5)
@@ -222,7 +251,9 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                               borderRadius: BorderRadius.circular(24),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.redAccent.withValues(alpha: 0.3),
+                                  color: Colors.redAccent.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -240,7 +271,11 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(Icons.emergency, color: Colors.white, size: 18),
+                                    : const Icon(
+                                        Icons.emergency,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
                                 const SizedBox(width: 8),
                                 const Text(
                                   'SOS',
@@ -316,7 +351,10 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12.0,
+                      horizontal: 16.0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: config.fabItemIndices.map((index) {
@@ -331,13 +369,19 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 8.0,
+                            ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   item.icon,
-                                  color: isSelected ? theme.primaryColor : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                  color: isSelected
+                                      ? theme.primaryColor
+                                      : theme.textTheme.bodyMedium?.color
+                                            ?.withValues(alpha: 0.7),
                                   size: 24,
                                 ),
                                 const SizedBox(height: 4),
@@ -345,8 +389,13 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                                   item.label,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? theme.primaryColor : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? theme.primaryColor
+                                        : theme.textTheme.bodyMedium?.color
+                                              ?.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -402,7 +451,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
             children: [
               // Left side item 1
               _buildBottomBarItem(config.leftItemIndices[0], theme),
-              
+
               // Left side item 2
               _buildBottomBarItem(config.leftItemIndices[1], theme),
 
@@ -410,13 +459,13 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
               _buildMiddleFab(theme, config),
 
               // Right side item 1: SOS or Peralatan
-              config.hasSos 
-                  ? _buildSosItem(theme) 
+              config.hasSos
+                  ? _buildSosItem(theme)
                   : _buildBottomBarItem(config.rightItemIndices[0], theme),
 
               // Right side item 2: Incident or Ahli
-              config.hasSos 
-                  ? _buildBottomBarItem(config.rightItemIndices[0], theme) 
+              config.hasSos
+                  ? _buildBottomBarItem(config.rightItemIndices[0], theme)
                   : _buildBottomBarItem(config.rightItemIndices[1], theme),
             ],
           ),
@@ -428,8 +477,8 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
   Widget _buildBottomBarItem(int index, ThemeData theme) {
     final item = widget.items[index];
     final isSelected = widget.currentIndex == index && !_isFabMenuOpen;
-    final color = isSelected 
-        ? theme.colorScheme.primary 
+    final color = isSelected
+        ? theme.colorScheme.primary
         : theme.colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Expanded(
@@ -447,7 +496,9 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isSelected && item.selectedIcon != null ? item.selectedIcon : item.icon,
+                isSelected && item.selectedIcon != null
+                    ? item.selectedIcon
+                    : item.icon,
                 color: color,
                 size: 24,
               ),
@@ -490,7 +541,10 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                   ? const SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.redAccent,
+                        strokeWidth: 2,
+                      ),
                     )
                   : const Icon(
                       Icons.emergency,
@@ -515,7 +569,9 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
 
   Widget _buildMiddleFab(ThemeData theme, _BottomBarConfig config) {
     final colorScheme = theme.colorScheme;
-    final isFabItemSelected = config.fabItemIndices.contains(widget.currentIndex);
+    final isFabItemSelected = config.fabItemIndices.contains(
+      widget.currentIndex,
+    );
     final isCurrentFabActive = _isFabMenuOpen || isFabItemSelected;
 
     return Expanded(
@@ -535,15 +591,24 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: isCurrentFabActive
-                      ? [colorScheme.secondary, colorScheme.secondary.withValues(alpha: 0.8)]
-                      : [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+                      ? [
+                          colorScheme.secondary,
+                          colorScheme.secondary.withValues(alpha: 0.8),
+                        ]
+                      : [
+                          colorScheme.primary,
+                          colorScheme.primary.withValues(alpha: 0.8),
+                        ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isCurrentFabActive ? colorScheme.secondary : colorScheme.primary)
-                        .withValues(alpha: 0.3),
+                    color:
+                        (isCurrentFabActive
+                                ? colorScheme.secondary
+                                : colorScheme.primary)
+                            .withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

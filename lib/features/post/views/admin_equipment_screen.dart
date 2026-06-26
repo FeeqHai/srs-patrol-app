@@ -12,22 +12,26 @@ class AdminEquipmentScreen extends StatefulWidget {
   State<AdminEquipmentScreen> createState() => _AdminEquipmentScreenState();
 }
 
-class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with SingleTickerProviderStateMixin {
+class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   List<dynamic> _inventory = [];
   List<dynamic> _logs = [];
-  
+  List<dynamic> _pendingReturns = [];
+
   bool _isLoadingInventory = false;
   bool _isLoadingLogs = false;
-  
+  bool _isLoadingReturns = false;
+
   String? _inventoryError;
   String? _logsError;
+  String? _returnsError;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
     _fetchInventory();
   }
@@ -45,10 +49,16 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
       return;
     }
     if (mounted) setState(() {});
-    if (_tabController.index == 0) {
-      _fetchInventory();
-    } else {
-      _fetchLogs();
+    switch (_tabController.index) {
+      case 0:
+        _fetchInventory();
+        break;
+      case 1:
+        _fetchLogs();
+        break;
+      case 2:
+        _fetchPendingReturns();
+        break;
     }
   }
 
@@ -72,7 +82,8 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
       } else {
         if (mounted) {
           setState(() {
-            _inventoryError = response['message'] ?? 'Ralat memuatkan inventori.';
+            _inventoryError =
+                response['message'] ?? 'Ralat memuatkan inventori.';
             _isLoadingInventory = false;
           });
         }
@@ -122,6 +133,93 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
     }
   }
 
+  Future<void> _fetchPendingReturns() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingReturns = true;
+        _returnsError = null;
+      });
+    }
+
+    try {
+      final response = await ApiClient.getData(
+        'attendance/get_pending_returns.php',
+      );
+      if (response['status'] == 'success') {
+        if (mounted) {
+          setState(() {
+            _pendingReturns = response['data'] ?? [];
+            _isLoadingReturns = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _returnsError =
+                response['message'] ?? 'Gagal memuatkan pemulangan.';
+            _isLoadingReturns = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _returnsError = 'Ralat Rangkaian: $e';
+          _isLoadingReturns = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _acknowledgeReturn(
+    Map<String, dynamic> pendingReturn,
+    SettingsProvider settings,
+  ) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    setState(() => _isLoadingReturns = true);
+
+    try {
+      final response = await ApiClient.postData(
+        'attendance/acknowledge_return.php',
+        {'attendance_id': pendingReturn['id'].toString()},
+      );
+
+      if (!mounted) return;
+      if (response['status'] == 'success') {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(settings.t('Pemulangan peronda telah disahkan.')),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchPendingReturns();
+        await _fetchLogs();
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              response['message'] ??
+                  settings.t('Gagal mengesahkan pemulangan.'),
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('${settings.t('Ralat Rangkaian')}: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingReturns = false);
+      }
+    }
+  }
+
   Future<void> _showAddEquipmentDialog(SettingsProvider settings) async {
     final nameController = TextEditingController();
     final quantityController = TextEditingController(text: '0');
@@ -131,7 +229,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
       context: context,
       builder: (context) {
         return AlertDialog(
-          icon: const Icon(Icons.add_box_outlined, color: Colors.lightBlueAccent, size: 40),
+          icon: const Icon(
+            Icons.add_box_outlined,
+            color: Colors.lightBlueAccent,
+            size: 40,
+          ),
           title: Text(settings.t('Tambah Peralatan')),
           content: Form(
             key: formKey,
@@ -183,7 +285,7 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                 if (formKey.currentState!.validate()) {
                   final navigator = Navigator.of(context);
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  
+
                   final Map<String, String> payload = {
                     'action': 'add',
                     'item_name': nameController.text.trim(),
@@ -191,21 +293,41 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                   };
 
                   try {
-                    final response = await ApiClient.postData('equipment/manage_equipment.php', payload);
+                    final response = await ApiClient.postData(
+                      'equipment/manage_equipment.php',
+                      payload,
+                    );
                     if (response['status'] == 'success') {
                       scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text(settings.t(response['message'] ?? 'Berjaya ditambah!')), backgroundColor: Colors.green),
+                        SnackBar(
+                          content: Text(
+                            settings.t(
+                              response['message'] ?? 'Berjaya ditambah!',
+                            ),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
                       );
                       navigator.pop();
                       _fetchInventory();
                     } else {
                       scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text(settings.t(response['message'] ?? 'Gagal menambah.')), backgroundColor: Colors.red),
+                        SnackBar(
+                          content: Text(
+                            settings.t(
+                              response['message'] ?? 'Gagal menambah.',
+                            ),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                     }
                   } catch (e) {
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }
@@ -218,16 +340,25 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
     );
   }
 
-  Future<void> _showEditEquipmentDialog(Map<String, dynamic> item, SettingsProvider settings) async {
+  Future<void> _showEditEquipmentDialog(
+    Map<String, dynamic> item,
+    SettingsProvider settings,
+  ) async {
     final nameController = TextEditingController(text: item['item_name']);
-    final quantityController = TextEditingController(text: item['total_quantity'].toString());
+    final quantityController = TextEditingController(
+      text: item['total_quantity'].toString(),
+    );
     final formKey = GlobalKey<FormState>();
 
     return showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          icon: const Icon(Icons.edit_note_outlined, color: Colors.orangeAccent, size: 40),
+          icon: const Icon(
+            Icons.edit_note_outlined,
+            color: Colors.orangeAccent,
+            size: 40,
+          ),
           title: Text(settings.t('Kemaskini Peralatan')),
           content: Form(
             key: formKey,
@@ -279,7 +410,7 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                 if (formKey.currentState!.validate()) {
                   final navigator = Navigator.of(context);
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  
+
                   final Map<String, String> payload = {
                     'action': 'update',
                     'id': item['id'].toString(),
@@ -288,21 +419,41 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                   };
 
                   try {
-                    final response = await ApiClient.postData('equipment/manage_equipment.php', payload);
+                    final response = await ApiClient.postData(
+                      'equipment/manage_equipment.php',
+                      payload,
+                    );
                     if (response['status'] == 'success') {
                       scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text(settings.t(response['message'] ?? 'Berjaya dikemaskini!')), backgroundColor: Colors.green),
+                        SnackBar(
+                          content: Text(
+                            settings.t(
+                              response['message'] ?? 'Berjaya dikemaskini!',
+                            ),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
                       );
                       navigator.pop();
                       _fetchInventory();
                     } else {
                       scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text(settings.t(response['message'] ?? 'Gagal mengemaskini.')), backgroundColor: Colors.red),
+                        SnackBar(
+                          content: Text(
+                            settings.t(
+                              response['message'] ?? 'Gagal mengemaskini.',
+                            ),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                     }
                   } catch (e) {
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }
@@ -315,12 +466,19 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
     );
   }
 
-  Future<void> _showDeleteEquipmentConfirm(Map<String, dynamic> item, SettingsProvider settings) async {
+  Future<void> _showDeleteEquipmentConfirm(
+    Map<String, dynamic> item,
+    SettingsProvider settings,
+  ) async {
     return showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          icon: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 40),
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.redAccent,
+            size: 40,
+          ),
           title: Text(settings.t('Padam Peralatan')),
           content: Text(
             '${settings.t('Adakah anda pasti mahu memadam peralatan')} "${item['item_name']}"? \n\n${settings.t('Ini juga akan memadam semua log yang berkaitan.')}',
@@ -334,28 +492,44 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
-                
+
                 final Map<String, String> payload = {
                   'action': 'delete',
                   'id': item['id'].toString(),
                 };
 
                 try {
-                  final response = await ApiClient.postData('equipment/manage_equipment.php', payload);
+                  final response = await ApiClient.postData(
+                    'equipment/manage_equipment.php',
+                    payload,
+                  );
                   if (response['status'] == 'success') {
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text(settings.t(response['message'] ?? 'Berjaya dipadam!')), backgroundColor: Colors.green),
+                      SnackBar(
+                        content: Text(
+                          settings.t(response['message'] ?? 'Berjaya dipadam!'),
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
                     );
                     navigator.pop();
                     _fetchInventory();
                   } else {
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text(settings.t(response['message'] ?? 'Gagal memadam.')), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text(
+                          settings.t(response['message'] ?? 'Gagal memadam.'),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 } catch (e) {
                   scaffoldMessenger.showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
@@ -388,12 +562,9 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                   tabAlignment: TabAlignment.start,
                   dividerColor: Colors.transparent,
                   tabs: [
-                    Tab(
-                      text: settings.t('Inventori'),
-                    ),
-                    Tab(
-                      text: settings.t('Rekod Log'),
-                    ),
+                    Tab(text: settings.t('Inventori')),
+                    Tab(text: settings.t('Rekod Log')),
+                    Tab(text: settings.t('Pemulangan')),
                   ],
                   labelColor: theme.colorScheme.primary,
                   unselectedLabelColor: theme.unselectedWidgetColor,
@@ -402,7 +573,10 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
               ),
               if (_tabController.index == 0)
                 IconButton(
-                  icon: Icon(Icons.add_box_outlined, color: theme.colorScheme.primary),
+                  icon: Icon(
+                    Icons.add_box_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
                   tooltip: settings.t('Tambah Peralatan'),
                   onPressed: () => _showAddEquipmentDialog(settings),
                 ),
@@ -423,6 +597,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
             onRefresh: _fetchLogs,
             child: _buildLogsTab(settings, theme),
           ),
+          // Tab 3: Pending return acknowledgements
+          RefreshIndicator(
+            onRefresh: _fetchPendingReturns,
+            child: _buildPendingReturnsTab(settings, theme),
+          ),
         ],
       ),
     );
@@ -430,7 +609,9 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
 
   Widget _buildInventoryTab(SettingsProvider settings, ThemeData theme) {
     if (_isLoadingInventory && _inventory.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: Colors.lightBlueAccent));
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.lightBlueAccent),
+      );
     }
 
     if (_inventoryError != null && _inventory.isEmpty) {
@@ -464,7 +645,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 64, color: theme.disabledColor),
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 64,
+              color: theme.disabledColor,
+            ),
             const SizedBox(height: 16),
             Text(
               settings.t('Tiada peralatan direkodkan.'),
@@ -482,7 +667,8 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
         final item = _inventory[index];
         final name = item['item_name'] ?? '';
         final total = int.tryParse(item['total_quantity'].toString()) ?? 0;
-        final available = int.tryParse(item['available_quantity'].toString()) ?? 0;
+        final available =
+            int.tryParse(item['available_quantity'].toString()) ?? 0;
         final borrowed = total - available;
 
         return Card(
@@ -498,11 +684,14 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: (available > 0 ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                  backgroundColor: (available > 0 ? Colors.green : Colors.red)
+                      .withValues(alpha: 0.1),
                   radius: 24,
                   child: Icon(
                     Icons.inventory_2_outlined,
-                    color: available > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                    color: available > 0
+                        ? Colors.green.shade700
+                        : Colors.red.shade700,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -512,26 +701,43 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                     children: [
                       Text(
                         name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         runSpacing: 4,
                         children: [
-                          _buildInventoryBadge(settings.t('Tinggal'), '$available/$total', available > 0 ? Colors.green : Colors.red),
-                          _buildInventoryBadge(settings.t('Dipinjam'), borrowed.toString(), borrowed > 0 ? Colors.orange : Colors.grey),
+                          _buildInventoryBadge(
+                            settings.t('Tinggal'),
+                            '$available/$total',
+                            available > 0 ? Colors.green : Colors.red,
+                          ),
+                          _buildInventoryBadge(
+                            settings.t('Dipinjam'),
+                            borrowed.toString(),
+                            borrowed > 0 ? Colors.orange : Colors.grey,
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: Colors.blueAccent,
+                  ),
                   onPressed: () => _showEditEquipmentDialog(item, settings),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
                   onPressed: () => _showDeleteEquipmentConfirm(item, settings),
                 ),
               ],
@@ -563,7 +769,9 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
 
   Widget _buildLogsTab(SettingsProvider settings, ThemeData theme) {
     if (_isLoadingLogs && _logs.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: Colors.lightBlueAccent));
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.lightBlueAccent),
+      );
     }
 
     if (_logsError != null && _logs.isEmpty) {
@@ -597,7 +805,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history_edu_outlined, size: 64, color: theme.disabledColor),
+            Icon(
+              Icons.history_edu_outlined,
+              size: 64,
+              color: theme.disabledColor,
+            ),
             const SizedBox(height: 16),
             Text(
               settings.t('Tiada rekod penggunaan peralatan.'),
@@ -618,16 +830,22 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
         final borrowedAtStr = log['borrowed_at'] ?? '';
         final returnedAtStr = log['returned_at'];
         final String rawItems = log['items'] ?? '';
-        final List<String> itemList = rawItems.isEmpty ? [] : rawItems.split(', ');
-        
+        final List<String> itemList = rawItems.isEmpty
+            ? []
+            : rawItems.split(', ');
+
         final DateTime borrowedTime = DateTime.parse(borrowedAtStr);
-        final String borrowedFormatted = DateFormat('dd MMM yyyy, hh:mm a').format(borrowedTime);
-        
+        final String borrowedFormatted = DateFormat(
+          'dd MMM yyyy, hh:mm a',
+        ).format(borrowedTime);
+
         String returnedFormatted = '';
         bool isReturned = returnedAtStr != null;
         if (isReturned) {
           final DateTime returnedTime = DateTime.parse(returnedAtStr);
-          returnedFormatted = DateFormat('dd MMM yyyy, hh:mm a').format(returnedTime);
+          returnedFormatted = DateFormat(
+            'dd MMM yyyy, hh:mm a',
+          ).format(returnedTime);
         }
 
         return Card(
@@ -649,7 +867,10 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                     Expanded(
                       child: Text(
                         patrollerName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     _buildStatusBadge(isReturned, settings),
@@ -659,7 +880,12 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                   const SizedBox(height: 4),
                   Text(
                     phone,
-                    style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6), fontSize: 12),
+                    style: TextStyle(
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.6,
+                      ),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
                 const Divider(height: 24),
@@ -668,12 +894,21 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.arrow_upward_rounded, size: 16, color: Colors.orange.shade700),
+                    Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 16,
+                      color: Colors.orange.shade700,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '${settings.t('Diambil')}: $borrowedFormatted',
-                        style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.8,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -683,12 +918,20 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.green.shade700),
+                      Icon(
+                        Icons.arrow_downward_rounded,
+                        size: 16,
+                        color: Colors.green.shade700,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${settings.t('Dipulangkan')}: $returnedFormatted',
-                          style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withValues(alpha: 0.8),
+                          ),
                         ),
                       ),
                     ],
@@ -702,11 +945,163 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
     );
   }
 
-  Widget _buildBorrowedItemsSection(List<String> itemList, SettingsProvider settings, ThemeData theme) {
+  Widget _buildPendingReturnsTab(SettingsProvider settings, ThemeData theme) {
+    if (_isLoadingReturns && _pendingReturns.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.lightBlueAccent),
+      );
+    }
+
+    if (_returnsError != null && _pendingReturns.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+              const SizedBox(height: 16),
+              Text(
+                _returnsError!,
+                style: const TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _fetchPendingReturns,
+                icon: const Icon(Icons.refresh),
+                label: Text(settings.t('Cuba Lagi')),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_pendingReturns.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.22),
+          Icon(Icons.fact_check_outlined, size: 64, color: theme.disabledColor),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              settings.t('Tiada pemulangan menunggu pengesahan.'),
+              style: TextStyle(color: theme.disabledColor, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: _pendingReturns.length,
+      itemBuilder: (context, index) {
+        final pendingReturn = _pendingReturns[index] as Map<String, dynamic>;
+        final equipment = List<String>.from(
+          pendingReturn['equipment'] ?? const [],
+        );
+        final requestedAt =
+            pendingReturn['return_requested_at']?.toString() ?? '';
+        String requestedAtText = requestedAt;
+        if (requestedAt.isNotEmpty) {
+          try {
+            requestedAtText = DateFormat(
+              'dd MMM yyyy, hh:mm a',
+            ).format(DateTime.parse(requestedAt));
+          } catch (_) {
+            requestedAtText = requestedAt;
+          }
+        }
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+          ),
+          color: theme.cardColor,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.orange.withValues(alpha: 0.12),
+                      child: const Icon(
+                        Icons.assignment_return_outlined,
+                        color: Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pendingReturn['full_name'] ?? settings.t('Peronda'),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (requestedAtText.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${settings.t('Diminta pada')}: $requestedAtText',
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.65),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                _buildBorrowedItemsSection(equipment, settings, theme),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _isLoadingReturns
+                        ? null
+                        : () => _acknowledgeReturn(pendingReturn, settings),
+                    icon: const Icon(Icons.task_alt_rounded),
+                    label: Text(settings.t('Sahkan Pemulangan')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBorrowedItemsSection(
+    List<String> itemList,
+    SettingsProvider settings,
+    ThemeData theme,
+  ) {
     if (itemList.isEmpty) {
       return Row(
         children: [
-          Icon(Icons.inventory_2_outlined, size: 16, color: theme.disabledColor),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 16,
+            color: theme.disabledColor,
+          ),
           const SizedBox(width: 8),
           Text(
             settings.t('Tiada peralatan direkodkan.'),
@@ -725,7 +1120,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 16, color: theme.primaryColor),
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 16,
+              color: theme.primaryColor,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -733,12 +1132,16 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                 children: [
                   Text(
                     '${settings.t("Peralatan")}: ${displayItems.join(", ")}${isALot ? "..." : ""}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                   if (isALot) ...[
                     const SizedBox(height: 4),
                     InkWell(
-                      onTap: () => _showBorrowedItemsDrawer(itemList, settings, theme),
+                      onTap: () =>
+                          _showBorrowedItemsDrawer(itemList, settings, theme),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Row(
@@ -753,7 +1156,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down, size: 16, color: theme.primaryColor),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 16,
+                              color: theme.primaryColor,
+                            ),
                           ],
                         ),
                       ),
@@ -768,7 +1175,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
     );
   }
 
-  void _showBorrowedItemsDrawer(List<String> itemList, SettingsProvider settings, ThemeData theme) {
+  void _showBorrowedItemsDrawer(
+    List<String> itemList,
+    SettingsProvider settings,
+    ThemeData theme,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -799,7 +1210,10 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                   Expanded(
                     child: Text(
                       settings.t('Senarai Peralatan Dipinjam'),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -814,11 +1228,18 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle_outline, color: Colors.green.shade600, size: 20),
+                          Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.green.shade600,
+                            size: 20,
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             itemList[idx],
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -839,9 +1260,15 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen> with Single
   }
 
   Widget _buildStatusBadge(bool isReturned, SettingsProvider settings) {
-    final bgColor = (isReturned ? Colors.green : Colors.orange).withValues(alpha: 0.15);
-    final textColor = isReturned ? Colors.green.shade800 : Colors.orange.shade800;
-    final text = isReturned ? settings.t('Telah Dipulangkan') : settings.t('Sedang Digunakan');
+    final bgColor = (isReturned ? Colors.green : Colors.orange).withValues(
+      alpha: 0.15,
+    );
+    final textColor = isReturned
+        ? Colors.green.shade800
+        : Colors.orange.shade800;
+    final text = isReturned
+        ? settings.t('Telah Dipulangkan')
+        : settings.t('Sedang Digunakan');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

@@ -8,7 +8,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/logger.dart';
 
 class IncidentService {
-  final String _uploadEndpoint = '${ApiConstants.baseUrl}incidents/upload_incident.php';
+  final String _uploadEndpoint = ApiConstants.buildApiUrl('incidents/upload_incident.php');
 
   Future<String?> submitReport({
     required String reporterId,
@@ -74,7 +74,7 @@ class IncidentService {
   // Fetch all incidents from the backend
   Future<List<dynamic>> fetchAllIncidents({String? patrollerId}) async {
     try {
-      String url = '${ApiConstants.baseUrl}incidents/get_incidents.php';
+      String url = ApiConstants.buildApiUrl('incidents/get_incidents.php');
       if (patrollerId != null && patrollerId.isNotEmpty) {
         url += '?user_id=$patrollerId';
       }
@@ -99,7 +99,7 @@ class IncidentService {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.baseUrl}incidents/get_incidents.php\n==================================', error: e, stackTrace: stackTrace);
+      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.buildApiUrl('incidents/get_incidents.php')}\n==================================', error: e, stackTrace: stackTrace);
       throw Exception("Network Exception: $e");
     }
   }

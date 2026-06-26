@@ -11,6 +11,7 @@ import 'incident_report_screen.dart';
 import 'incident_detail_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/malaysia_time.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import '../../../core/utils/pdf_saver.dart';
 
@@ -92,7 +93,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
     try {
       String url =
-          '${ApiConstants.baseUrl}incidents/fetch_incidents.php?page=$_page&limit=10';
+          ApiConstants.buildApiUrl('incidents/fetch_incidents.php?page=$_page&limit=10');
 
       final authProvider = context.read<AuthProvider>();
       final String? effectiveFilter;
@@ -117,19 +118,18 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       // Handle tab-based dates
       if (_tabController.index == 0) {
         // Today
-        final today = DateTime.now();
-        final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+        final todayStr = MalaysiaTime.dateKey(MalaysiaTime.now());
         url += '&start_date=$todayStr&end_date=$todayStr';
       } else {
         // Archive
         if (_selectedDateRange != null) {
-          final startStr = '${_selectedDateRange!.start.year}-${_selectedDateRange!.start.month.toString().padLeft(2, '0')}-${_selectedDateRange!.start.day.toString().padLeft(2, '0')}';
-          final endStr = '${_selectedDateRange!.end.year}-${_selectedDateRange!.end.month.toString().padLeft(2, '0')}-${_selectedDateRange!.end.day.toString().padLeft(2, '0')}';
+          final startStr = MalaysiaTime.dateKey(_selectedDateRange!.start);
+          final endStr = MalaysiaTime.dateKey(_selectedDateRange!.end);
           url += '&start_date=$startStr&end_date=$endStr';
         } else {
           // Default Archive view: get incidents up to yesterday
-          final yesterday = DateTime.now().subtract(const Duration(days: 1));
-          final yesterdayStr = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+          final yesterday = MalaysiaTime.now().subtract(const Duration(days: 1));
+          final yesterdayStr = MalaysiaTime.dateKey(yesterday);
           url += '&start_date=1970-01-01&end_date=$yesterdayStr';
         }
       }
@@ -208,7 +208,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       final token = prefs.getString('jwt_token');
 
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}incidents/delete_incident.php'),
+        Uri.parse(ApiConstants.buildApiUrl('incidents/delete_incident.php')),
         headers: {
           if (token != null) 'Authorization': 'Bearer $token',
         },
@@ -244,7 +244,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       final token = prefs.getString('jwt_token');
 
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}incidents/update_status.php'),
+        Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
         headers: {
           if (token != null) 'Authorization': 'Bearer $token',
         },
@@ -326,7 +326,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     for (final id in _selectedIncidentIds) {
       try {
         final response = await http.post(
-          Uri.parse('${ApiConstants.baseUrl}incidents/delete_incident.php'),
+          Uri.parse(ApiConstants.buildApiUrl('incidents/delete_incident.php')),
           headers: {
             if (token != null) 'Authorization': 'Bearer $token',
           },
@@ -386,7 +386,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     for (final id in _selectedIncidentIds) {
       try {
         final response = await http.post(
-          Uri.parse('${ApiConstants.baseUrl}incidents/update_status.php'),
+          Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
           headers: {
             if (token != null) 'Authorization': 'Bearer $token',
           },
@@ -956,7 +956,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                           Text(
                             () {
                               try {
-                                final dt = DateTime.parse(data['created_at'].toString());
+                                final dt = MalaysiaTime.fromUtcDatabase(data['created_at']);
                                 return '${dt.day}/${dt.month}/${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
                               } catch (_) {
                                 return data['created_at'].toString();

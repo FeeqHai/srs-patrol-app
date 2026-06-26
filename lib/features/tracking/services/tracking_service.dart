@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 
 class TrackingService {
-  final String _sosEndpoint = '${ApiConstants.baseUrl}tracking/sos_alert.php';
+  final String _sosEndpoint = ApiConstants.buildApiUrl('tracking/sos_alert.php');
 
   Future<String?> sendSosAlert({
     required String userId,

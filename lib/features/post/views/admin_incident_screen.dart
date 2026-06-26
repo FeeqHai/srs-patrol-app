@@ -40,7 +40,7 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}auth/get_patrollers.php'),
+        Uri.parse(ApiConstants.buildApiUrl('auth/get_patrollers.php')),
         headers: headers,
       );
       if (response.statusCode == 200) {
@@ -51,7 +51,7 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
           // Fetch incidents to calculate note counts
           try {
             final incidentsResponse = await http.get(
-              Uri.parse('${ApiConstants.baseUrl}incidents/fetch_incidents.php?page=1&limit=9999'),
+              Uri.parse(ApiConstants.buildApiUrl('incidents/fetch_incidents.php?page=1&limit=9999')),
               headers: headers,
             );
             if (incidentsResponse.statusCode == 200) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../core/widgets/responsive_shell.dart';
 import 'analytics_screen.dart';
 import 'admin_incident_screen.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/global_menu_button.dart';
 import 'admin_squad_schedule_screen.dart';
 import 'admin_member_screen.dart';
 import 'admin_equipment_screen.dart';
+import 'super_admin_screen.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -34,8 +36,15 @@ class _AdminShellState extends State<AdminShell> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final isSuperAdmin = context.watch<AuthProvider>().role == 'super_admin';
+
+    final List<String> pageTitles = [
+      if (isSuperAdmin) 'Super Admin',
+      ..._pageTitles,
+    ];
 
     final List<Widget> screens = [
+      if (isSuperAdmin) const SuperAdminScreen(),
       const AnalyticsScreen(),
       const QrGeneratorScreen(),
       const AdminEquipmentScreen(),
@@ -61,14 +70,25 @@ class _AdminShellState extends State<AdminShell> {
       screens: screens,
       showAppBar: !_hideAppBar,
       items: [
+        if (isSuperAdmin)
+          NavigationItem(
+            icon: Icons.security_outlined,
+            label: settings.t('Super Admin'),
+          ),
         NavigationItem(icon: Icons.dashboard, label: settings.t('Pantau')),
-        NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Jana QR')),
-        NavigationItem(icon: Icons.inventory_2_outlined, label: settings.t('Peralatan')),
+        NavigationItem(
+          icon: Icons.qr_code_scanner,
+          label: settings.t('Jana QR'),
+        ),
+        NavigationItem(
+          icon: Icons.inventory_2_outlined,
+          label: settings.t('Peralatan'),
+        ),
         NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan')),
         NavigationItem(icon: Icons.calendar_month, label: settings.t('Skuad')),
         NavigationItem(icon: Icons.people, label: settings.t('Ahli')),
       ],
-      title: settings.t(_pageTitles[_currentIndex]),
+      title: settings.t(pageTitles[_currentIndex]),
       actions: const [AppNotificationButton(), GlobalMenuButton()],
     );
   }

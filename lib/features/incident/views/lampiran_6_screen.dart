@@ -56,8 +56,8 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.userId ?? '';
 
-      final url = '${ApiConstants.baseUrl}incidents/get_lampiran_6_summary.php'
-          '?month_offset=$_monthOffset&user_id=$userId&level=$_selectedLevel';
+      final endpoint = ApiConstants.buildApiUrl('incidents/get_lampiran_6_summary.php');
+      final url = '$endpoint?month_offset=$_monthOffset&user_id=$userId&level=$_selectedLevel';
 
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');

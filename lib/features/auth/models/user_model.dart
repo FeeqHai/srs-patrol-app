@@ -36,6 +36,7 @@ class UserModel {
   final String? icNumber;
   final String? phoneNumber;
   final String? email;
+  final String? profileImagePath;
   final String? districtZone;
   final String? stateId;
   final String? districtId;
@@ -52,6 +53,7 @@ class UserModel {
     this.icNumber,
     this.phoneNumber,
     this.email,
+    this.profileImagePath,
     this.districtZone,
     this.stateId,
     this.districtId,
@@ -75,6 +77,7 @@ class UserModel {
       icNumber: json['ic_number'] as String?,
       phoneNumber: json['phone_number'] as String?,
       email: json['email'] as String?,
+      profileImagePath: json['profile_image_path'] as String?,
       districtZone: json['district_zone'] as String?,
       stateId: json['state_id'] as String?,
       districtId: json['district_id'] as String?,
@@ -97,6 +100,7 @@ class UserModel {
       'ic_number': icNumber,
       'phone_number': phoneNumber,
       'email': email,
+      'profile_image_path': profileImagePath,
       'district_zone': districtZone,
       'state_id': stateId,
       'district_id': districtId,

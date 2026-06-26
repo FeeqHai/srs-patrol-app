@@ -13,7 +13,6 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    
 
     // Load Language
     final String? langStr = prefs.getString('languageCode');
@@ -25,8 +24,6 @@ class SettingsProvider extends ChangeNotifier {
 
     notifyListeners();
   }
-
-
 
   Future<void> setLanguage(String langCode) async {
     _locale = Locale(langCode);
@@ -41,13 +38,17 @@ class SettingsProvider extends ChangeNotifier {
       'Peralatan Tersedia': 'Available Equipment',
       'Hari Ini': 'Today',
       'Arkib': 'Archive',
-      'Laporan yang telah dihantar tidak boleh dihapuskan.': 'Submitted reports cannot be deleted.',
-      'Terdapat laporan yang telah dihantar dalam pilihan anda.': 'There are already submitted reports in your selection.',
+      'Laporan yang telah dihantar tidak boleh dihapuskan.':
+          'Submitted reports cannot be deleted.',
+      'Terdapat laporan yang telah dihantar dalam pilihan anda.':
+          'There are already submitted reports in your selection.',
       'Tamatkan Rondaan Awal': 'End Patrol Early',
-      'Adakah anda pasti mahu menamatkan shif rondaan awal?': 'Are you sure you want to end your patrol shift early?',
+      'Adakah anda pasti mahu menamatkan shif rondaan awal?':
+          'Are you sure you want to end your patrol shift early?',
       'Baki masa': 'Time remaining',
       'Sahkan Tamat Rondaan': 'Confirm End Patrol',
-      'Sila sahkan sekali lagi. Adakah anda benar-benar mahu menamatkan rondaan sekarang?': 'Please confirm once more. Do you really want to end the patrol now?',
+      'Sila sahkan sekali lagi. Adakah anda benar-benar mahu menamatkan rondaan sekarang?':
+          'Please confirm once more. Do you really want to end the patrol now?',
       'Ya, Tamatkan': 'Yes, End Shift',
       'Ya, Sahkan': 'Yes, Confirm',
       'terpilih': 'selected',
@@ -63,7 +64,8 @@ class SettingsProvider extends ChangeNotifier {
       'Abjad (Default)': 'Alphabetical (Default)',
       'Paling Banyak Nota': 'Most Notes',
       'Tiada Nota': 'No Notes',
-      'Ciri kemas kini sedang dibangunkan.': 'Update feature is currently under development.',
+      'Ciri kemas kini sedang dibangunkan.':
+          'Update feature is currently under development.',
       'Dashboard': 'Dashboard',
       'Insiden': 'Incidents',
       'Laporan': 'Reports',
@@ -73,6 +75,47 @@ class SettingsProvider extends ChangeNotifier {
       'Laporan Peronda': 'Patrol Reports',
       'Suapan Insiden': 'Incident Feed',
       'Pantau Analitik': 'Analytics',
+      'Super Admin': 'Super Admin',
+      'Pemantauan semua kawasan SRS': 'Monitoring across all SRS areas',
+      'Muat Semula': 'Refresh',
+      'Ringkasan Pantas': 'Quick Overview',
+      'Belum dikemas kini': 'Not updated yet',
+      'Skop Semasa': 'Current Scope',
+      'Dikemas kini': 'Updated',
+      'Malaysia / Semua Negeri / Semua Daerah / Semua Zon':
+          'Malaysia / All States / All Districts / All Zones',
+      'Tukar Skop': 'Change Scope',
+      'Perlu Tindakan': 'Action Required',
+      'Jumlah Pengguna': 'Total Users',
+      'Akaun Menunggu': 'Pending Accounts',
+      'Akaun baharu memerlukan semakan.': 'New accounts require review.',
+      'Pemulangan Menunggu': 'Pending Returns',
+      'Pemulangan rondaan menunggu pengesahan.':
+          'Patrol returns are awaiting acknowledgement.',
+      'Insiden Hari Ini': 'Today\'s Incidents',
+      'Catatan hari ini untuk perhatian.': 'Today\'s notes need attention.',
+      'Negeri': 'States',
+      'Negeri Diliputi': 'States Covered',
+      'Senarai Ketua KRT': 'KRT Admin List',
+      'Tiada Ketua KRT direkodkan.': 'No KRT admins recorded.',
+      'Liputan Daerah': 'District Coverage',
+      'Tiada liputan daerah direkodkan.': 'No district coverage recorded.',
+      'Pembersihan data diperlukan': 'Data cleanup required',
+      '1 lokasi legasi perlu disemak.': '1 legacy location needs review.',
+      'lokasi legasi perlu disemak.': '{count} legacy locations need review.',
+      'Semak': 'Review',
+      'Malaysia': 'Malaysia',
+      'Semua negeri, daerah dan zon': 'All states, districts and zones',
+      'Negeri / Daerah / Zon': 'State / District / Zone',
+      'Penapis skop belum disambungkan.':
+          'Scope filters are not connected yet.',
+      'Cari Ketua KRT...': 'Search KRT admins...',
+      'Cari daerah...': 'Search districts...',
+      'Cari rekod...': 'Search records...',
+      'Tiada data legasi.': 'No legacy data.',
+      'zon': 'zone',
+      'ahli': 'members',
+      'KRT': 'KRT',
       'Jana Kod QR': 'Generate QR',
       'Laporan Insiden': 'Incident Reports',
       'Pengurusan Ahli': 'Member Management',
@@ -86,23 +129,29 @@ class SettingsProvider extends ChangeNotifier {
       'Sila jana semula kod QR untuk pemulangan seterusnya.':
           'Please generate a new QR code for the next return.',
       'Pengesahan Pemulangan': 'Return Acknowledgement',
-      'Tiada pemulangan menunggu pengesahan.': 'No returns awaiting acknowledgement.',
+      'Pemulangan': 'Returns',
+      'Diminta pada': 'Requested at',
+      'Tiada pemulangan menunggu pengesahan.':
+          'No returns awaiting acknowledgement.',
       'Tiada peralatan dipinjam': 'No equipment borrowed',
       'Sahkan Pemulangan': 'Acknowledge Return',
       'Pemulangan peronda telah disahkan.': 'Patroller return acknowledged.',
       'Gagal memuatkan pemulangan.': 'Unable to load returns.',
       'Gagal mengesahkan pemulangan.': 'Unable to acknowledge the return.',
-      'Gagal memuatkan peralatan dipinjam.': 'Unable to load borrowed equipment.',
+      'Gagal memuatkan peralatan dipinjam.':
+          'Unable to load borrowed equipment.',
       'Sahkan Pemulangan Peralatan': 'Confirm Equipment Return',
       'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.':
           'Tick every item handed back to Ketua KRT.',
       'Tiada peralatan dipinjam untuk shif ini.':
           'No equipment was borrowed for this shift.',
       'Pemulangan tidak dapat disahkan.': 'The return could not be confirmed.',
-      'Menunggu pengesahan Ketua KRT.': 'Waiting for Ketua KRT acknowledgement.',
+      'Menunggu pengesahan Ketua KRT.':
+          'Waiting for Ketua KRT acknowledgement.',
       'Hantar Pemulangan': 'Submit Return',
       'IMBAS QR PULANG': 'SCAN RETURN QR',
-      'Imbas QR Clock Out di Pos Utama': 'Scan the Clock Out QR at the main post',
+      'Imbas QR Clock Out di Pos Utama':
+          'Scan the Clock Out QR at the main post',
       'Log Keluar': 'Logout',
       'Profil': 'Profile',
       'Tetapan': 'Settings',
@@ -126,7 +175,8 @@ class SettingsProvider extends ChangeNotifier {
       'E-mel': 'Email',
       'Peranan': 'Role',
       'Status Akaun': 'Account Status',
-      'Sesi tamat. Sila log masuk semula.': 'Session expired. Please log in again.',
+      'Sesi tamat. Sila log masuk semula.':
+          'Session expired. Please log in again.',
       'Ralat Pelayan': 'Server Error',
       'Ralat Rangkaian': 'Network Error',
       'Cuba Semula': 'Try Again',
@@ -137,7 +187,7 @@ class SettingsProvider extends ChangeNotifier {
       'Ringkasan Aktiviti Anda': 'Your Activity Summary',
       'Tidak Aktif': 'Inactive',
       'Rondaan Anda': 'Your Patrol',
-      'Jumlah Insiden': 'Total Incidents',
+      'Jumlah Nota': 'Total Notes',
       'Status Semasa': 'Current Status',
       'Bersedia Untuk Rondaan': 'Ready for Patrol',
       'Tekan untuk mula': 'Tap to start',
@@ -160,15 +210,18 @@ class SettingsProvider extends ChangeNotifier {
       'Faham & Tutup': 'Understood & Close',
       // SOS Strings
       'AMARAN SOS': 'SOS WARNING',
-      'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?': 'Are you sure you want to trigger an EMERGENCY alert? This will send your location immediately to all patrollers.',
+      'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?':
+          'Are you sure you want to trigger an EMERGENCY alert? This will send your location immediately to all patrollers.',
       'Batal': 'Cancel',
       'SAHKAN SOS': 'CONFIRM SOS',
-      'Sedang Mengesan GPS & Menyiarkan SOS...': 'Detecting GPS Coordinates & Broadcasting SOS...',
+      'Sedang Mengesan GPS & Menyiarkan SOS...':
+          'Detecting GPS Coordinates & Broadcasting SOS...',
       'SOS BERJAYA DISIARKAN!': 'SOS BROADCAST SUCCESSFUL!',
       'RALAT SOS': 'SOS ERROR',
       'GAGAL PENGESANAN GPS': 'GPS DETECTION FAILED',
       'KECEMASAN': 'EMERGENCY!',
-      'Seorang peronda memerlukan bantuan SEGERA!': 'A patroller needs IMMEDIATE help!',
+      'Seorang peronda memerlukan bantuan SEGERA!':
+          'A patroller needs IMMEDIATE help!',
       'Peronda': 'Patroller',
       'Tidak Diketahui': 'Unknown',
       'Lokasi': 'Location',
@@ -176,11 +229,13 @@ class SettingsProvider extends ChangeNotifier {
       'LIHAT LOG': 'VIEW LOG',
       // Login
       'Securing Our Community\nTogether.': 'Securing Our Community\nTogether.',
-      'Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.': 'Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.',
+      'Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.':
+          'Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.',
       'SRS Patrol Portal': 'SRS Patrol Portal',
       'Securing Our Community': 'Securing Our Community',
       'Welcome Back': 'Welcome Back',
-      'Enter your credentials to access your account': 'Enter your credentials to access your account',
+      'Enter your credentials to access your account':
+          'Enter your credentials to access your account',
       'Email Address': 'Email Address',
       'Password': 'Password',
       'Forgot password?': 'Forgot password?',
@@ -192,7 +247,8 @@ class SettingsProvider extends ChangeNotifier {
       'Register Here': 'Register Here',
       // Register
       'Create Your Account': 'Create Your Account',
-      'Join the SRS patrol team and secure your community': 'Join the SRS patrol team and secure your community',
+      'Join the SRS patrol team and secure your community':
+          'Join the SRS patrol team and secure your community',
       'Full Name': 'Full Name',
       'IC Number': 'IC Number',
       'Patrol Zone': 'Patrol Zone',
@@ -202,9 +258,11 @@ class SettingsProvider extends ChangeNotifier {
       'Already have an account?': 'Already have an account?',
       'Login Here': 'Login Here',
       'Pendaftaran Selesai': 'Registration Complete',
-      'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.': 'Your account has been recorded. Please contact the KRT Head to verify your identity before logging in.',
+      'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.':
+          'Your account has been recorded. Please contact the KRT Head to verify your identity before logging in.',
       'Kembali ke Log Masuk': 'Back to Login',
-      'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.': 'Registration denied: Form incomplete or zone not selected.',
+      'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.':
+          'Registration denied: Form incomplete or zone not selected.',
       // Incidents / Misc
       'Sila pilih kategori insiden': 'Please select incident category',
       'Sila masukkan tajuk': 'Please enter a title',
@@ -227,11 +285,13 @@ class SettingsProvider extends ChangeNotifier {
       // Added missing keys
       'Join Our Patrol\nNetwork.': 'Join Our Patrol\nNetwork.',
       'Click to see available equipment': 'Click to see available equipment',
-      'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.': 'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.',
+      'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.':
+          'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.',
       'Pendaftaran': 'Registration',
       'Daftar Peronda Baru': 'Register New Patroller',
       'Create Account': 'Create Account',
-      'Fill in the details below to register as a patroller.': 'Fill in the details below to register as a patroller.',
+      'Fill in the details below to register as a patroller.':
+          'Fill in the details below to register as a patroller.',
       'Maklumat Identiti': 'Identity Information',
       'Nama Penuh (Mengikut Kad Pengenalan)': 'Full Name (As in IC)',
       'No. Kad Pengenalan (Tanpa Sengkang)': 'IC Number (Without dashes)',
@@ -253,8 +313,10 @@ class SettingsProvider extends ChangeNotifier {
       'Jum': 'Fri',
       'Sab': 'Sat',
       'Aha': 'Sun',
-      'Bahan bukti diperlukan: Sila ambil gambar insiden.': 'Evidence required: Please take a photo of the incident.',
-      'Ralat Sesi: Sila log masuk semula.': 'Session Error: Please login again.',
+      'Bahan bukti diperlukan: Sila ambil gambar insiden.':
+          'Evidence required: Please take a photo of the incident.',
+      'Ralat Sesi: Sila log masuk semula.':
+          'Session Error: Please login again.',
       'Jadual Rondaan': 'Patrol Schedule',
       'Jadual Rondaan Akan Datang': 'Upcoming Patrol Schedule',
       'Kumpulan Rondaan Anda': 'Your Patrol Squad',
@@ -262,18 +324,21 @@ class SettingsProvider extends ChangeNotifier {
       'Ahli Rondaan': 'Patroller',
       'HARI INI': 'TODAY',
       'Tiada Jadual Ditugaskan': 'No Schedule Assigned',
-      'Sila hubungi Ketua KRT untuk penetapan jadual.': 'Please contact Ketua KRT for schedule assignment.',
+      'Sila hubungi Ketua KRT untuk penetapan jadual.':
+          'Please contact Ketua KRT for schedule assignment.',
       'Tiada ahli dalam kumpulan ini.': 'No members in this squad.',
       'Klik untuk melihat senarai ahli': 'Click to view squad members list',
       'Ketua': 'Leader',
       'Ahli (Peranan)': 'Member',
       'Menyambung ke GPS & Memuat Naik...': 'Connecting to GPS & Uploading...',
       'Laporan Berjaya': 'Report Successful',
-      'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.': 'Incident data, photographic evidence, and GPS coordinates have been safely sent to the main server.',
+      'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.':
+          'Incident data, photographic evidence, and GPS coordinates have been safely sent to the main server.',
       'Kembali ke Menu': 'Back to Menu',
       'Tambah': 'Add',
       'Kategori Insiden (Carian JPNIN)': 'Incident Category (JPNIN Search)',
-      'Cari kategori (cth: Samun, Dadah)...': 'Search category (e.g., Robbery, Drugs)...',
+      'Cari kategori (cth: Samun, Dadah)...':
+          'Search category (e.g., Robbery, Drugs)...',
       'Lapor Insiden': 'Report Incident',
       'RALAT MUAT NAIK:': 'UPLOAD ERROR:',
       'Butiran Insiden': 'Incident Details',
@@ -297,11 +362,13 @@ class SettingsProvider extends ChangeNotifier {
       'Lokasi tidak dapat dikesan. Sila cuba semula.':
           'Unable to detect location. Please try again.',
       'Jana QR Kehadiran': 'Generate Attendance QR',
-      'Papar kod QR ini kepada peronda untuk merekod kehadiran.': 'Show this QR code to patrollers to record attendance.',
+      'Papar kod QR ini kepada peronda untuk merekod kehadiran.':
+          'Show this QR code to patrollers to record attendance.',
       'Tamat Tempoh:': 'Expires:',
       'saat': 'seconds',
       'Kod QR Telah Tamat Tempoh': 'QR Code Expired',
-      'Sila jana semula kod QR untuk peronda seterusnya.': 'Please regenerate QR code for the next patroller.',
+      'Sila jana semula kod QR untuk peronda seterusnya.':
+          'Please regenerate QR code for the next patroller.',
       'Lokasi Semasa (Pos Utama)': 'Current Location (Main Post)',
       'Pos Utama KRT': 'KRT Main Post',
       'Jana Semula QR': 'Regenerate QR',
@@ -321,7 +388,8 @@ class SettingsProvider extends ChangeNotifier {
       'Semua pendaftaran baharu telah diluluskan.':
           'All new registrations have been approved.',
       'Tiada ahli nyahaktif.': 'No inactive members.',
-      'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.': 'All registered members are active or pending approval.',
+      'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.':
+          'All registered members are active or pending approval.',
       'Tapis Pengurusan Ahli': 'Filter Member Management',
       'Tapis Laporan Insiden': 'Filter Incident Reports',
       'Ketua Peronda': 'Squad Leader',
@@ -332,7 +400,8 @@ class SettingsProvider extends ChangeNotifier {
       'Mengesahkan...': 'Authenticating...',
       'Mendapatkan Kunci Satelit GPS...': 'Acquiring GPS Satellite Lock...',
       'Pilih Peralatan': 'Select Equipment',
-      'Tandakan peralatan yang anda ambil dari Pos Utama.': 'Mark the equipment you take from the Main Post.',
+      'Tandakan peralatan yang anda ambil dari Pos Utama.':
+          'Mark the equipment you take from the Main Post.',
       'Tiada peralatan direkodkan.': 'No equipment recorded.',
       'Tinggal': 'Remaining',
       'Sahkan & Mula Shif': 'Confirm & Start Shift',
@@ -355,22 +424,26 @@ class SettingsProvider extends ChangeNotifier {
       'Simpan': 'Save',
       'Kemaskini Peralatan': 'Update Equipment',
       'Padam Peralatan': 'Delete Equipment',
-      'Adakah anda pasti mahu memadam peralatan': 'Are you sure you want to delete equipment',
-      'Ini juga akan memadam semua log yang berkaitan.': 'This will also delete all associated logs.',
+      'Adakah anda pasti mahu memadam peralatan':
+          'Are you sure you want to delete equipment',
+      'Ini juga akan memadam semua log yang berkaitan.':
+          'This will also delete all associated logs.',
       'Tiada rekod penggunaan peralatan.': 'No equipment usage logs recorded.',
       'Jumlah': 'Total',
       'Dipinjam': 'Borrowed',
       'Lihat Semua': 'View All',
       'Senarai Peralatan Dipinjam': 'List of Borrowed Equipment',
       'Monitor & Analitik': 'Monitor & Analytics',
-      'Paparan pemantauan rondaan dan trend insiden semasa.': 'Display of patrol monitoring and current incident trends.',
+      'Paparan pemantauan rondaan dan trend insiden semasa.':
+          'Display of patrol monitoring and current incident trends.',
       'Insiden (Minggu)': 'Incidents (Week)',
       'Shif Aktif': 'Active Shifts',
       'Peronda Terdaftar': 'Registered Patrollers',
       'JANA LAPORAN LAMPIRAN 6': 'Generate monthly report',
       'Borang Lampiran D3(C)': 'Monthly Report',
       'Rondaan Aktif Semasa': 'Current Active Patrols',
-      'Tiada rondaan aktif dijalankan ketika ini.': 'No active patrols running at this time.',
+      'Tiada rondaan aktif dijalankan ketika ini.':
+          'No active patrols running at this time.',
       'Tiada Kumpulan': 'No Squad',
       'Kumpulan': 'Squad',
       'Mula': 'Start',
@@ -394,8 +467,10 @@ class SettingsProvider extends ChangeNotifier {
       'Ralat memuat senarai:': 'Error loading list:',
       'Tiada Kumpulan Direkodkan': 'No Squads Recorded',
       'Padam Kumpulan': 'Delete Squad',
-      'Adakah anda pasti untuk memadam kumpulan': 'Are you sure you want to delete squad',
-      'Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.': 'All member data and schedules related to this squad will be deleted.',
+      'Adakah anda pasti untuk memadam kumpulan':
+          'Are you sure you want to delete squad',
+      'Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.':
+          'All member data and schedules related to this squad will be deleted.',
       'Belum ada ahli.': 'No members yet.',
       'Keluarkan Ahli': 'Remove Member',
       'Adakah anda pasti untuk mengeluarkan': 'Are you sure you want to remove',
@@ -416,7 +491,8 @@ class SettingsProvider extends ChangeNotifier {
       'Simpan Jadual': 'Save Schedule',
       'Tiada Jadual Rondaan Direkodkan': 'No Patrol Schedules Recorded',
       'Kumpulan Tanpa Nama': 'Unnamed Squad',
-      'Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan': 'Are you sure you want to delete the patrol schedule for squad',
+      'Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan':
+          'Are you sure you want to delete the patrol schedule for squad',
       'pada tarikh': 'on date',
       'Jadual & Skuad': 'Schedules & Squads',
       'Maklumat Peribadi': 'Personal Information',
@@ -443,7 +519,8 @@ class SettingsProvider extends ChangeNotifier {
       'Rondaan & Keberkesanan': 'Patrols & Effectiveness',
       'Lain-lain': 'Others',
       'QR Tamat Tempoh': 'QR Expired',
-      'Kod QR ini telah tamat tempoh pelindungan (60 saat). Sila minta Ketua memaparkan Kod QR yang baharu untuk mengelakkan penipuan tangkapan skrin.': 'This QR code has expired (60 seconds). Please ask the Leader to display a new QR Code to prevent screenshot fraud.',
+      'Kod QR ini telah tamat tempoh pelindungan (60 saat). Sila minta Ketua memaparkan Kod QR yang baharu untuk mengelakkan penipuan tangkapan skrin.':
+          'This QR code has expired (60 seconds). Please ask the Leader to display a new QR Code to prevent screenshot fraud.',
     },
     'ms': {
       'Dashboard': 'Dashboard',
@@ -455,6 +532,46 @@ class SettingsProvider extends ChangeNotifier {
       'Laporan Peronda': 'Laporan Peronda',
       'Suapan Insiden': 'Suapan Insiden',
       'Pantau Analitik': 'Pantau Analitik',
+      'Super Admin': 'Super Admin',
+      'Pemantauan semua kawasan SRS': 'Pemantauan semua kawasan SRS',
+      'Muat Semula': 'Muat Semula',
+      'Ringkasan Pantas': 'Ringkasan Pantas',
+      'Belum dikemas kini': 'Belum dikemas kini',
+      'Skop Semasa': 'Skop Semasa',
+      'Dikemas kini': 'Dikemas kini',
+      'Malaysia / Semua Negeri / Semua Daerah / Semua Zon':
+          'Malaysia / Semua Negeri / Semua Daerah / Semua Zon',
+      'Tukar Skop': 'Tukar Skop',
+      'Perlu Tindakan': 'Perlu Tindakan',
+      'Jumlah Pengguna': 'Jumlah Pengguna',
+      'Akaun Menunggu': 'Akaun Menunggu',
+      'Akaun baharu memerlukan semakan.': 'Akaun baharu memerlukan semakan.',
+      'Pemulangan Menunggu': 'Pemulangan Menunggu',
+      'Pemulangan rondaan menunggu pengesahan.':
+          'Pemulangan rondaan menunggu pengesahan.',
+      'Insiden Hari Ini': 'Insiden Hari Ini',
+      'Catatan hari ini untuk perhatian.': 'Catatan hari ini untuk perhatian.',
+      'Negeri': 'Negeri',
+      'Negeri Diliputi': 'Negeri Diliputi',
+      'Senarai Ketua KRT': 'Senarai Ketua KRT',
+      'Tiada Ketua KRT direkodkan.': 'Tiada Ketua KRT direkodkan.',
+      'Liputan Daerah': 'Liputan Daerah',
+      'Tiada liputan daerah direkodkan.': 'Tiada liputan daerah direkodkan.',
+      'Pembersihan data diperlukan': 'Pembersihan data diperlukan',
+      '1 lokasi legasi perlu disemak.': '1 lokasi legasi perlu disemak.',
+      'lokasi legasi perlu disemak.': '{count} lokasi legasi perlu disemak.',
+      'Semak': 'Semak',
+      'Malaysia': 'Malaysia',
+      'Semua negeri, daerah dan zon': 'Semua negeri, daerah dan zon',
+      'Negeri / Daerah / Zon': 'Negeri / Daerah / Zon',
+      'Penapis skop belum disambungkan.': 'Penapis skop belum disambungkan.',
+      'Cari Ketua KRT...': 'Cari Ketua KRT...',
+      'Cari daerah...': 'Cari daerah...',
+      'Cari rekod...': 'Cari rekod...',
+      'Tiada data legasi.': 'Tiada data legasi.',
+      'zon': 'zon',
+      'ahli': 'ahli',
+      'KRT': 'KRT',
       'Jana Kod QR': 'Jana Kod QR',
       'Laporan Insiden': 'Laporan Insiden',
       'Pengurusan Ahli': 'Pengurusan Ahli',
@@ -468,14 +585,18 @@ class SettingsProvider extends ChangeNotifier {
       'Sila jana semula kod QR untuk pemulangan seterusnya.':
           'Sila jana semula kod QR untuk pemulangan seterusnya.',
       'Pengesahan Pemulangan': 'Pengesahan Pemulangan',
+      'Pemulangan': 'Pemulangan',
+      'Diminta pada': 'Diminta pada',
       'Tiada pemulangan menunggu pengesahan.':
           'Tiada pemulangan menunggu pengesahan.',
       'Tiada peralatan dipinjam': 'Tiada peralatan dipinjam',
       'Sahkan Pemulangan': 'Sahkan Pemulangan',
-      'Pemulangan peronda telah disahkan.': 'Pemulangan peronda telah disahkan.',
+      'Pemulangan peronda telah disahkan.':
+          'Pemulangan peronda telah disahkan.',
       'Gagal memuatkan pemulangan.': 'Gagal memuatkan pemulangan.',
       'Gagal mengesahkan pemulangan.': 'Gagal mengesahkan pemulangan.',
-      'Gagal memuatkan peralatan dipinjam.': 'Gagal memuatkan peralatan dipinjam.',
+      'Gagal memuatkan peralatan dipinjam.':
+          'Gagal memuatkan peralatan dipinjam.',
       'Sahkan Pemulangan Peralatan': 'Sahkan Pemulangan Peralatan',
       'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.':
           'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.',
@@ -515,7 +636,8 @@ class SettingsProvider extends ChangeNotifier {
       'E-mel': 'E-mel',
       'Peranan': 'Peranan',
       'Status Akaun': 'Status Akaun',
-      'Sesi tamat. Sila log masuk semula.': 'Sesi tamat. Sila log masuk semula.',
+      'Sesi tamat. Sila log masuk semula.':
+          'Sesi tamat. Sila log masuk semula.',
       'Ralat Pelayan': 'Ralat Pelayan',
       'Ralat Rangkaian': 'Ralat Rangkaian',
       'Cuba Semula': 'Cuba Semula',
@@ -526,7 +648,7 @@ class SettingsProvider extends ChangeNotifier {
       'Ringkasan Aktiviti Anda': 'Ringkasan Aktiviti Anda',
       'Tidak Aktif': 'Tidak Aktif',
       'Rondaan Anda': 'Rondaan Anda',
-      'Jumlah Insiden': 'Jumlah Insiden',
+      'Jumlah Nota': 'Jumlah Nota',
       'Status Semasa': 'Status Semasa',
       'Bersedia Untuk Rondaan': 'Bersedia Untuk Rondaan',
       'Tekan untuk mula': 'Tekan untuk mula',
@@ -549,15 +671,18 @@ class SettingsProvider extends ChangeNotifier {
       'Faham & Tutup': 'Faham & Tutup',
       // SOS Strings
       'AMARAN SOS': 'AMARAN SOS',
-      'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?': 'Adakah anda pasti mahu mencetuskan penggera KECEMASAN? Tindakan ini akan menghantar lokasi anda serta-merta kepada semua peronda.',
+      'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?':
+          'Adakah anda pasti mahu mencetuskan penggera KECEMASAN? Tindakan ini akan menghantar lokasi anda serta-merta kepada semua peronda.',
       'Batal': 'Batal',
       'SAHKAN SOS': 'SAHKAN SOS',
-      'Sedang Mengesan GPS & Menyiarkan SOS...': 'Sedang Mengesan Koordinat GPS & Menyiarkan SOS...',
+      'Sedang Mengesan GPS & Menyiarkan SOS...':
+          'Sedang Mengesan Koordinat GPS & Menyiarkan SOS...',
       'SOS BERJAYA DISIARKAN!': 'SOS BERJAYA DISIARKAN!',
       'RALAT SOS': 'RALAT SOS',
       'GAGAL PENGESANAN GPS': 'GAGAL PENGESANAN GPS',
       'KECEMASAN': 'KECEMASAN!',
-      'Seorang peronda memerlukan bantuan SEGERA!': 'Seorang peronda memerlukan bantuan SEGERA!',
+      'Seorang peronda memerlukan bantuan SEGERA!':
+          'Seorang peronda memerlukan bantuan SEGERA!',
       'Peronda': 'Peronda',
       'Tidak Diketahui': 'Tidak Diketahui',
       'Lokasi': 'Lokasi',
@@ -565,11 +690,13 @@ class SettingsProvider extends ChangeNotifier {
       'LIHAT LOG': 'LIHAT LOG',
       // Login
       'Securing Our Community\nTogether.': 'Bersama Menjaga\nKomuniti Kita.',
-      'Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.': 'Selamat datang ke Portal Rondaan SRS. Log masuk untuk menguruskan rondaan, melapor insiden, dan menjaga keselamatan kawasan.',
+      'Welcome to the SRS Patrol Portal. Access your dashboard to manage patrols, report incidents, and keep the neighborhood safe.':
+          'Selamat datang ke Portal Rondaan SRS. Log masuk untuk menguruskan rondaan, melapor insiden, dan menjaga keselamatan kawasan.',
       'SRS Patrol Portal': 'Portal Rondaan SRS',
       'Securing Our Community': 'Menjaga Komuniti Kita',
       'Welcome Back': 'Selamat Kembali',
-      'Enter your credentials to access your account': 'Masukkan butiran anda untuk mengakses akaun',
+      'Enter your credentials to access your account':
+          'Masukkan butiran anda untuk mengakses akaun',
       'Email Address': 'Alamat E-mel',
       'Password': 'Kata Laluan',
       'Forgot password?': 'Lupa kata laluan?',
@@ -581,7 +708,8 @@ class SettingsProvider extends ChangeNotifier {
       'Register Here': 'Daftar Di Sini',
       // Register
       'Create Your Account': 'Daftar Akaun Anda',
-      'Join the SRS patrol team and secure your community': 'Sertai pasukan rondaan SRS dan jaga komuniti anda',
+      'Join the SRS patrol team and secure your community':
+          'Sertai pasukan rondaan SRS dan jaga komuniti anda',
       'Full Name': 'Nama Penuh',
       'IC Number': 'No. Kad Pengenalan',
       'Patrol Zone': 'Zon Rondaan',
@@ -591,13 +719,16 @@ class SettingsProvider extends ChangeNotifier {
       'Already have an account?': 'Sudah mempunyai akaun?',
       'Login Here': 'Log Masuk Di Sini',
       'Pendaftaran Selesai': 'Pendaftaran Selesai',
-      'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.': 'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.',
+      'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.':
+          'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.',
       'Kembali ke Log Masuk': 'Kembali ke Log Masuk',
-      'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.': 'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.',
+      'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.':
+          'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.',
       // Incidents / Misc
       'Sila pilih kategori insiden': 'Sila pilih kategori insiden',
       'Sila masukkan tajuk': 'Sila masukkan tajuk',
-      'Penerangan tidak boleh dibiarkan kosong': 'Penerangan tidak boleh dibiarkan kosong',
+      'Penerangan tidak boleh dibiarkan kosong':
+          'Penerangan tidak boleh dibiarkan kosong',
       'Kategori Insiden': 'Kategori Insiden',
       'Tajuk Ringkas': 'Tajuk Ringkas',
       'Cth: Pagar rosak di Lorong 4': 'Cth: Pagar rosak di Lorong 4',
@@ -615,15 +746,20 @@ class SettingsProvider extends ChangeNotifier {
       'Semua': 'Semua',
       // Added missing keys
       'Join Our Patrol\nNetwork.': 'Sertai Rangkaian\nRondaan Kami.',
-      'Click to see available equipment': 'Klik untuk melihat peralatan tersedia',
-      'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.': 'Daftar sebagai peronda untuk mula menjaga keselamatan kawasan, menjejak insiden, dan menyumbang kepada komuniti yang lebih selamat.',
+      'Click to see available equipment':
+          'Klik untuk melihat peralatan tersedia',
+      'Register as a patroller to start securing the neighborhood, tracking incidents, and contributing to a safer community.':
+          'Daftar sebagai peronda untuk mula menjaga keselamatan kawasan, menjejak insiden, dan menyumbang kepada komuniti yang lebih selamat.',
       'Pendaftaran': 'Pendaftaran',
       'Daftar Peronda Baru': 'Daftar Peronda Baru',
       'Create Account': 'Daftar Akaun',
-      'Fill in the details below to register as a patroller.': 'Lengkapkan butiran di bawah untuk mendaftar sebagai peronda.',
+      'Fill in the details below to register as a patroller.':
+          'Lengkapkan butiran di bawah untuk mendaftar sebagai peronda.',
       'Maklumat Identiti': 'Maklumat Identiti',
-      'Nama Penuh (Mengikut Kad Pengenalan)': 'Nama Penuh (Mengikut Kad Pengenalan)',
-      'No. Kad Pengenalan (Tanpa Sengkang)': 'No. Kad Pengenalan (Tanpa Sengkang)',
+      'Nama Penuh (Mengikut Kad Pengenalan)':
+          'Nama Penuh (Mengikut Kad Pengenalan)',
+      'No. Kad Pengenalan (Tanpa Sengkang)':
+          'No. Kad Pengenalan (Tanpa Sengkang)',
       'Maklumat Operasi': 'Maklumat Operasi',
       'No. Telefon (Kecemasan)': 'No. Telefon (Kecemasan)',
       'Pilih Sektor / Zon Rondaan': 'Pilih Sektor / Zon Rondaan',
@@ -642,8 +778,10 @@ class SettingsProvider extends ChangeNotifier {
       'Jum': 'Jum',
       'Sab': 'Sab',
       'Aha': 'Aha',
-      'Bahan bukti diperlukan: Sila ambil gambar insiden.': 'Bahan bukti diperlukan: Sila ambil gambar insiden.',
-      'Ralat Sesi: Sila log masuk semula.': 'Ralat Sesi: Sila log masuk semula.',
+      'Bahan bukti diperlukan: Sila ambil gambar insiden.':
+          'Bahan bukti diperlukan: Sila ambil gambar insiden.',
+      'Ralat Sesi: Sila log masuk semula.':
+          'Ralat Sesi: Sila log masuk semula.',
       'Jadual Rondaan': 'Jadual Rondaan',
       'Jadual Rondaan Akan Datang': 'Jadual Rondaan Akan Datang',
       'Kumpulan Rondaan Anda': 'Kumpulan Rondaan Anda',
@@ -651,23 +789,28 @@ class SettingsProvider extends ChangeNotifier {
       'Ahli Rondaan': 'Ahli Rondaan',
       'HARI INI': 'HARI INI',
       'Tiada Jadual Ditugaskan': 'Tiada Jadual Ditugaskan',
-      'Sila hubungi Ketua KRT untuk penetapan jadual.': 'Sila hubungi Ketua KRT untuk penetapan jadual.',
+      'Sila hubungi Ketua KRT untuk penetapan jadual.':
+          'Sila hubungi Ketua KRT untuk penetapan jadual.',
       'Tiada ahli dalam kumpulan ini.': 'Tiada ahli dalam kumpulan ini.',
       'Klik untuk melihat senarai ahli': 'Klik untuk melihat senarai ahli',
       'Ketua': 'Ketua',
       'Ahli (Peranan)': 'Ahli',
-      'Menyambung ke GPS & Memuat Naik...': 'Menyambung ke GPS & Memuat Naik...',
+      'Menyambung ke GPS & Memuat Naik...':
+          'Menyambung ke GPS & Memuat Naik...',
       'Laporan Berjaya': 'Laporan Berjaya',
-      'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.': 'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.',
+      'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.':
+          'Data insiden, gambar bukti, dan kordinat GPS telah selamat dihantar ke pelayan utama.',
       'Kembali ke Menu': 'Kembali ke Menu',
       'Tambah': 'Tambah',
       'Kategori Insiden (Carian JPNIN)': 'Kategori Insiden (Carian JPNIN)',
-      'Cari kategori (cth: Samun, Dadah)...': 'Cari kategori (cth: Samun, Dadah)...',
+      'Cari kategori (cth: Samun, Dadah)...':
+          'Cari kategori (cth: Samun, Dadah)...',
       'Lapor Insiden': 'Lapor Insiden',
       'RALAT MUAT NAIK:': 'RALAT MUAT NAIK:',
       'Butiran Insiden': 'Butiran Insiden',
       'Catatan Tambahan': 'Catatan Tambahan',
-      'Tiada catatan tambahan direkodkan.': 'Tiada catatan tambahan direkodkan.',
+      'Tiada catatan tambahan direkodkan.':
+          'Tiada catatan tambahan direkodkan.',
       'Tambah catatan...': 'Tambah catatan...',
       'Semua Zon': 'Semua Zon',
       'Tiada peronda dijumpai.': 'Tiada peronda dijumpai.',
@@ -676,11 +819,13 @@ class SettingsProvider extends ChangeNotifier {
       'Zon': 'Zon',
       'Gagal mengesan lokasi': 'Gagal mengesan lokasi',
       'Jana QR Kehadiran': 'Jana QR Kehadiran',
-      'Papar kod QR ini kepada peronda untuk merekod kehadiran.': 'Papar kod QR ini kepada peronda untuk merekod kehadiran.',
+      'Papar kod QR ini kepada peronda untuk merekod kehadiran.':
+          'Papar kod QR ini kepada peronda untuk merekod kehadiran.',
       'Tamat Tempoh:': 'Tamat Tempoh:',
       'saat': 'saat',
       'Kod QR Telah Tamat Tempoh': 'Kod QR Telah Tamat Tempoh',
-      'Sila jana semula kod QR untuk peronda seterusnya.': 'Sila jana semula kod QR untuk peronda seterusnya.',
+      'Sila jana semula kod QR untuk peronda seterusnya.':
+          'Sila jana semula kod QR untuk peronda seterusnya.',
       'Lokasi Semasa (Pos Utama)': 'Lokasi Semasa (Pos Utama)',
       'Pos Utama KRT': 'Pos Utama KRT',
       'Jana Semula QR': 'Jana Semula QR',
@@ -700,7 +845,8 @@ class SettingsProvider extends ChangeNotifier {
       'Semua pendaftaran baharu telah diluluskan.':
           'Semua pendaftaran baharu telah diluluskan.',
       'Tiada ahli nyahaktif.': 'Tiada ahli nyahaktif.',
-      'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.': 'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.',
+      'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.':
+          'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.',
       'Tapis Pengurusan Ahli': 'Tapis Pengurusan Ahli',
       'Tapis Laporan Insiden': 'Tapis Laporan Insiden',
       'Ketua Peronda': 'Ketua Peronda',
@@ -711,7 +857,8 @@ class SettingsProvider extends ChangeNotifier {
       'Mengesahkan...': 'Mengesahkan...',
       'Mendapatkan Kunci Satelit GPS...': 'Mendapatkan Kunci Satelit GPS...',
       'Pilih Peralatan': 'Pilih Peralatan',
-      'Tandakan peralatan yang anda ambil dari Pos Utama.': 'Tandakan peralatan yang anda ambil dari Pos Utama.',
+      'Tandakan peralatan yang anda ambil dari Pos Utama.':
+          'Tandakan peralatan yang anda ambil dari Pos Utama.',
       'Tiada peralatan direkodkan.': 'Tiada peralatan direkodkan.',
       'Tinggal': 'Tinggal',
       'Sahkan & Mula Shif': 'Sahkan & Mula Shif',
@@ -734,14 +881,19 @@ class SettingsProvider extends ChangeNotifier {
       'Simpan': 'Simpan',
       'Kemaskini Peralatan': 'Kemaskini Peralatan',
       'Padam Peralatan': 'Padam Peralatan',
-      'Adakah anda pasti mahu memadam peralatan': 'Adakah anda pasti mahu memadam peralatan',
-      'Ini juga akan memadam semua log yang berkaitan.': 'Ini juga akan memadam semua log yang berkaitan.',
-      'Terdapat laporan yang telah dihantar dalam pilihan anda.': 'Terdapat laporan yang telah dihantar dalam pilihan anda.',
+      'Adakah anda pasti mahu memadam peralatan':
+          'Adakah anda pasti mahu memadam peralatan',
+      'Ini juga akan memadam semua log yang berkaitan.':
+          'Ini juga akan memadam semua log yang berkaitan.',
+      'Terdapat laporan yang telah dihantar dalam pilihan anda.':
+          'Terdapat laporan yang telah dihantar dalam pilihan anda.',
       'Tamatkan Rondaan Awal': 'Tamatkan Rondaan Awal',
-      'Adakah anda pasti mahu menamatkan shif rondaan awal?': 'Adakah anda pasti mahu menamatkan shif rondaan awal?',
+      'Adakah anda pasti mahu menamatkan shif rondaan awal?':
+          'Adakah anda pasti mahu menamatkan shif rondaan awal?',
       'Baki masa': 'Baki masa',
       'Sahkan Tamat Rondaan': 'Sahkan Tamat Rondaan',
-      'Sila sahkan sekali lagi. Adakah anda benar-benar mahu menamatkan rondaan sekarang?': 'Sila sahkan sekali lagi. Adakah anda benar-benar mahu menamatkan rondaan sekarang?',
+      'Sila sahkan sekali lagi. Adakah anda benar-benar mahu menamatkan rondaan sekarang?':
+          'Sila sahkan sekali lagi. Adakah anda benar-benar mahu menamatkan rondaan sekarang?',
       'Ya, Tamatkan': 'Ya, Tamatkan',
       'Ya, Sahkan': 'Ya, Sahkan',
       'Tiada rekod penggunaan peralatan.': 'Tiada rekod penggunaan peralatan.',
@@ -750,14 +902,16 @@ class SettingsProvider extends ChangeNotifier {
       'Lihat Semua': 'Lihat Semua',
       'Senarai Peralatan Dipinjam': 'Senarai Peralatan Dipinjam',
       'Monitor & Analitik': 'Monitor & Analitik',
-      'Paparan pemantauan rondaan dan trend insiden semasa.': 'Paparan pemantauan rondaan dan trend insiden semasa.',
+      'Paparan pemantauan rondaan dan trend insiden semasa.':
+          'Paparan pemantauan rondaan dan trend insiden semasa.',
       'Insiden (Minggu)': 'Insiden (Minggu)',
       'Shif Aktif': 'Shif Aktif',
       'Peronda Terdaftar': 'Peronda Terdaftar',
       'JANA LAPORAN LAMPIRAN 6': 'Jana Laporan Bulanan',
       'Borang Lampiran D3(C)': 'Laporan Bulanan',
       'Rondaan Aktif Semasa': 'Rondaan Aktif Semasa',
-      'Tiada rondaan aktif dijalankan ketika ini.': 'Tiada rondaan aktif dijalankan ketika ini.',
+      'Tiada rondaan aktif dijalankan ketika ini.':
+          'Tiada rondaan aktif dijalankan ketika ini.',
       'Tiada Kumpulan': 'Tiada Kumpulan',
       'Kumpulan': 'Kumpulan',
       'Mula': 'Mula',
@@ -781,11 +935,14 @@ class SettingsProvider extends ChangeNotifier {
       'Ralat memuat senarai:': 'Ralat memuat senarai:',
       'Tiada Kumpulan Direkodkan': 'Tiada Kumpulan Direkodkan',
       'Padam Kumpulan': 'Padam Kumpulan',
-      'Adakah anda pasti untuk memadam kumpulan': 'Adakah anda pasti untuk memadam kumpulan',
-      'Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.': 'Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.',
+      'Adakah anda pasti untuk memadam kumpulan':
+          'Adakah anda pasti untuk memadam kumpulan',
+      'Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.':
+          'Semua data ahli dan jadual berkaitan kumpulan ini akan dipadam.',
       'Belum ada ahli.': 'Belum ada ahli.',
       'Keluarkan Ahli': 'Keluarkan Ahli',
-      'Adakah anda pasti untuk mengeluarkan': 'Adakah anda pasti untuk mengeluarkan',
+      'Adakah anda pasti untuk mengeluarkan':
+          'Adakah anda pasti untuk mengeluarkan',
       'daripada kumpulan?': 'daripada kumpulan?',
       'Keluarkan': 'Keluarkan',
       'Tambah Ahli': 'Tambah Ahli',
@@ -794,7 +951,8 @@ class SettingsProvider extends ChangeNotifier {
       'Jadual berjaya dipadam!': 'Jadual berjaya dipadam!',
       'Ralat memadam jadual': 'Ralat memadam jadual',
       'Ralat memuatkan kumpulan:': 'Ralat memuatkan kumpulan:',
-      'Sila cipta kumpulan terlebih dahulu!': 'Sila cipta kumpulan terlebih dahulu!',
+      'Sila cipta kumpulan terlebih dahulu!':
+          'Sila cipta kumpulan terlebih dahulu!',
       'Tetapkan Jadual Rondaan': 'Tetapkan Jadual Rondaan',
       'Pilih Kumpulan': 'Pilih Kumpulan',
       'Tarikh Rondaan': 'Tarikh Rondaan',
@@ -803,7 +961,8 @@ class SettingsProvider extends ChangeNotifier {
       'Simpan Jadual': 'Simpan Jadual',
       'Tiada Jadual Rondaan Direkodkan': 'Tiada Jadual Rondaan Direkodkan',
       'Kumpulan Tanpa Nama': 'Kumpulan Tanpa Nama',
-      'Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan': 'Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan',
+      'Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan':
+          'Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan',
       'pada tarikh': 'pada tarikh',
       'Jadual & Skuad': 'Jadual & Skuad',
       'Maklumat Peribadi': 'Maklumat Peribadi',
@@ -829,7 +988,7 @@ class SettingsProvider extends ChangeNotifier {
       'Pecahan Mengikut Kategori': 'Pecahan Mengikut Kategori',
       'Rondaan & Keberkesanan': 'Rondaan & Keberkesanan',
       'Lain-lain': 'Lain-lain',
-    }
+    },
   };
 
   /// Retrieves the translated string based on the current locale
