@@ -11,7 +11,8 @@ class ScheduleScreen extends StatefulWidget {
   State<ScheduleScreen> createState() => _ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProviderStateMixin {
+class _ScheduleScreenState extends State<ScheduleScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   Map<String, dynamic>? _squad;
   List<dynamic> _schedules = [];
@@ -42,7 +43,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     });
 
     try {
-      final response = await ApiClient.getData('schedules/get_user_schedule.php');
+      final response = await ApiClient.getData(
+        'schedules/get_user_schedule.php',
+      );
       if (response['status'] == 'success') {
         if (mounted) {
           setState(() {
@@ -63,7 +66,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Ralat rangkaian: Sila pastikan sambungan internet anda aktif.';
+          _error =
+              'Ralat rangkaian: Sila pastikan sambungan internet anda aktif.';
           _isLoading = false;
         });
       }
@@ -83,8 +87,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _buildErrorView(settings, theme)
-                : _buildContentView(settings, theme, colorScheme),
+            ? _buildErrorView(settings, theme)
+            : _buildContentView(settings, theme, colorScheme),
       ),
     );
   }
@@ -96,11 +100,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.redAccent.withValues(alpha: 0.8)),
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.redAccent.withValues(alpha: 0.8),
+            ),
             const SizedBox(height: 16),
             Text(
               settings.t(_error ?? 'Ralat berlaku'),
-              style: TextStyle(fontSize: 16, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8)),
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.8,
+                ),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -115,9 +128,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildContentView(SettingsProvider settings, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildContentView(
+    SettingsProvider settings,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
     final bool hasSquad = _squad != null;
-    final String squadName = hasSquad ? _squad!['squad_name'] : settings.t('Tiada Kumpulan');
+    final String squadName = hasSquad
+        ? _squad!['squad_name']
+        : settings.t('Tiada Kumpulan');
     final authProvider = context.read<AuthProvider>();
     final String userRole = authProvider.role ?? '';
 
@@ -129,7 +148,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- Squad Info Banner Card ---
-            _buildSquadBanner(settings, theme, colorScheme, squadName, userRole, hasSquad),
+            _buildSquadBanner(
+              settings,
+              theme,
+              colorScheme,
+              squadName,
+              userRole,
+              hasSquad,
+            ),
             const SizedBox(height: 24),
 
             // --- Upcoming Shifts Header ---
@@ -139,7 +165,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                 const SizedBox(width: 8),
                 Text(
                   settings.t('Jadual Rondaan Akan Datang'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
             ),
@@ -165,7 +195,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                               curve: Curves.easeOut,
                             ),
                           ).value;
-                          
+
                           return Opacity(
                             opacity: opacity,
                             child: Transform.translate(
@@ -174,7 +204,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                             ),
                           );
                         },
-                        child: _buildScheduleCard(settings, theme, colorScheme, schedule),
+                        child: _buildScheduleCard(
+                          settings,
+                          theme,
+                          colorScheme,
+                          schedule,
+                        ),
                       );
                     },
                   ),
@@ -184,9 +219,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     );
   }
 
-  void _showSquadMembersDialog(BuildContext context, SettingsProvider settings) {
+  void _showSquadMembersDialog(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
     if (_squad == null || _squad!['members'] == null) return;
-    
+
     final members = _squad!['members'] as List<dynamic>;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -215,7 +253,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                     child: Text(
                       settings.t('Tiada ahli dalam kumpulan ini.'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+                      style: TextStyle(
+                        color: theme.textTheme.bodyMedium?.color?.withValues(
+                          alpha: 0.6,
+                        ),
+                      ),
                     ),
                   )
                 : ListView.separated(
@@ -226,16 +268,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                       final member = members[index];
                       final name = member['full_name'] ?? '';
                       final phone = member['phone_number'] ?? '';
-                      final isLeader = (member['squad_role'] ?? '').toString().toUpperCase() == 'LEADER';
+                      final isLeader =
+                          (member['squad_role'] ?? '')
+                              .toString()
+                              .toUpperCase() ==
+                          'LEADER';
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: isLeader 
-                              ? colorScheme.secondary.withValues(alpha: 0.2) 
+                          backgroundColor: isLeader
+                              ? colorScheme.secondary.withValues(alpha: 0.2)
                               : colorScheme.primary.withValues(alpha: 0.1),
                           child: Icon(
                             isLeader ? Icons.shield : Icons.person,
-                            color: isLeader ? colorScheme.secondary : colorScheme.primary,
+                            color: isLeader
+                                ? colorScheme.secondary
+                                : colorScheme.primary,
                           ),
                         ),
                         title: Text(
@@ -244,22 +292,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                         ),
                         subtitle: Text(phone),
                         trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: isLeader 
-                                ? colorScheme.secondary.withValues(alpha: 0.15) 
+                            color: isLeader
+                                ? colorScheme.secondary.withValues(alpha: 0.15)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: isLeader 
-                                  ? colorScheme.secondary 
+                              color: isLeader
+                                  ? colorScheme.secondary
                                   : theme.dividerColor.withValues(alpha: 0.5),
                             ),
                           ),
                           child: Text(
-                            isLeader ? settings.t('Ketua') : settings.t('Ahli (Peranan)'),
+                            isLeader
+                                ? settings.t('Ketua')
+                                : settings.t('Ahli (Peranan)'),
                             style: TextStyle(
-                              color: isLeader ? colorScheme.secondary : theme.textTheme.bodyMedium?.color,
+                              color: isLeader
+                                  ? colorScheme.secondary
+                                  : theme.textTheme.bodyMedium?.color,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -293,7 +348,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: hasSquad ? () => _showSquadMembersDialog(context, settings) : null,
+        onTap: hasSquad
+            ? () => _showSquadMembersDialog(context, settings)
+            : null,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           width: double.infinity,
@@ -356,11 +413,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                     if (hasSquad && userRole.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: colorScheme.secondary.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colorScheme.secondary.withValues(alpha: 0.5), width: 1),
+                          border: Border.all(
+                            color: colorScheme.secondary.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
                         ),
                         child: Text(
                           userRole == 'ketua_peronda'
@@ -417,7 +480,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     try {
       final DateTime date = DateTime.parse(dateStr);
       final DateTime now = DateTime.now();
-      isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+      isToday =
+          date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day;
     } catch (_) {}
 
     return Container(
@@ -426,7 +492,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isToday ? colorScheme.primary.withValues(alpha: 0.6) : Colors.transparent,
+          color: isToday
+              ? colorScheme.primary.withValues(alpha: 0.6)
+              : Colors.transparent,
           width: 1.5,
         ),
         boxShadow: [
@@ -445,11 +513,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
               // Glowing highlight bar
               Container(
                 width: 6,
-                color: isToday ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.7),
+                color: isToday
+                    ? colorScheme.secondary
+                    : colorScheme.primary.withValues(alpha: 0.7),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -471,9 +544,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                                 if (isToday) ...[
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: colorScheme.secondary.withValues(alpha: 0.15),
+                                      color: colorScheme.secondary.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -491,13 +569,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                Icon(Icons.access_time, size: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+                                Icon(
+                                  Icons.access_time,
+                                  size: 14,
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withValues(alpha: 0.6),
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   "$startTime - $endTime",
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                    color: theme.textTheme.bodyMedium?.color
+                                        ?.withValues(alpha: 0.7),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -509,7 +593,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                       // Arrow indicator icon
                       Icon(
                         Icons.chevron_right,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
+                        color: theme.textTheme.bodyMedium?.color?.withValues(
+                          alpha: 0.3,
+                        ),
                       ),
                     ],
                   ),
@@ -528,16 +614,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
         padding: const EdgeInsets.symmetric(vertical: 40.0),
         child: Column(
           children: [
-            Icon(Icons.calendar_today_outlined, size: 60, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3)),
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 60,
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 16),
             Text(
               settings.t('Tiada Jadual Ditugaskan'),
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.8)),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.8),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               settings.t('Sila hubungi Ketua KRT untuk penetapan jadual.'),
-              style: TextStyle(fontSize: 13, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.6,
+                ),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

@@ -8,7 +8,9 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/logger.dart';
 
 class IncidentService {
-  final String _uploadEndpoint = ApiConstants.buildApiUrl('incidents/upload_incident.php');
+  final String _uploadEndpoint = ApiConstants.buildApiUrl(
+    'incidents/upload_incident.php',
+  );
 
   Future<String?> submitReport({
     required String reporterId,
@@ -66,7 +68,11 @@ class IncidentService {
         return "Server Protocol Error: ${response.statusCode}";
       }
     } catch (e, stackTrace) {
-      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $_uploadEndpoint\n==================================', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $_uploadEndpoint\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return "Network Exception: Could not reach the command center. Raw error: $e";
     }
   }
@@ -78,7 +84,7 @@ class IncidentService {
       if (patrollerId != null && patrollerId.isNotEmpty) {
         url += '?user_id=$patrollerId';
       }
-      
+
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       final Map<String, String> headers = {};
@@ -87,7 +93,7 @@ class IncidentService {
       }
 
       final response = await http.get(Uri.parse(url), headers: headers);
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -99,7 +105,11 @@ class IncidentService {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.buildApiUrl('incidents/get_incidents.php')}\n==================================', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.buildApiUrl('incidents/get_incidents.php')}\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw Exception("Network Exception: $e");
     }
   }

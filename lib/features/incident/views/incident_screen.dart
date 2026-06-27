@@ -25,26 +25,25 @@ class IncidentScreen extends StatefulWidget {
   State<IncidentScreen> createState() => _IncidentScreenState();
 }
 
-class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProviderStateMixin {
+class _IncidentScreenState extends State<IncidentScreen>
+    with SingleTickerProviderStateMixin {
   final List<dynamic> _incidents = [];
   int _page = 1;
   bool _isLoading = false;
   bool _hasMore = true;
   final ScrollController _scrollController = ScrollController();
-  
+
   late TabController _tabController;
-  
+
   // Batch selection states
   bool _isBatchMode = false;
   final Set<String> _selectedIncidentIds = {};
-  
 
-  
   // Filter states
   String _selectedFilter = 'Semua';
   String _selectedZone = 'Semua';
   DateTimeRange? _selectedDateRange;
-  
+
   final List<String> _filterOptions = [
     'Semua',
     'Jenayah Kekerasan',
@@ -67,9 +66,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
         _refresh();
       }
     });
-    
+
     _fetchIncidents();
-    
+
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
@@ -85,15 +84,14 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     super.dispose();
   }
 
-
-
   Future<void> _fetchIncidents() async {
     if (_isLoading || !_hasMore) return;
     setState(() => _isLoading = true);
 
     try {
-      String url =
-          ApiConstants.buildApiUrl('incidents/fetch_incidents.php?page=$_page&limit=10');
+      String url = ApiConstants.buildApiUrl(
+        'incidents/fetch_incidents.php?page=$_page&limit=10',
+      );
 
       final authProvider = context.read<AuthProvider>();
       final String? effectiveFilter;
@@ -114,7 +112,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       if (_selectedZone != 'Semua') {
         url += '&zone=${Uri.encodeComponent(_selectedZone)}';
       }
-      
+
       // Handle tab-based dates
       if (_tabController.index == 0) {
         // Today
@@ -128,7 +126,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
           url += '&start_date=$startStr&end_date=$endStr';
         } else {
           // Default Archive view: get incidents up to yesterday
-          final yesterday = MalaysiaTime.now().subtract(const Duration(days: 1));
+          final yesterday = MalaysiaTime.now().subtract(
+            const Duration(days: 1),
+          );
           final yesterdayStr = MalaysiaTime.dateKey(yesterday);
           url += '&start_date=1970-01-01&end_date=$yesterdayStr';
         }
@@ -140,7 +140,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
       }
-      
+
       final response = await http.get(Uri.parse(url), headers: headers);
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = json.decode(response.body);
@@ -163,7 +163,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Ralat rangkaian: $e', style: const TextStyle(fontWeight: FontWeight.bold)),
+            content: Text(
+              'Ralat rangkaian: $e',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -186,7 +189,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       context: context,
       builder: (context) => AlertDialog(
         title: Text(settings.t("Hapus Rekod")),
-        content: Text(settings.t("Adakah anda pasti mahu menghapus laporan ini?")),
+        content: Text(
+          settings.t("Adakah anda pasti mahu menghapus laporan ini?"),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -209,9 +214,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
       final response = await http.post(
         Uri.parse(ApiConstants.buildApiUrl('incidents/delete_incident.php')),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
         body: {'id': id},
       );
 
@@ -220,7 +223,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
         if (res['status'] == 'success') {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(settings.t("Laporan berjaya dihapuskan.")), backgroundColor: Colors.green),
+            SnackBar(
+              content: Text(settings.t("Laporan berjaya dihapuskan.")),
+              backgroundColor: Colors.green,
+            ),
           );
           _refresh();
         } else {
@@ -232,7 +238,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${settings.t("Ralat:")} $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('${settings.t("Ralat:")} $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -245,9 +254,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
       final response = await http.post(
         Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
         body: {'id': id, 'status': 'Submitted'},
       );
 
@@ -256,7 +263,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
         if (res['status'] == 'success') {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(settings.t("Laporan berjaya dihantar.")), backgroundColor: Colors.green),
+            SnackBar(
+              content: Text(settings.t("Laporan berjaya dihantar.")),
+              backgroundColor: Colors.green,
+            ),
           );
           _refresh();
         } else {
@@ -268,7 +278,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${settings.t("Ralat:")} $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('${settings.t("Ralat:")} $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -279,7 +292,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
     // Guard: Prevent deletion of submitted records
     final hasSubmitted = _selectedIncidentIds.any((id) {
-      final incident = _incidents.firstWhere((i) => i['id'].toString() == id, orElse: () => null);
+      final incident = _incidents.firstWhere(
+        (i) => i['id'].toString() == id,
+        orElse: () => null,
+      );
       if (incident != null) {
         final status = incident['status'] ?? 'Pending';
         return status.toLowerCase() == 'submitted';
@@ -290,7 +306,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     if (hasSubmitted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(settings.t("Laporan yang telah dihantar tidak boleh dihapuskan.")),
+          content: Text(
+            settings.t("Laporan yang telah dihantar tidak boleh dihapuskan."),
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -301,7 +319,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       context: context,
       builder: (context) => AlertDialog(
         title: Text(settings.t("Hapus Batch")),
-        content: Text(settings.t("Adakah anda pasti mahu menghapus semua laporan dipilih?")),
+        content: Text(
+          settings.t("Adakah anda pasti mahu menghapus semua laporan dipilih?"),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -327,9 +347,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       try {
         final response = await http.post(
           Uri.parse(ApiConstants.buildApiUrl('incidents/delete_incident.php')),
-          headers: {
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
           body: {'id': id},
         );
         if (response.statusCode == 200) {
@@ -345,7 +363,12 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("$successCount ${settings.t("laporan berjaya dihapuskan.")}"), backgroundColor: Colors.green),
+      SnackBar(
+        content: Text(
+          "$successCount ${settings.t("laporan berjaya dihapuskan.")}",
+        ),
+        backgroundColor: Colors.green,
+      ),
     );
 
     setState(() {
@@ -360,7 +383,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     if (_selectedIncidentIds.isEmpty) return;
 
     final hasSubmitted = _selectedIncidentIds.any((id) {
-      final incident = _incidents.firstWhere((inc) => inc['id'].toString() == id, orElse: () => null);
+      final incident = _incidents.firstWhere(
+        (inc) => inc['id'].toString() == id,
+        orElse: () => null,
+      );
       if (incident != null) {
         final status = incident['status'] ?? 'Pending';
         return status.toLowerCase() == 'submitted';
@@ -371,7 +397,11 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     if (hasSubmitted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(settings.t("Terdapat laporan yang telah dihantar dalam pilihan anda.")),
+          content: Text(
+            settings.t(
+              "Terdapat laporan yang telah dihantar dalam pilihan anda.",
+            ),
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -387,9 +417,7 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
       try {
         final response = await http.post(
           Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
-          headers: {
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
           body: {'id': id, 'status': 'Submitted'},
         );
         if (response.statusCode == 200) {
@@ -405,7 +433,12 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("$successCount ${settings.t("laporan berjaya dihantar.")}"), backgroundColor: Colors.green),
+      SnackBar(
+        content: Text(
+          "$successCount ${settings.t("laporan berjaya dihantar.")}",
+        ),
+        backgroundColor: Colors.green,
+      ),
     );
 
     setState(() {
@@ -415,20 +448,27 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
     _refresh();
   }
 
-
-
   void _showFilterBottomSheet() {
     final settings = context.read<SettingsProvider>();
     final theme = Theme.of(context);
     String tempCategory = _selectedFilter;
     String tempZone = _selectedZone;
-    final List<String> zonesList = ['Semua', 'Zon Pusat', 'Zon Utara', 'Zon Selatan', 'Zon Barat', 'Zon Timur'];
+    final List<String> zonesList = [
+      'Semua',
+      'Zon Pusat',
+      'Zon Utara',
+      'Zon Selatan',
+      'Zon Barat',
+      'Zon Timur',
+    ];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: theme.cardColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
@@ -443,23 +483,38 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                     children: [
                       Text(
                         settings.t("Tapis Rekod Insiden"),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ],
                   ),
                   const Divider(),
-                  Text(settings.t("Kategori"), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    settings.t("Kategori"),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: tempCategory,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                     items: _filterOptions.map((String val) {
-                      return DropdownMenuItem<String>(value: val, child: Text(val));
+                      return DropdownMenuItem<String>(
+                        value: val,
+                        child: Text(val),
+                      );
                     }).toList(),
                     onChanged: (val) {
                       if (val != null) {
@@ -468,17 +523,26 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                     },
                   ),
                   const SizedBox(height: 16),
-                  Text(settings.t("Zon Rondaan"), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    settings.t("Zon Rondaan"),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: tempZone,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                     items: zonesList.map((String val) {
-                      return DropdownMenuItem<String>(value: val, child: Text(val));
+                      return DropdownMenuItem<String>(
+                        value: val,
+                        child: Text(val),
+                      );
                     }).toList(),
                     onChanged: (val) {
                       if (val != null) {
@@ -487,40 +551,60 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                     },
                   ),
                   const SizedBox(height: 16),
-                  Text(settings.t("Pilih Tarikh"), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    settings.t("Pilih Tarikh"),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   InkWell(
                     onTap: () async {
-                      final List<DateTime?>? results = await showCalendarDatePicker2Dialog(
-                        context: context,
-                        config: CalendarDatePicker2WithActionButtonsConfig(
-                          calendarType: CalendarDatePicker2Type.range,
-                          selectedDayHighlightColor: theme.primaryColor,
-                          weekdayLabelTextStyle: const TextStyle(fontWeight: FontWeight.bold),
-                          controlsTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          centerAlignModePicker: true,
-                          customModePickerIcon: const SizedBox(),
-                        ),
-                        dialogSize: const Size(340, 420),
-                        value: [
-                          _selectedDateRange?.start,
-                          _selectedDateRange?.end,
-                        ],
-                        borderRadius: BorderRadius.circular(20),
-                      );
+                      final List<DateTime?>? results =
+                          await showCalendarDatePicker2Dialog(
+                            context: context,
+                            config: CalendarDatePicker2WithActionButtonsConfig(
+                              calendarType: CalendarDatePicker2Type.range,
+                              selectedDayHighlightColor: theme.primaryColor,
+                              weekdayLabelTextStyle: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              controlsTextStyle: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              centerAlignModePicker: true,
+                              customModePickerIcon: const SizedBox(),
+                            ),
+                            dialogSize: const Size(340, 420),
+                            value: [
+                              _selectedDateRange?.start,
+                              _selectedDateRange?.end,
+                            ],
+                            borderRadius: BorderRadius.circular(20),
+                          );
 
                       if (results != null && results.isNotEmpty) {
                         setSheetState(() {
                           if (results.length == 1 && results[0] != null) {
-                            _selectedDateRange = DateTimeRange(start: results[0]!, end: results[0]!);
-                          } else if (results.length >= 2 && results[0] != null && results[1] != null) {
-                            _selectedDateRange = DateTimeRange(start: results[0]!, end: results[1]!);
+                            _selectedDateRange = DateTimeRange(
+                              start: results[0]!,
+                              end: results[0]!,
+                            );
+                          } else if (results.length >= 2 &&
+                              results[0] != null &&
+                              results[1] != null) {
+                            _selectedDateRange = DateTimeRange(
+                              start: results[0]!,
+                              end: results[1]!,
+                            );
                           }
                         });
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade400),
                         borderRadius: BorderRadius.circular(10),
@@ -587,7 +671,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
 
     final authProvider = context.watch<AuthProvider>();
     final isArchiveTab = _tabController.index == 1;
-    final isAdminOrSquadLeader = authProvider.role == 'ketua_krt' || authProvider.role == 'ketua_peronda';
+    final isAdminOrSquadLeader =
+        authProvider.role == 'ketua_krt' ||
+        authProvider.role == 'ketua_peronda';
 
     final displayIncidents = _incidents.where((incident) {
       if (isArchiveTab && isAdminOrSquadLeader) {
@@ -606,7 +692,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                   const SizedBox(width: 10),
                   Text(
                     settings.t('Rekod Insiden'),
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -652,7 +741,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                       const SizedBox(width: 8),
                       Text(
                         "${_selectedIncidentIds.length} ${settings.t("terpilih")}",
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -684,13 +776,19 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                         Tab(
                           child: Text(
                             settings.t('Hari Ini'),
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         Tab(
                           child: Text(
                             settings.t('Arkib'),
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
@@ -719,41 +817,49 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
               ],
             ),
           ),
-          
-
 
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refresh,
               color: theme.primaryColor,
               child: displayIncidents.isEmpty && _isLoading
-                  ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: theme.primaryColor,
+                      ),
+                    )
                   : displayIncidents.isEmpty && !_isLoading
-                      ? ListView(
-                          children: [
-                            const SizedBox(height: 200),
-                            Center(
-                              child: Text(
-                                settings.t("Tiada insiden direkodkan."),
-                                style: TextStyle(color: theme.textTheme.bodySmall?.color),
+                  ? ListView(
+                      children: [
+                        const SizedBox(height: 200),
+                        Center(
+                          child: Text(
+                            settings.t("Tiada insiden direkodkan."),
+                            style: TextStyle(
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.only(top: 8, bottom: 80),
+                      itemCount: displayIncidents.length + (_hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == displayIncidents.length) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.redAccent,
                               ),
                             ),
-                          ],
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.only(top: 8, bottom: 80),
-                          itemCount: displayIncidents.length + (_hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == displayIncidents.length) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Center(child: CircularProgressIndicator(color: Colors.redAccent)),
-                              );
-                            }
-                            return _buildIncidentCard(displayIncidents[index]);
-                          },
-                        ),
+                          );
+                        }
+                        return _buildIncidentCard(displayIncidents[index]);
+                      },
+                    ),
             ),
           ),
         ],
@@ -768,7 +874,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                 onPressed: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const IncidentReportScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const IncidentReportScreen(),
+                    ),
                   );
                   await _refresh();
                 },
@@ -795,7 +903,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
             imageUrl = ApiConstants.resolveUploadUrl(parsed.first.toString());
           }
         } else {
-          imageUrl = ApiConstants.resolveUploadUrl(data['image_url'].toString());
+          imageUrl = ApiConstants.resolveUploadUrl(
+            data['image_url'].toString(),
+          );
         }
       } catch (e) {
         imageUrl = ApiConstants.resolveUploadUrl(data['image_url'].toString());
@@ -830,7 +940,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                         width: 800,
                         height: 700,
                         clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: IncidentDetailScreen(incident: data),
                       ),
                     ),
@@ -838,7 +950,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                 } else {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => IncidentDetailScreen(incident: data)),
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          IncidentDetailScreen(incident: data),
+                    ),
                   );
                 }
               },
@@ -885,7 +1000,8 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Icon(Icons.broken_image, color: Colors.grey),
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.broken_image, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -907,7 +1023,10 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                         children: [
                           Flexible(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.redAccent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
@@ -926,7 +1045,9 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              data['zone'] ?? data['district_zone'] ?? 'Zon Umum',
+                              data['zone'] ??
+                                  data['district_zone'] ??
+                                  'Zon Umum',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: theme.primaryColor,
@@ -951,18 +1072,27 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.access_time, size: 15, color: Colors.grey),
+                          const Icon(
+                            Icons.access_time,
+                            size: 15,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             () {
                               try {
-                                final dt = MalaysiaTime.fromUtcDatabase(data['created_at']);
+                                final dt = MalaysiaTime.fromUtcDatabase(
+                                  data['created_at'],
+                                );
                                 return '${dt.day}/${dt.month}/${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
                               } catch (_) {
                                 return data['created_at'].toString();
                               }
                             }(),
-                            style: const TextStyle(fontSize: 13, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -979,21 +1109,37 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Status submit icon (separate submit icon)
-                      if (status.toLowerCase() == 'pending' || status.toLowerCase() == 'draft')
+                      if (status.toLowerCase() == 'pending' ||
+                          status.toLowerCase() == 'draft')
                         IconButton(
-                          icon: const Icon(Icons.send_outlined, color: Colors.green, size: 21),
+                          icon: const Icon(
+                            Icons.send_outlined,
+                            color: Colors.green,
+                            size: 21,
+                          ),
                           tooltip: settings.t("Hantar Laporan"),
                           onPressed: () => _submitIncident(id),
-                          constraints: const BoxConstraints(minWidth: 50, minHeight: 50),
+                          constraints: const BoxConstraints(
+                            minWidth: 50,
+                            minHeight: 50,
+                          ),
                         )
                       else
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Icon(Icons.check_circle_outline, color: Colors.blue, size: 19),
+                          child: Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.blue,
+                            size: 19,
+                          ),
                         ),
                       // Three dot menu button
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: Colors.grey, size: 21),
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: Colors.grey,
+                          size: 21,
+                        ),
                         onSelected: (action) {
                           if (action == 'delete') {
                             _deleteIncident(id);
@@ -1013,28 +1159,53 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Scaffold(
-                                        appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                                        appBar: AppBar(
+                                          title: Text(
+                                            settings.t(
+                                              'Pratonton Buku Nota Harian',
+                                            ),
+                                          ),
+                                        ),
                                         body: PdfPreview(
                                           build: (format) async {
-                                            final doc = await IncidentDetailScreen.buildPdf(data);
+                                            final doc =
+                                                await IncidentDetailScreen.buildPdf(
+                                                  data,
+                                                );
                                             return doc.save();
                                           },
                                           canChangeOrientation: false,
                                           canChangePageFormat: false,
                                           canDebug: false,
-                                          pdfFileName: 'buku_nota_harian_${data['id']}.pdf',
+                                          pdfFileName:
+                                              'buku_nota_harian_${data['id']}.pdf',
                                           actions: [
                                             PdfPreviewAction(
                                               icon: Tooltip(
-                                                message: settings.t('Muat Turun PDF'),
-                                                child: const Icon(Icons.download),
+                                                message: settings.t(
+                                                  'Muat Turun PDF',
+                                                ),
+                                                child: const Icon(
+                                                  Icons.download,
+                                                ),
                                               ),
-                                              onPressed: (context, build, pageFormat) async {
-                                                final bytes = await build(pageFormat);
-                                                if (context.mounted) {
-                                                  await savePdf(context, bytes, 'buku_nota_harian_${data['id']}.pdf');
-                                                }
-                                              },
+                                              onPressed:
+                                                  (
+                                                    context,
+                                                    build,
+                                                    pageFormat,
+                                                  ) async {
+                                                    final bytes = await build(
+                                                      pageFormat,
+                                                    );
+                                                    if (context.mounted) {
+                                                      await savePdf(
+                                                        context,
+                                                        bytes,
+                                                        'buku_nota_harian_${data['id']}.pdf',
+                                                      );
+                                                    }
+                                                  },
                                             ),
                                           ],
                                         ),
@@ -1047,28 +1218,51 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => Scaffold(
-                                      appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                                      appBar: AppBar(
+                                        title: Text(
+                                          settings.t(
+                                            'Pratonton Buku Nota Harian',
+                                          ),
+                                        ),
+                                      ),
                                       body: PdfPreview(
                                         build: (format) async {
-                                          final doc = await IncidentDetailScreen.buildPdf(data);
+                                          final doc =
+                                              await IncidentDetailScreen.buildPdf(
+                                                data,
+                                              );
                                           return doc.save();
                                         },
                                         canChangeOrientation: false,
                                         canChangePageFormat: false,
                                         canDebug: false,
-                                        pdfFileName: 'buku_nota_harian_${data['id']}.pdf',
+                                        pdfFileName:
+                                            'buku_nota_harian_${data['id']}.pdf',
                                         actions: [
                                           PdfPreviewAction(
                                             icon: Tooltip(
-                                              message: settings.t('Muat Turun PDF'),
+                                              message: settings.t(
+                                                'Muat Turun PDF',
+                                              ),
                                               child: const Icon(Icons.download),
                                             ),
-                                            onPressed: (context, build, pageFormat) async {
-                                              final bytes = await build(pageFormat);
-                                              if (context.mounted) {
-                                                await savePdf(context, bytes, 'buku_nota_harian_${data['id']}.pdf');
-                                              }
-                                            },
+                                            onPressed:
+                                                (
+                                                  context,
+                                                  build,
+                                                  pageFormat,
+                                                ) async {
+                                                  final bytes = await build(
+                                                    pageFormat,
+                                                  );
+                                                  if (context.mounted) {
+                                                    await savePdf(
+                                                      context,
+                                                      bytes,
+                                                      'buku_nota_harian_${data['id']}.pdf',
+                                                    );
+                                                  }
+                                                },
                                           ),
                                         ],
                                       ),
@@ -1094,14 +1288,18 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
                             PopupMenuItem(
                               value: 'delete',
                               child: Row(
-                                  children: [
-                                    const Icon(Icons.delete, color: Colors.red, size: 18),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      settings.t("Hapus"),
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                  ],
+                                children: [
+                                  const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    settings.t("Hapus"),
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ],
                               ),
                             ),
                         ],
@@ -1112,7 +1310,11 @@ class _IncidentScreenState extends State<IncidentScreen> with SingleTickerProvid
               else if (status.toLowerCase() == 'submitted')
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Icon(Icons.check_circle_outline, color: Colors.blue, size: 18),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.blue,
+                    size: 18,
+                  ),
                 ),
             ],
           ),

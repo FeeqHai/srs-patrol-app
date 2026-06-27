@@ -51,7 +51,11 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
           // Fetch incidents to calculate note counts
           try {
             final incidentsResponse = await http.get(
-              Uri.parse(ApiConstants.buildApiUrl('incidents/fetch_incidents.php?page=1&limit=9999')),
+              Uri.parse(
+                ApiConstants.buildApiUrl(
+                  'incidents/fetch_incidents.php?page=1&limit=9999',
+                ),
+              ),
               headers: headers,
             );
             if (incidentsResponse.statusCode == 200) {
@@ -143,7 +147,10 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                     children: [
                       Text(
                         settings.t("Tapis Laporan Insiden"),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -155,7 +162,10 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                   const SizedBox(height: 12),
                   Text(
                     settings.t("Zon Rondaan"),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -169,12 +179,17 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     items: zones.map((String zone) {
                       return DropdownMenuItem(
                         value: zone,
-                        child: Text(zone == 'Semua Zon' ? settings.t(zone) : zone),
+                        child: Text(
+                          zone == 'Semua Zon' ? settings.t(zone) : zone,
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -186,7 +201,10 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                   const SizedBox(height: 16),
                   Text(
                     settings.t("Susunan Prioriti"),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -200,7 +218,10 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     items: [
                       DropdownMenuItem(
@@ -289,29 +310,42 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
     }
 
     if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
+      return Center(
+        child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
+      );
     }
 
     if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent)));
+      return Center(
+        child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+      );
     }
 
     if (_patrollers.isEmpty) {
-      return Center(child: Text(settings.t('Tiada peronda dijumpai.'), style: const TextStyle(color: Colors.white70)));
+      return Center(
+        child: Text(
+          settings.t('Tiada peronda dijumpai.'),
+          style: const TextStyle(color: Colors.white70),
+        ),
+      );
     }
 
     // Extract unique zones for the dropdown
     final Set<String> zones = {'Semua Zon'};
     for (var p in _patrollers) {
-      if (p['district_zone'] != null && p['district_zone'].toString().isNotEmpty) {
+      if (p['district_zone'] != null &&
+          p['district_zone'].toString().isNotEmpty) {
         zones.add(p['district_zone']);
       }
     }
 
     // Apply filtering
     final filteredPatrollers = _patrollers.where((p) {
-      final matchesSearch = p['full_name'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesZone = _selectedZone == 'Semua Zon' || p['district_zone'] == _selectedZone;
+      final matchesSearch = p['full_name'].toString().toLowerCase().contains(
+        _searchQuery.toLowerCase(),
+      );
+      final matchesZone =
+          _selectedZone == 'Semua Zon' || p['district_zone'] == _selectedZone;
       return matchesSearch && matchesZone;
     }).toList();
 
@@ -330,10 +364,14 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
         return countB.compareTo(countA);
       });
     } else {
-      filteredPatrollers.sort((a, b) => a['full_name'].toString().compareTo(b['full_name'].toString()));
+      filteredPatrollers.sort(
+        (a, b) =>
+            a['full_name'].toString().compareTo(b['full_name'].toString()),
+      );
     }
 
-    final bool isFilterActive = _selectedZone != 'Semua Zon' || _selectedSortPriority != 'Default';
+    final bool isFilterActive =
+        _selectedZone != 'Semua Zon' || _selectedSortPriority != 'Default';
     final theme = Theme.of(context);
 
     return Column(
@@ -348,22 +386,38 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                   style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                   decoration: InputDecoration(
                     hintText: settings.t('Cari nama peronda...'),
-                    hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5)),
+                    hintStyle: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color?.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
                     prefixIcon: Icon(Icons.search, color: theme.primaryColor),
                     filled: true,
                     fillColor: theme.cardColor,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: theme.primaryColor, width: 2),
+                      borderSide: BorderSide(
+                        color: theme.primaryColor,
+                        width: 2,
+                      ),
                     ),
                   ),
                   onChanged: (value) {
@@ -381,11 +435,15 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                       color: isFilterActive ? Colors.white : theme.primaryColor,
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: isFilterActive ? theme.primaryColor : theme.cardColor,
+                      backgroundColor: isFilterActive
+                          ? theme.primaryColor
+                          : theme.cardColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: isFilterActive ? Colors.transparent : Colors.grey.shade200,
+                          color: isFilterActive
+                              ? Colors.transparent
+                              : Colors.grey.shade200,
                           width: 1,
                         ),
                       ),
@@ -411,83 +469,116 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
             ],
           ),
         ),
-        
+
         // List of filtered patrollers
         Expanded(
           child: filteredPatrollers.isEmpty
-            ? Center(child: Text(settings.t('Tiada padanan carian.'), style: const TextStyle(color: Colors.white54)))
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filteredPatrollers.length,
-                itemBuilder: (context, index) {
-                  final patroller = filteredPatrollers[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFF0F3D87),
-                        child: Icon(Icons.folder_shared, color: Colors.white),
-                      ),
-                      title: Text(patroller['full_name'], style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                      subtitle: Text('${settings.t('Zon')}: ${patroller['district_zone'] ?? settings.t('Tiada')} | IC: ${patroller['ic_number']}', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6))),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: (patroller['note_count'] ?? 0) == 0
-                                  ? Colors.redAccent.withValues(alpha: 0.15)
-                                  : Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${patroller['note_count'] ?? 0} ${settings.t('Nota')}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: (patroller['note_count'] ?? 0) == 0
-                                    ? Colors.redAccent
-                                    : Theme.of(context).primaryColor,
-                              ),
-                            ),
+              ? Center(
+                  child: Text(
+                    settings.t('Tiada padanan carian.'),
+                    style: const TextStyle(color: Colors.white54),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredPatrollers.length,
+                  itemBuilder: (context, index) {
+                    final patroller = filteredPatrollers[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFF0F3D87),
+                          child: Icon(Icons.folder_shared, color: Colors.white),
+                        ),
+                        title: Text(
+                          patroller['full_name'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_ios, color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6), size: 16),
-                        ],
-                      ),
-                      onTap: () {
-                        if (MediaQuery.of(context).size.width > 600) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => Dialog(
-                              backgroundColor: Colors.transparent,
-                              insetPadding: const EdgeInsets.all(40),
-                              child: Container(
-                                width: 800,
-                                height: 700,
-                                clipBehavior: Clip.antiAlias,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: IncidentScreen(
-                                  patrollerIdFilter: patroller['id'],
+                        ),
+                        subtitle: Text(
+                          '${settings.t('Zon')}: ${patroller['district_zone'] ?? settings.t('Tiada')} | IC: ${patroller['ic_number']}',
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                                ?.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (patroller['note_count'] ?? 0) == 0
+                                    ? Colors.redAccent.withValues(alpha: 0.15)
+                                    : Theme.of(
+                                        context,
+                                      ).primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${patroller['note_count'] ?? 0} ${settings.t('Nota')}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: (patroller['note_count'] ?? 0) == 0
+                                      ? Colors.redAccent
+                                      : Theme.of(context).primaryColor,
                                 ),
                               ),
                             ),
-                          );
-                        } else {
-                          widget.onSubViewChanged?.call(true);
-                          setState(() {
-                            _selectedPatrollerId = patroller['id'];
-                          });
-                        }
-                      },
-                    ),
-                  );
-                },
-              ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.color
+                                  ?.withValues(alpha: 0.6),
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          if (MediaQuery.of(context).size.width > 600) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => Dialog(
+                                backgroundColor: Colors.transparent,
+                                insetPadding: const EdgeInsets.all(40),
+                                child: Container(
+                                  width: 800,
+                                  height: 700,
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: IncidentScreen(
+                                    patrollerIdFilter: patroller['id'],
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            widget.onSubViewChanged?.call(true);
+                            setState(() {
+                              _selectedPatrollerId = patroller['id'];
+                            });
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );

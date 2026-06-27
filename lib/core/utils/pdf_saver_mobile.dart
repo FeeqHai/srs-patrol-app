@@ -3,7 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<void> savePdf(BuildContext context, Uint8List bytes, String filename) async {
+Future<void> savePdf(
+  BuildContext context,
+  Uint8List bytes,
+  String filename,
+) async {
   try {
     Directory? directory;
     if (Platform.isAndroid) {

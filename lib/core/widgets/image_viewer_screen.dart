@@ -68,7 +68,8 @@ class _ZoomableImagePage extends StatefulWidget {
   State<_ZoomableImagePage> createState() => _ZoomableImagePageState();
 }
 
-class _ZoomableImagePageState extends State<_ZoomableImagePage> with SingleTickerProviderStateMixin {
+class _ZoomableImagePageState extends State<_ZoomableImagePage>
+    with SingleTickerProviderStateMixin {
   late TransformationController _transformationController;
   late AnimationController _animationController;
   Animation<Matrix4>? _animation;
@@ -78,14 +79,15 @@ class _ZoomableImagePageState extends State<_ZoomableImagePage> with SingleTicke
   void initState() {
     super.initState();
     _transformationController = TransformationController();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    )..addListener(() {
-        if (_animation != null) {
-          _transformationController.value = _animation!.value;
-        }
-      });
+    _animationController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 200),
+        )..addListener(() {
+          if (_animation != null) {
+            _transformationController.value = _animation!.value;
+          }
+        });
   }
 
   @override
@@ -111,10 +113,13 @@ class _ZoomableImagePageState extends State<_ZoomableImagePage> with SingleTicke
         ..multiply(Matrix4.diagonal3Values(2.5, 2.5, 1.0)); // Zoom factor
     }
 
-    _animation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: endMatrix,
-    ).animate(CurveTween(curve: Curves.easeInOut).animate(_animationController));
+    _animation =
+        Matrix4Tween(
+          begin: _transformationController.value,
+          end: endMatrix,
+        ).animate(
+          CurveTween(curve: Curves.easeInOut).animate(_animationController),
+        );
 
     _animationController.forward(from: 0);
   }

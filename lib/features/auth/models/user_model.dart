@@ -88,8 +88,7 @@ class UserModel {
       role: json['role'] as String? ?? 'peronda',
       // `account_status` is the canonical key; legacy `get_patrollers.php`
       // responses once used `status`, so tolerate both on read.
-      accountStatus:
-          (json['account_status'] ?? json['status']) as String?,
+      accountStatus: (json['account_status'] ?? json['status']) as String?,
     );
   }
 

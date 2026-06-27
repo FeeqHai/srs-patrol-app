@@ -98,17 +98,23 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       }
 
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
           _currentLocation = '${place.locality}, ${place.administrativeArea}';
         }
       } catch (e) {
-        _currentLocation = '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+        _currentLocation =
+            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
       }
 
       // Generate secure payload
@@ -124,7 +130,6 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       _hasBeenGenerated = true;
 
       _startTimer(60);
-
     } catch (e) {
       if (!mounted) return;
       final locationMessage = _friendlyLocationError(e);
@@ -174,7 +179,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
   Future<void> _showPendingReturns() async {
     final messenger = ScaffoldMessenger.of(context);
-    final response = await ApiClient.getData('attendance/get_pending_returns.php');
+    final response = await ApiClient.getData(
+      'attendance/get_pending_returns.php',
+    );
     if (!mounted) return;
 
     if (response['status'] != 'success') {
@@ -182,7 +189,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         SnackBar(
           content: Text(
             response['message'] ??
-                context.read<SettingsProvider>().t('Gagal memuatkan pemulangan.'),
+                context.read<SettingsProvider>().t(
+                  'Gagal memuatkan pemulangan.',
+                ),
           ),
           backgroundColor: Colors.redAccent,
         ),
@@ -190,94 +199,137 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       return;
     }
 
-    final pendingReturns = List<dynamic>.from(response['data'] ?? []);
+    final pendingReturns = List<Map<String, dynamic>>.from(
+      (response['data'] ?? []).map((item) => Map<String, dynamic>.from(item)),
+    );
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) {
         final sheetSettings = sheetContext.watch<SettingsProvider>();
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sheetSettings.t('Pengesahan Pemulangan'),
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (pendingReturns.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Text(sheetSettings.t('Tiada pemulangan menunggu pengesahan.')),
-                    ),
-                  )
-                else
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: pendingReturns.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final pendingReturn = pendingReturns[index] as Map<String, dynamic>;
-                        final equipment = List<String>.from(
-                          pendingReturn['equipment'] ?? const [],
-                        );
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(pendingReturn['full_name'] ?? ''),
-                          subtitle: Text(
-                            equipment.isEmpty
-                                ? sheetSettings.t('Tiada peralatan dipinjam')
-                                : equipment.join(', '),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.task_alt_rounded),
-                            color: Theme.of(context).colorScheme.primary,
-                            tooltip: sheetSettings.t('Sahkan Pemulangan'),
-                            onPressed: () async {
-                              final acknowledgeResponse = await ApiClient.postData(
-                                'attendance/acknowledge_return.php',
-                                {'attendance_id': pendingReturn['id'].toString()},
-                              );
-                              if (!sheetContext.mounted) return;
+        String? acknowledgingId;
 
-                              if (acknowledgeResponse['status'] == 'success') {
-                                Navigator.pop(sheetContext);
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      sheetSettings.t('Pemulangan peronda telah disahkan.'),
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      acknowledgeResponse['message'] ??
-                                          sheetSettings.t('Gagal mengesahkan pemulangan.'),
-                                    ),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                        );
-                      },
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sheetSettings.t('Pengesahan Pemulangan'),
+                      style: Theme.of(sheetContext).textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
-                  ),
-              ],
-            ),
-          ),
+                    const SizedBox(height: 12),
+                    if (pendingReturns.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            sheetSettings.t(
+                              'Tiada pemulangan menunggu pengesahan.',
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: pendingReturns.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final pendingReturn = pendingReturns[index];
+                            final returnId = pendingReturn['id'].toString();
+                            final isAcknowledging = acknowledgingId == returnId;
+                            final equipment = List<String>.from(
+                              pendingReturn['equipment'] ?? const [],
+                            );
+
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(pendingReturn['full_name'] ?? ''),
+                              subtitle: Text(
+                                equipment.isEmpty
+                                    ? sheetSettings.t(
+                                        'Tiada peralatan dipinjam',
+                                      )
+                                    : equipment.join(', '),
+                              ),
+                              trailing: IconButton(
+                                icon: isAcknowledging
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.task_alt_rounded),
+                                color: Theme.of(context).colorScheme.primary,
+                                tooltip: sheetSettings.t('Sahkan Pemulangan'),
+                                onPressed: acknowledgingId != null
+                                    ? null
+                                    : () async {
+                                        setSheetState(() {
+                                          acknowledgingId = returnId;
+                                        });
+                                        final acknowledgeResponse =
+                                            await ApiClient.postData(
+                                              'attendance/acknowledge_return.php',
+                                              {'attendance_id': returnId},
+                                            );
+                                        if (!sheetContext.mounted) return;
+
+                                        if (acknowledgeResponse['status'] ==
+                                            'success') {
+                                          setSheetState(() {
+                                            pendingReturns.removeAt(index);
+                                            acknowledgingId = null;
+                                          });
+                                          messenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                sheetSettings.t(
+                                                  'Pemulangan telah disahkan.',
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          setSheetState(() {
+                                            acknowledgingId = null;
+                                          });
+                                          ScaffoldMessenger.of(
+                                            sheetContext,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                acknowledgeResponse['message'] ??
+                                                    sheetSettings.t(
+                                                      'Gagal mengesahkan pemulangan.',
+                                                    ),
+                                              ),
+                                              backgroundColor: Colors.redAccent,
+                                            ),
+                                          );
+                                        }
+                                      },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -291,8 +343,12 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
     // Premium high-contrast colors for expired warning container
     final errorBg = isDark ? const Color(0xFF3F1919) : const Color(0xFFFEEBEE);
-    final errorText = isDark ? const Color(0xFFFFB4AB) : const Color(0xFFC00010);
-    final errorSubtext = isDark ? const Color(0xFFF5C2C2) : const Color(0xFF7A1C1C);
+    final errorText = isDark
+        ? const Color(0xFFFFB4AB)
+        : const Color(0xFFC00010);
+    final errorSubtext = isDark
+        ? const Color(0xFFF5C2C2)
+        : const Color(0xFF7A1C1C);
     final isClockOut = _qrMode == 'OUT';
 
     return SingleChildScrollView(
@@ -301,11 +357,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Header section
-          Icon(
-            Icons.qr_code_2_rounded,
-            size: 48,
-            color: theme.primaryColor,
-          ),
+          Icon(Icons.qr_code_2_rounded, size: 48, color: theme.primaryColor),
           const SizedBox(height: 16),
           Text(
             settings.t(isClockOut ? 'Jana QR Clock Out' : 'Jana QR Kehadiran'),
@@ -326,7 +378,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                     : 'Papar kod QR ini kepada peronda untuk merekod kehadiran.',
               ),
               style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.6,
+                ),
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -381,14 +435,16 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.04),
+                  color: isDark
+                      ? Colors.white12
+                      : Colors.black.withValues(alpha: 0.04),
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -403,7 +459,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
-                        )
+                        ),
                       ],
                     ),
                     child: QrImageView(
@@ -428,7 +484,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                     child: LinearProgressIndicator(
                       value: _timeLeft / 60.0,
                       minHeight: 6,
-                      backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                      backgroundColor: theme.primaryColor.withValues(
+                        alpha: 0.1,
+                      ),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _timeLeft > 15 ? theme.primaryColor : Colors.redAccent,
                       ),
@@ -440,14 +498,18 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                     children: [
                       Icon(
                         Icons.timer_outlined,
-                        color: _timeLeft > 15 ? theme.primaryColor : Colors.redAccent,
+                        color: _timeLeft > 15
+                            ? theme.primaryColor
+                            : Colors.redAccent,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '${settings.t('Tamat Tempoh:')} $_timeLeft ${settings.t('saat')}',
                         style: TextStyle(
-                          color: _timeLeft > 15 ? theme.primaryColor : Colors.redAccent,
+                          color: _timeLeft > 15
+                              ? theme.primaryColor
+                              : Colors.redAccent,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -464,9 +526,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
               decoration: BoxDecoration(
                 color: errorBg,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: errorText.withValues(alpha: 0.2),
-                ),
+                border: Border.all(color: errorText.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
@@ -520,7 +580,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
               color: theme.cardColor,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.04),
+                color: isDark
+                    ? Colors.white12
+                    : Colors.black.withValues(alpha: 0.04),
               ),
             ),
             child: Row(
@@ -531,7 +593,11 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                     color: Colors.green.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.location_on_rounded, color: Colors.green, size: 24),
+                  child: const Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.green,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -541,7 +607,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                       Text(
                         settings.t('Lokasi Semasa (Pos Utama)'),
                         style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                          color: theme.textTheme.bodySmall?.color?.withValues(
+                            alpha: 0.5,
+                          ),
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.8,

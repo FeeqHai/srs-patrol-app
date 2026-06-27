@@ -1,9 +1,5 @@
 class LocationOption {
-  const LocationOption({
-    required this.id,
-    required this.name,
-    this.code,
-  });
+  const LocationOption({required this.id, required this.name, this.code});
 
   final String id;
   final String name;

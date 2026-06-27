@@ -62,7 +62,7 @@ class AuthProvider extends ChangeNotifier {
         _districtName = data['data']['district_name'] as String?;
         _zoneName = data['data']['zone_name'] as String?;
         final String? token = data['token'];
-        
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', _userId!);
         await prefs.setString('user_role', _role!);
@@ -84,9 +84,14 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e, stackTrace) {
       // 4. Expose the raw exception to the IDE console for engineering review
-      appLogger.e('=== LOGIN NETWORK EXCEPTION ===\nException: $e', error: e, stackTrace: stackTrace);
-      
-      _errorMessage = "Network Exception: Unable to communicate with the server.";
+      appLogger.e(
+        '=== LOGIN NETWORK EXCEPTION ===\nException: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      _errorMessage =
+          "Network Exception: Unable to communicate with the server.";
       _isLoading = false;
       notifyListeners();
       return false;

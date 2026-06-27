@@ -1,6 +1,9 @@
 class MalaysiaTime {
   static const Duration _utcOffset = Duration(hours: 8);
-  static final RegExp _timezoneSuffix = RegExp(r'(Z|[+-]\d{2}:?\d{2})$', caseSensitive: false);
+  static final RegExp _timezoneSuffix = RegExp(
+    r'(Z|[+-]\d{2}:?\d{2})$',
+    caseSensitive: false,
+  );
 
   /// Parses MySQL incident timestamps as UTC, then exposes Malaysia's UTC+8 clock values.
   static DateTime fromUtcDatabase(dynamic value) {

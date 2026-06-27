@@ -38,7 +38,10 @@ class GlobalMenuButton extends StatelessWidget {
           value: GlobalMenuAction.profile,
           child: Row(
             children: [
-              Icon(Icons.person, color: Theme.of(context).textTheme.bodyMedium?.color),
+              Icon(
+                Icons.person,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
               const SizedBox(width: 8),
               Text(settings.t('Profil')),
             ],
@@ -48,7 +51,10 @@ class GlobalMenuButton extends StatelessWidget {
           value: GlobalMenuAction.settings,
           child: Row(
             children: [
-              Icon(Icons.settings, color: Theme.of(context).textTheme.bodyMedium?.color),
+              Icon(
+                Icons.settings,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
               const SizedBox(width: 8),
               Text(settings.t('Tetapan')),
             ],
@@ -63,7 +69,10 @@ class GlobalMenuButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 settings.t('Log Keluar'),
-                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -132,7 +141,6 @@ class _SettingsDialogContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Text(
               settings.t('Bahasa'),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -140,12 +148,16 @@ class _SettingsDialogContent extends StatelessWidget {
             const SizedBox(height: 8),
             ListTile(
               title: Text(settings.t('Bahasa Melayu')),
-              trailing: settings.locale.languageCode == 'ms' ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+              trailing: settings.locale.languageCode == 'ms'
+                  ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+                  : null,
               onTap: () => settings.setLanguage('ms'),
             ),
             ListTile(
               title: Text(settings.t('English')),
-              trailing: settings.locale.languageCode == 'en' ? Icon(Icons.check, color: Theme.of(context).primaryColor) : null,
+              trailing: settings.locale.languageCode == 'en'
+                  ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+                  : null,
               onTap: () => settings.setLanguage('en'),
             ),
           ],

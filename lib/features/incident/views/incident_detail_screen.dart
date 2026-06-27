@@ -28,7 +28,9 @@ class IncidentDetailScreen extends StatelessWidget {
             .toList();
       }
     } catch (e) {
-      appLogger.w('Failed to parse image URL array, falling back to string: $e');
+      appLogger.w(
+        'Failed to parse image URL array, falling back to string: $e',
+      );
     }
     final imageUrl = ApiConstants.resolveUploadUrl(imageUrlData.toString());
     return imageUrl == null ? [] : [imageUrl];
@@ -107,7 +109,10 @@ class IncidentDetailScreen extends StatelessWidget {
                         constraints: const pw.BoxConstraints(minHeight: 200),
                         child: pw.Text(
                           peristiwa,
-                          style: const pw.TextStyle(fontSize: 12, lineSpacing: 10),
+                          style: const pw.TextStyle(
+                            fontSize: 12,
+                            lineSpacing: 10,
+                          ),
                         ),
                       ),
                     ],
@@ -131,11 +136,15 @@ class IncidentDetailScreen extends StatelessWidget {
                 .whereType<String>()
                 .toList();
           } else {
-            final imageUrl = ApiConstants.resolveUploadUrl(imageUrlData.toString());
+            final imageUrl = ApiConstants.resolveUploadUrl(
+              imageUrlData.toString(),
+            );
             imageUrls = imageUrl == null ? [] : [imageUrl];
           }
         } catch (_) {
-          final imageUrl = ApiConstants.resolveUploadUrl(imageUrlData.toString());
+          final imageUrl = ApiConstants.resolveUploadUrl(
+            imageUrlData.toString(),
+          );
           imageUrls = imageUrl == null ? [] : [imageUrl];
         }
       }
@@ -165,7 +174,10 @@ class IncidentDetailScreen extends StatelessWidget {
                       pw.SizedBox(height: 24),
                       pw.Expanded(
                         child: pw.Center(
-                          child: pw.Image(imageProvider, fit: pw.BoxFit.contain),
+                          child: pw.Image(
+                            imageProvider,
+                            fit: pw.BoxFit.contain,
+                          ),
                         ),
                       ),
                     ],
@@ -182,18 +194,26 @@ class IncidentDetailScreen extends StatelessWidget {
       return pdf;
     } catch (e, stackTrace) {
       final errorPdf = pw.Document();
-      errorPdf.addPage(pw.Page(
-        build: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('ERROR GENERATING PDF:', style: pw.TextStyle(color: PdfColors.red, fontSize: 18)),
-            pw.SizedBox(height: 16),
-            pw.Text(e.toString()),
-            pw.SizedBox(height: 16),
-            pw.Text(stackTrace.toString(), style: const pw.TextStyle(fontSize: 8)),
-          ]
-        )
-      ));
+      errorPdf.addPage(
+        pw.Page(
+          build: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'ERROR GENERATING PDF:',
+                style: pw.TextStyle(color: PdfColors.red, fontSize: 18),
+              ),
+              pw.SizedBox(height: 16),
+              pw.Text(e.toString()),
+              pw.SizedBox(height: 16),
+              pw.Text(
+                stackTrace.toString(),
+                style: const pw.TextStyle(fontSize: 8),
+              ),
+            ],
+          ),
+        ),
+      );
       return errorPdf;
     }
   }
@@ -228,9 +248,9 @@ class IncidentDetailScreen extends StatelessWidget {
 
     final String namaPeronda = incident['full_name'] ?? '-';
     final String tarikh = incident['created_at'] != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(
-            MalaysiaTime.fromUtcDatabase(incident['created_at']),
-          )
+        ? DateFormat(
+            'dd MMM yyyy, hh:mm a',
+          ).format(MalaysiaTime.fromUtcDatabase(incident['created_at']))
         : '-';
     final String lokasi = incident['location_name'] ?? '-';
     final String kategori = incident['category'] ?? '-';
@@ -261,8 +281,12 @@ class IncidentDetailScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                         child: Scaffold(
-                          appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                        child: Scaffold(
+                          appBar: AppBar(
+                            title: Text(
+                              settings.t('Pratonton Buku Nota Harian'),
+                            ),
+                          ),
                           body: PdfPreview(
                             build: (format) async {
                               final doc = await _buildPdf();
@@ -271,7 +295,8 @@ class IncidentDetailScreen extends StatelessWidget {
                             canChangeOrientation: false,
                             canChangePageFormat: false,
                             canDebug: false,
-                            pdfFileName: 'buku_nota_harian_${incident['id']}.pdf',
+                            pdfFileName:
+                                'buku_nota_harian_${incident['id']}.pdf',
                             actions: [
                               PdfPreviewAction(
                                 icon: Tooltip(
@@ -281,7 +306,11 @@ class IncidentDetailScreen extends StatelessWidget {
                                 onPressed: (context, build, pageFormat) async {
                                   final bytes = await build(pageFormat);
                                   if (context.mounted) {
-                                    await savePdf(context, bytes, 'buku_nota_harian_${incident['id']}.pdf');
+                                    await savePdf(
+                                      context,
+                                      bytes,
+                                      'buku_nota_harian_${incident['id']}.pdf',
+                                    );
                                   }
                                 },
                               ),
@@ -296,7 +325,9 @@ class IncidentDetailScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => Scaffold(
-                        appBar: AppBar(title: Text(settings.t('Pratonton Buku Nota Harian'))),
+                        appBar: AppBar(
+                          title: Text(settings.t('Pratonton Buku Nota Harian')),
+                        ),
                         body: PdfPreview(
                           build: (format) async {
                             final doc = await _buildPdf();
@@ -315,7 +346,11 @@ class IncidentDetailScreen extends StatelessWidget {
                               onPressed: (context, build, pageFormat) async {
                                 final bytes = await build(pageFormat);
                                 if (context.mounted) {
-                                  await savePdf(context, bytes, 'buku_nota_harian_${incident['id']}.pdf');
+                                  await savePdf(
+                                    context,
+                                    bytes,
+                                    'buku_nota_harian_${incident['id']}.pdf',
+                                  );
                                 }
                               },
                             ),
@@ -344,12 +379,22 @@ class IncidentDetailScreen extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => ImageViewerScreen(imageUrls: images, initialIndex: index),
-                      )),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ImageViewerScreen(
+                            imageUrls: images,
+                            initialIndex: index,
+                          ),
+                        ),
+                      ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(images[index], fit: BoxFit.cover, width: 250),
+                        child: Image.network(
+                          images[index],
+                          fit: BoxFit.cover,
+                          width: 250,
+                        ),
                       ),
                     ),
                   );
@@ -376,19 +421,46 @@ class IncidentDetailScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
+              border: Border.all(
+                color: theme.dividerColor.withValues(alpha: 0.15),
+              ),
             ),
             child: Column(
               children: [
-                _buildInfoRow(context, Icons.person, settings.t('Nama Peronda'), namaPeronda),
+                _buildInfoRow(
+                  context,
+                  Icons.person,
+                  settings.t('Nama Peronda'),
+                  namaPeronda,
+                ),
                 const Divider(height: 20),
-                _buildInfoRow(context, Icons.calendar_today, settings.t('Tarikh & Masa'), tarikh),
+                _buildInfoRow(
+                  context,
+                  Icons.calendar_today,
+                  settings.t('Tarikh & Masa'),
+                  tarikh,
+                ),
                 const Divider(height: 20),
-                _buildInfoRow(context, Icons.location_on, settings.t('Lokasi Rondaan'), lokasi),
+                _buildInfoRow(
+                  context,
+                  Icons.location_on,
+                  settings.t('Lokasi Rondaan'),
+                  lokasi,
+                ),
                 const Divider(height: 20),
-                _buildInfoRow(context, Icons.category, settings.t('Kategori'), kategori),
+                _buildInfoRow(
+                  context,
+                  Icons.category,
+                  settings.t('Kategori'),
+                  kategori,
+                ),
                 const Divider(height: 20),
-                _buildInfoRow(context, Icons.account_balance, settings.t('Agensi Dirujuk'), agensiDirujuk),
+                _buildInfoRow(
+                  context,
+                  Icons.account_balance,
+                  settings.t('Agensi Dirujuk'),
+                  agensiDirujuk,
+                ),
               ],
             ),
           ),
@@ -410,14 +482,18 @@ class IncidentDetailScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
+              border: Border.all(
+                color: theme.dividerColor.withValues(alpha: 0.15),
+              ),
             ),
             child: Text(
               peristiwa,
               style: TextStyle(
                 fontSize: 15,
                 height: 1.6,
-                color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.85),
+                color: theme.textTheme.bodyLarge?.color?.withValues(
+                  alpha: 0.85,
+                ),
               ),
             ),
           ),
@@ -426,7 +502,12 @@ class IncidentDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildInfoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
     final theme = Theme.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +518,14 @@ class IncidentDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
               const SizedBox(height: 2),
               Text(value, style: const TextStyle(fontSize: 14)),
             ],

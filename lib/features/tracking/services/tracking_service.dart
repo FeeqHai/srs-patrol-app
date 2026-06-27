@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 
 class TrackingService {
-  final String _sosEndpoint = ApiConstants.buildApiUrl('tracking/sos_alert.php');
+  final String _sosEndpoint = ApiConstants.buildApiUrl(
+    'tracking/sos_alert.php',
+  );
 
   Future<String?> sendSosAlert({
     required String userId,
@@ -14,9 +16,7 @@ class TrackingService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final Map<String, String> headers = {
-        'Content-Type': 'application/json',
-      };
+      final Map<String, String> headers = {'Content-Type': 'application/json'};
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
       }

@@ -34,8 +34,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
 
   Future<void> _fetchMembers() async {
     try {
-      final data = await ApiClient.getData('auth/get_patrollers.php')
-          as Map<String, dynamic>;
+      final data =
+          await ApiClient.getData('auth/get_patrollers.php')
+              as Map<String, dynamic>;
       if (data['status'] == 'success') {
         final list = (data['data'] as List<dynamic>)
             .map((j) => UserModel.fromJson(j as Map<String, dynamic>))
@@ -132,7 +133,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
   }
 
   void _showStatusBottomSheet(
-      BuildContext context, UserModel member, SettingsProvider settings) {
+    BuildContext context,
+    UserModel member,
+    SettingsProvider settings,
+  ) {
     AccountStatus selected = member.accountStatusEnum;
 
     showModalBottomSheet(
@@ -164,7 +168,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   Text(
                     '${settings.t('Tukar Status')}: ${member.fullName}',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -241,7 +247,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
   }
 
   void _showRoleBottomSheet(
-      BuildContext context, UserModel member, SettingsProvider settings) {
+    BuildContext context,
+    UserModel member,
+    SettingsProvider settings,
+  ) {
     String selectedRole = member.role;
 
     showModalBottomSheet(
@@ -273,7 +282,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   Text(
                     '${settings.t('Tukar Peranan')}: ${member.fullName}',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -349,14 +360,11 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final data = await ApiClient.postData(
-        'admin/update_user.php',
-        {
-          'action': 'update_status',
-          'user_id': userId,
-          'account_status': status.wireValue,
-        },
-      );
+      final data = await ApiClient.postData('admin/update_user.php', {
+        'action': 'update_status',
+        'user_id': userId,
+        'account_status': status.wireValue,
+      });
 
       if (data['status'] == 'success') {
         messenger.showSnackBar(
@@ -389,14 +397,11 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final data = await ApiClient.postData(
-        'admin/update_user.php',
-        {
-          'action': 'promote_role',
-          'user_id': userId,
-          'role': role,
-        },
-      );
+      final data = await ApiClient.postData('admin/update_user.php', {
+        'action': 'promote_role',
+        'user_id': userId,
+        'role': role,
+      });
 
       if (data['status'] == 'success') {
         messenger.showSnackBar(
@@ -433,8 +438,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.person_remove_outlined, size: 40),
         title: Text(settings.t('Tolak Pendaftaran')),
-        content: Text(settings.t(
-            'Adakah anda pasti ingin menolak pendaftaran ahli ini?')),
+        content: Text(
+          settings.t('Adakah anda pasti ingin menolak pendaftaran ahli ini?'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -503,7 +509,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                     children: [
                       Text(
                         settings.t("Tapis Pengurusan Ahli"),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -515,7 +524,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   const SizedBox(height: 12),
                   Text(
                     settings.t("Status Akaun"),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -529,7 +541,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     items: [
                       DropdownMenuItem(
@@ -558,7 +573,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   const SizedBox(height: 20),
                   Text(
                     settings.t("Zon Rondaan"),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -572,12 +590,17 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     items: zonesList.map((String zone) {
                       return DropdownMenuItem(
                         value: zone,
-                        child: Text(zone == 'Semua Zon' ? settings.t(zone) : zone),
+                        child: Text(
+                          zone == 'Semua Zon' ? settings.t(zone) : zone,
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -665,8 +688,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor:
-                          theme.primaryColor.withValues(alpha: 0.1),
+                      backgroundColor: theme.primaryColor.withValues(
+                        alpha: 0.1,
+                      ),
                       child: Text(
                         member.fullName.isNotEmpty
                             ? member.fullName[0].toUpperCase()
@@ -688,8 +712,8 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                           color: status == AccountStatus.active
                               ? Colors.green
                               : status == AccountStatus.pending
-                                  ? Colors.orange
-                                  : Colors.grey,
+                              ? Colors.orange
+                              : Colors.grey,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -722,14 +746,19 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 14, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Colors.grey.shade600,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               '${settings.t('Zon')}: ${member.districtZone ?? settings.t('Tiada')}',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade600),
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -738,26 +767,36 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.badge_outlined,
-                              size: 14, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.badge_outlined,
+                            size: 14,
+                            color: Colors.grey.shade600,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'IC: ${member.icNumber ?? '-'}',
                             style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600),
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.phone_outlined,
-                              size: 14, color: theme.primaryColor),
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 14,
+                            color: theme.primaryColor,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             member.phoneNumber ?? '-',
                             style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w500),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -777,29 +816,35 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   },
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      value: 'status',
-                      child: Row(
-                        children: [
-                          Icon(Icons.shield_outlined,
-                              size: 18, color: theme.primaryColor),
-                          const SizedBox(width: 8),
-                          Text(settings.t('Tukar Status')),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'role',
-                      child: Row(
-                        children: [
-                          Icon(Icons.admin_panel_settings_outlined,
-                              size: 18, color: theme.primaryColor),
-                          const SizedBox(width: 8),
-                          Text(settings.t('Tukar Peranan')),
-                        ],
-                      ),
-                    ),
-                  ],
+                        PopupMenuItem<String>(
+                          value: 'status',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.shield_outlined,
+                                size: 18,
+                                color: theme.primaryColor,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(settings.t('Tukar Status')),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'role',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.admin_panel_settings_outlined,
+                                size: 18,
+                                color: theme.primaryColor,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(settings.t('Tukar Peranan')),
+                            ],
+                          ),
+                        ),
+                      ],
                 ),
               ],
             ),
@@ -858,7 +903,8 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     // so admins can retry / filter even on an empty (filtered) result set.
     if (_isLoading && _members.isEmpty) {
       return Center(
-          child: CircularProgressIndicator(color: theme.primaryColor));
+        child: CircularProgressIndicator(color: theme.primaryColor),
+      );
     }
 
     if (_error != null && _members.isEmpty) {
@@ -892,8 +938,10 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
 
     if (_members.isEmpty) {
       return Center(
-        child: Text(settings.t('Tiada peronda dijumpai.'),
-            style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+        child: Text(
+          settings.t('Tiada peronda dijumpai.'),
+          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+        ),
       );
     }
 
@@ -906,16 +954,19 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
 
     // Filter pipeline: search ∩ zone ∩ statusFilter.
     final filtered = _members.where((m) {
-      final matchesSearch =
-          m.fullName.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesSearch = m.fullName.toLowerCase().contains(
+        _searchQuery.toLowerCase(),
+      );
       final matchesZone =
           _selectedZone == 'Semua Zon' || m.districtZone == _selectedZone;
-      final matchesStatus = _statusFilter == _kFilterAll ||
+      final matchesStatus =
+          _statusFilter == _kFilterAll ||
           m.accountStatusEnum.wireValue == _statusFilter;
       return matchesSearch && matchesZone && matchesStatus;
     }).toList();
 
-    final bool isFilterActive = _statusFilter != _kFilterAll || _selectedZone != 'Semua Zon';
+    final bool isFilterActive =
+        _statusFilter != _kFilterAll || _selectedZone != 'Semua Zon';
 
     return Column(
       children: [
@@ -933,21 +984,29 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                     filled: true,
                     fillColor: theme.cardColor,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: Colors.grey.shade200, width: 1),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: Colors.grey.shade200, width: 1),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: theme.primaryColor, width: 2),
+                      borderSide: BorderSide(
+                        color: theme.primaryColor,
+                        width: 2,
+                      ),
                     ),
                   ),
                   onChanged: (value) {
@@ -965,11 +1024,15 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                       color: isFilterActive ? Colors.white : theme.primaryColor,
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: isFilterActive ? theme.primaryColor : theme.cardColor,
+                      backgroundColor: isFilterActive
+                          ? theme.primaryColor
+                          : theme.cardColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: isFilterActive ? Colors.transparent : Colors.grey.shade200,
+                          color: isFilterActive
+                              ? Colors.transparent
+                              : Colors.grey.shade200,
                           width: 1,
                         ),
                       ),
@@ -1012,19 +1075,20 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                               _statusFilter == _kFilterPending
                                   ? Icons.check_circle_outline
                                   : _statusFilter == _kFilterInactive
-                                      ? Icons.block
-                                      : Icons.search_off,
+                                  ? Icons.block
+                                  : Icons.search_off,
                               size: 64,
-                              color:
-                                  theme.disabledColor.withValues(alpha: 0.5),
+                              color: theme.disabledColor.withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               _statusFilter == _kFilterPending
-                                  ? settings.t('Tiada ahli menunggu pengesahan.')
+                                  ? settings.t(
+                                      'Tiada ahli menunggu pengesahan.',
+                                    )
                                   : _statusFilter == _kFilterInactive
-                                      ? settings.t('Tiada ahli nyahaktif.')
-                                      : settings.t('Tiada padanan carian.'),
+                                  ? settings.t('Tiada ahli nyahaktif.')
+                                  : settings.t('Tiada padanan carian.'),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1036,12 +1100,15 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                             Text(
                               _statusFilter == _kFilterPending
                                   ? settings.t(
-                                      'Semua pendaftaran baharu telah diluluskan.')
+                                      'Semua pendaftaran baharu telah diluluskan.',
+                                    )
                                   : _statusFilter == _kFilterInactive
-                                      ? settings.t(
-                                          'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.')
-                                      : settings.t(
-                                          'Cuba cari dengan e-mel atau no. kad pengenalan lain.'),
+                                  ? settings.t(
+                                      'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.',
+                                    )
+                                  : settings.t(
+                                      'Cuba cari dengan e-mel atau no. kad pengenalan lain.',
+                                    ),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: theme.textTheme.bodyLarge?.color

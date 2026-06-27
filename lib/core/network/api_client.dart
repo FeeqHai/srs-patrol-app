@@ -24,7 +24,9 @@ class ApiClient {
       // http.post automatically encodes Map<String, String> so PHP's $_POST can read it
       final response = await http.post(url, headers: headers, body: body);
       // 1. INJECT THIS DEBUG LINE:
-      appLogger.d('=== RAW HTTP NETWORK DATA ===\nTarget URI Hit: ${response.request?.url}\nHTTP Status Code: ${response.statusCode}\nRaw Body Response: "${response.body}"\n=============================');
+      appLogger.d(
+        '=== RAW HTTP NETWORK DATA ===\nTarget URI Hit: ${response.request?.url}\nHTTP Status Code: ${response.statusCode}\nRaw Body Response: "${response.body}"\n=============================',
+      );
       // Prevent the crash if the server returns a blank response
       if (response.body.isEmpty) {
         throw Exception(
@@ -39,7 +41,11 @@ class ApiClient {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw Exception("Network connection failed: $e");
     }
   }
@@ -65,7 +71,11 @@ class ApiClient {
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw Exception("Network connection failed: $e");
     }
   }

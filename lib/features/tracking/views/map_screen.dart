@@ -14,7 +14,9 @@ class MapScreen extends StatelessWidget {
     final userId = authProvider.userId;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sila log masuk untuk menggunakan fungsi kecemasan.')),
+        const SnackBar(
+          content: Text('Sila log masuk untuk menggunakan fungsi kecemasan.'),
+        ),
       );
       return;
     }
@@ -23,15 +25,26 @@ class MapScreen extends StatelessWidget {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Amaran Kecemasan (SOS)', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-        content: const Text('Adakah anda pasti mahu menghantar isyarat kecemasan? Kordinat GPS anda akan dihantar ke bilik gerakan serta-merta.'),
+        title: const Text(
+          'Amaran Kecemasan (SOS)',
+          style: TextStyle(
+            color: Colors.redAccent,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Adakah anda pasti mahu menghantar isyarat kecemasan? Kordinat GPS anda akan dihantar ke bilik gerakan serta-merta.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('HANTAR SOS'),
           ),
@@ -56,7 +69,9 @@ class MapScreen extends StatelessWidget {
               Text('SOS Dihantar'),
             ],
           ),
-          content: const Text('Bantuan sedang dalam perjalanan. Sila pastikan keselamatan diri anda dan hubungi talian 999 jika keadaan kritikal.'),
+          content: const Text(
+            'Bantuan sedang dalam perjalanan. Sila pastikan keselamatan diri anda dan hubungi talian 999 jika keadaan kritikal.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
@@ -68,7 +83,9 @@ class MapScreen extends StatelessWidget {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(trackingProvider.errorMessage ?? 'Gagal menghantar SOS'),
+          content: Text(
+            trackingProvider.errorMessage ?? 'Gagal menghantar SOS',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -82,7 +99,13 @@ class MapScreen extends StatelessWidget {
         return Scaffold(
           backgroundColor: const Color(0xFF121212),
           appBar: AppBar(
-            title: const Text('Pusat Kawalan & Kecemasan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            title: const Text(
+              'Pusat Kawalan & Kecemasan',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
             backgroundColor: Colors.transparent,
             elevation: 0,
             iconTheme: const IconThemeData(color: Colors.white),
@@ -109,7 +132,9 @@ class MapScreen extends StatelessWidget {
                     height: 220,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: provider.isLoading ? Colors.redAccent.withValues(alpha: 0.5) : Colors.red,
+                      color: provider.isLoading
+                          ? Colors.redAccent.withValues(alpha: 0.5)
+                          : Colors.red,
                       boxShadow: [
                         BoxShadow(
                           color: Colors.red.withValues(alpha: 0.4),
@@ -117,10 +142,7 @@ class MapScreen extends StatelessWidget {
                           spreadRadius: 10,
                         ),
                       ],
-                      border: Border.all(
-                        color: Colors.white24,
-                        width: 8,
-                      ),
+                      border: Border.all(color: Colors.white24, width: 8),
                     ),
                     child: Center(
                       child: provider.isLoading
@@ -131,7 +153,10 @@ class MapScreen extends StatelessWidget {
                                 SizedBox(height: 10),
                                 Text(
                                   'MENGESAN LOKASI...',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             )

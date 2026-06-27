@@ -49,7 +49,6 @@ class IncidentProvider extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -73,7 +72,7 @@ class IncidentProvider extends ChangeNotifier {
       throw Exception('Location permissions are permanently denied.');
     }
     return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 }

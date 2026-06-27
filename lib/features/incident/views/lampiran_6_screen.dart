@@ -37,7 +37,8 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
   int _monthOffset = 0; // 0 = Current Month, 1 = Previous Month
   DateTime _selectedDate = DateTime.now();
   String _selectedLevel = 'daerah'; // 'daerah' or 'negeri'
-  bool _showPdfView = true; // default to inline PDF preview for better mobile UX
+  bool _showPdfView =
+      true; // default to inline PDF preview for better mobile UX
   bool _isLoading = true;
   Map<String, dynamic> _data = {};
   String _monthLabel = '';
@@ -56,8 +57,11 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.userId ?? '';
 
-      final endpoint = ApiConstants.buildApiUrl('incidents/get_lampiran_6_summary.php');
-      final url = '$endpoint?month_offset=$_monthOffset&user_id=$userId&level=$_selectedLevel';
+      final endpoint = ApiConstants.buildApiUrl(
+        'incidents/get_lampiran_6_summary.php',
+      );
+      final url =
+          '$endpoint?month_offset=$_monthOffset&user_id=$userId&level=$_selectedLevel';
 
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
@@ -90,7 +94,12 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
         _metadata = {};
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e'), backgroundColor: Colors.redAccent));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ralat: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
   }
@@ -104,7 +113,9 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Pilih Bulan dan Tahun'),
           content: SizedBox(
             width: 340,
@@ -114,18 +125,16 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 DropdownButtonFormField<int>(
                   initialValue: selectedYear,
                   decoration: const InputDecoration(labelText: 'Tahun'),
-                  items: List.generate(
-                    now.year - 2020 + 1,
-                    (index) {
-                      final year = now.year - index;
-                      return DropdownMenuItem(value: year, child: Text('$year'));
-                    },
-                  ),
+                  items: List.generate(now.year - 2020 + 1, (index) {
+                    final year = now.year - index;
+                    return DropdownMenuItem(value: year, child: Text('$year'));
+                  }),
                   onChanged: (year) {
                     if (year == null) return;
                     setDialogState(() {
                       selectedYear = year;
-                      if (selectedYear == now.year && selectedMonth > now.month) {
+                      if (selectedYear == now.year &&
+                          selectedMonth > now.month) {
                         selectedMonth = now.month;
                       }
                     });
@@ -140,24 +149,31 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                   childAspectRatio: 1.8,
                   children: List.generate(12, (index) {
                     final month = index + 1;
-                    final isFuture = selectedYear == now.year && month > now.month;
+                    final isFuture =
+                        selectedYear == now.year && month > now.month;
                     final isSelected = month == selectedMonth;
                     return FilledButton(
                       onPressed: isFuture
                           ? null
                           : () => Navigator.pop(
-                                dialogContext,
-                                DateTime(selectedYear, month),
-                              ),
+                              dialogContext,
+                              DateTime(selectedYear, month),
+                            ),
                       style: FilledButton.styleFrom(
                         backgroundColor: isSelected
                             ? Theme.of(context).primaryColor
-                            : Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                            : Theme.of(
+                                context,
+                              ).dividerColor.withValues(alpha: 0.08),
                         foregroundColor: isSelected
                             ? Colors.white
                             : Theme.of(context).textTheme.bodyLarge?.color,
-                        disabledBackgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.04),
-                        disabledForegroundColor: Theme.of(context).disabledColor,
+                        disabledBackgroundColor: Theme.of(
+                          context,
+                        ).dividerColor.withValues(alpha: 0.04),
+                        disabledForegroundColor: Theme.of(
+                          context,
+                        ).disabledColor,
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                       ),
                       child: Text(
@@ -183,7 +199,8 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
       setState(() {
         _selectedDate = DateTime(picked.year, picked.month);
         final now = DateTime.now();
-        _monthOffset = (now.year - picked.year) * 12 + (now.month - picked.month);
+        _monthOffset =
+            (now.year - picked.year) * 12 + (now.month - picked.month);
       });
       _fetchSummary();
     }
@@ -204,7 +221,11 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
     );
   }
 
-  pw.Widget _pdfTextCell(String text, {bool alignCenter = false, bool isBold = false}) {
+  pw.Widget _pdfTextCell(
+    String text, {
+    bool alignCenter = false,
+    bool isBold = false,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: alignCenter
@@ -212,7 +233,9 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
               child: pw.Text(
                 text,
                 style: pw.TextStyle(
-                  fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+                  fontWeight: isBold
+                      ? pw.FontWeight.bold
+                      : pw.FontWeight.normal,
                   fontSize: 6.5,
                 ),
               ),
@@ -230,11 +253,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
   pw.Widget _buildTableHeader(pw.BorderSide borderSide) {
     return pw.Container(
       decoration: pw.BoxDecoration(
-        border: pw.Border(
-          top: borderSide,
-          left: borderSide,
-          right: borderSide,
-        ),
+        border: pw.Border(top: borderSide, left: borderSide, right: borderSide),
       ),
       height: 60,
       child: pw.Row(
@@ -244,7 +263,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             width: 75,
             decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
             alignment: pw.Alignment.center,
-            child: pw.Text('KATEGORI', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+            child: pw.Text(
+              'KATEGORI',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
+            ),
           ),
           // 2. Jenis Kes / Negeri Column
           pw.Container(
@@ -254,9 +276,21 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
               children: [
-                pw.Text('JENIS KES', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                pw.Text(
+                  'JENIS KES',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 7,
+                  ),
+                ),
                 pw.SizedBox(height: 2),
-                pw.Text('NEGERI', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                pw.Text(
+                  'NEGERI',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 7,
+                  ),
+                ),
               ],
             ),
           ),
@@ -265,7 +299,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             width: 35,
             decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
             alignment: pw.Alignment.center,
-            child: pw.Text('JUM.', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+            child: pw.Text(
+              'JUM.',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
+            ),
           ),
           // 4. Agensi Columns Spanning Container
           pw.Container(
@@ -276,12 +313,17 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 pw.Container(
                   height: 30,
                   width: double.infinity,
-                  decoration: pw.BoxDecoration(border: pw.Border(bottom: borderSide)),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border(bottom: borderSide),
+                  ),
                   alignment: pw.Alignment.center,
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4),
                   child: pw.Text(
                     'BILANGAN KES DILAPORKAN KEPADA AGENSI-\nAGENSI/YANG DIRUJUK UNTUK PENYELESAIAN',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6),
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 6,
+                    ),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
@@ -292,32 +334,72 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                     children: [
                       pw.Container(
                         width: 45,
-                        decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(right: borderSide),
+                        ),
                         alignment: pw.Alignment.center,
-                        child: pw.Text('POLIS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6)),
+                        child: pw.Text(
+                          'POLIS',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 6,
+                          ),
+                        ),
                       ),
                       pw.Container(
                         width: 65,
-                        decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(right: borderSide),
+                        ),
                         alignment: pw.Alignment.center,
-                        child: pw.Text('JABATAN\nAGAMA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 5.5), textAlign: pw.TextAlign.center),
+                        child: pw.Text(
+                          'JABATAN\nAGAMA',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 5.5,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
                       ),
                       pw.Container(
                         width: 45,
-                        decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(right: borderSide),
+                        ),
                         alignment: pw.Alignment.center,
-                        child: pw.Text('PBT', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6)),
+                        child: pw.Text(
+                          'PBT',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 6,
+                          ),
+                        ),
                       ),
                       pw.Container(
                         width: 45,
-                        decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(right: borderSide),
+                        ),
                         alignment: pw.Alignment.center,
-                        child: pw.Text('OBB', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6)),
+                        child: pw.Text(
+                          'OBB',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 6,
+                          ),
+                        ),
                       ),
                       pw.Container(
                         width: 75,
                         alignment: pw.Alignment.center,
-                        child: pw.Text('LAIN -\nLAIN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6), textAlign: pw.TextAlign.center),
+                        child: pw.Text(
+                          'LAIN -\nLAIN',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 6,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
                       ),
                     ],
                   ),
@@ -332,7 +414,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
 
   Future<pw.Document> _buildLampiran6Pdf() async {
     final pdf = pw.Document();
-    final borderSide = const pw.BorderSide(width: 0.5, color: PdfColors.grey600);
+    final borderSide = const pw.BorderSide(
+      width: 0.5,
+      color: PdfColors.grey600,
+    );
 
     // Compute Totals
     int totalOverall = 0;
@@ -370,13 +455,31 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('JABATAN PERPADUAN NEGARA DAN INTEGRASI NASIONAL', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('MS ISO 9001:2008', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('Pengurusan Rukun Tetangga dan Skim Rondaan Sukarela (JPNIN/RT 01)', style: pw.TextStyle(fontSize: 6.5)),
+                    pw.Text(
+                      'JABATAN PERPADUAN NEGARA DAN INTEGRASI NASIONAL',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'MS ISO 9001:2008',
+                      style: pw.TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'Pengurusan Rukun Tetangga dan Skim Rondaan Sukarela (JPNIN/RT 01)',
+                      style: pw.TextStyle(fontSize: 6.5),
+                    ),
                   ],
                 ),
                 pw.Table(
-                  border: pw.TableBorder.all(width: 0.5, color: PdfColors.black),
+                  border: pw.TableBorder.all(
+                    width: 0.5,
+                    color: PdfColors.black,
+                  ),
                   columnWidths: {
                     0: const pw.FixedColumnWidth(50),
                     1: const pw.FixedColumnWidth(60),
@@ -385,7 +488,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                     pw.TableRow(
                       children: [
                         _pdfMiniCell('M/Surat :'),
-                        _pdfMiniCell(_selectedLevel == 'daerah' ? '45 / 48' : '46 / 48', isBold: true),
+                        _pdfMiniCell(
+                          _selectedLevel == 'daerah' ? '45 / 48' : '46 / 48',
+                          isBold: true,
+                        ),
                       ],
                     ),
                     pw.TableRow(
@@ -410,9 +516,21 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             pw.Center(
               child: pw.Column(
                 children: [
-                  pw.Text('LAMPIRAN D3(C)', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    'LAMPIRAN D3(C)',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                   pw.SizedBox(height: 4),
-                  pw.Text('LAPORAN PENGENDALIAN SRS', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    'LAPORAN PENGENDALIAN SRS',
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -426,13 +544,28 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                   _selectedLevel == 'daerah'
                       ? 'Daerah : ${_metadata['daerah'] ?? "ALOR GAJAH"}'
                       : 'Negeri : ${_metadata['negeri'] ?? "MELAKA"}',
-                  style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
                 pw.Row(
                   children: [
-                    pw.Text('Bulan : $_monthLabel', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(
+                      'Bulan : $_monthLabel',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
                     pw.SizedBox(width: 30),
-                    pw.Text('Tahun : $_yearLabel', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(
+                      'Tahun : $_yearLabel',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -446,7 +579,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
               decoration: const pw.BoxDecoration(color: PdfColors.grey200),
               child: pw.Text(
                 'BILANGAN KES DITANGANI OLEH PASUKAN-PASUKAN RONDAAN SUKARELA DI SELURUH NEGARA',
-                style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(
+                  fontSize: 7,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
             ),
 
@@ -476,15 +612,41 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                       pw.TableRow(
                         children: [
                           pw.Padding(
-                            padding: const pw.EdgeInsets.only(left: 6, top: 4, bottom: 4),
-                            child: pw.Text(name, style: const pw.TextStyle(fontSize: 6.5)),
+                            padding: const pw.EdgeInsets.only(
+                              left: 6,
+                              top: 4,
+                              bottom: 4,
+                            ),
+                            child: pw.Text(
+                              name,
+                              style: const pw.TextStyle(fontSize: 6.5),
+                            ),
                           ),
-                          _pdfTextCell(counts['total']?.toString() ?? '0', alignCenter: true, isBold: true),
-                          _pdfTextCell(counts['polis']?.toString() ?? '0', alignCenter: true),
-                          _pdfTextCell(counts['agama']?.toString() ?? '0', alignCenter: true),
-                          _pdfTextCell(counts['pbt']?.toString() ?? '0', alignCenter: true),
-                          _pdfTextCell(counts['obb']?.toString() ?? '0', alignCenter: true),
-                          _pdfTextCell(counts['lain']?.toString() ?? '0', alignCenter: true),
+                          _pdfTextCell(
+                            counts['total']?.toString() ?? '0',
+                            alignCenter: true,
+                            isBold: true,
+                          ),
+                          _pdfTextCell(
+                            counts['polis']?.toString() ?? '0',
+                            alignCenter: true,
+                          ),
+                          _pdfTextCell(
+                            counts['agama']?.toString() ?? '0',
+                            alignCenter: true,
+                          ),
+                          _pdfTextCell(
+                            counts['pbt']?.toString() ?? '0',
+                            alignCenter: true,
+                          ),
+                          _pdfTextCell(
+                            counts['obb']?.toString() ?? '0',
+                            alignCenter: true,
+                          ),
+                          _pdfTextCell(
+                            counts['lain']?.toString() ?? '0',
+                            alignCenter: true,
+                          ),
                         ],
                       ),
                     );
@@ -507,7 +669,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                       padding: const pw.EdgeInsets.all(4),
                       child: pw.Text(
                         cleanGroupName,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6.5),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 6.5,
+                        ),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
@@ -548,48 +713,99 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 children: [
                   pw.Container(
                     width: 237,
-                    decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(right: borderSide),
+                    ),
                     alignment: pw.Alignment.centerLeft,
                     padding: const pw.EdgeInsets.symmetric(horizontal: 6),
                     child: pw.Text(
                       'JUMLAH KES DILAPORKAN KEPADA AGENSI UNTUK RUJUKAN DAN TINDAKAN SUSULAN',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 6,
+                      ),
                     ),
                   ),
                   pw.Container(
                     width: 35,
-                    decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(right: borderSide),
+                    ),
                     alignment: pw.Alignment.center,
-                    child: pw.Text(totalOverall.toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                    child: pw.Text(
+                      totalOverall.toString(),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
                   ),
                   pw.Container(
                     width: 45,
-                    decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(right: borderSide),
+                    ),
                     alignment: pw.Alignment.center,
-                    child: pw.Text(totalPolis.toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                    child: pw.Text(
+                      totalPolis.toString(),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
                   ),
                   pw.Container(
                     width: 65,
-                    decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(right: borderSide),
+                    ),
                     alignment: pw.Alignment.center,
-                    child: pw.Text(totalAgama.toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                    child: pw.Text(
+                      totalAgama.toString(),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
                   ),
                   pw.Container(
                     width: 45,
-                    decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(right: borderSide),
+                    ),
                     alignment: pw.Alignment.center,
-                    child: pw.Text(totalPbt.toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                    child: pw.Text(
+                      totalPbt.toString(),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
                   ),
                   pw.Container(
                     width: 45,
-                    decoration: pw.BoxDecoration(border: pw.Border(right: borderSide)),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(right: borderSide),
+                    ),
                     alignment: pw.Alignment.center,
-                    child: pw.Text(totalObb.toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                    child: pw.Text(
+                      totalObb.toString(),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
                   ),
                   pw.Container(
                     width: 75,
                     alignment: pw.Alignment.center,
-                    child: pw.Text(totalLain.toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+                    child: pw.Text(
+                      totalLain.toString(),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -603,29 +819,63 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('Disediakan oleh :', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
-                    pw.SizedBox(height: 25),
-                    pw.Text('..............................................................', style: const pw.TextStyle(fontSize: 8)),
                     pw.Text(
-                      _selectedLevel == 'daerah' ? '(Tandatangan PPM/PPK)' : '(Tandatangan)',
+                      'Disediakan oleh :',
+                      style: pw.TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 25),
+                    pw.Text(
+                      '..............................................................',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                    pw.Text(
+                      _selectedLevel == 'daerah'
+                          ? '(Tandatangan PPM/PPK)'
+                          : '(Tandatangan)',
                       style: const pw.TextStyle(fontSize: 7),
                     ),
-                    pw.Text('Nama : ${_metadata['admin_name'] ?? "Admin KRT"}', style: const pw.TextStyle(fontSize: 7)),
-                    pw.Text('Tarikh : _____________________', style: const pw.TextStyle(fontSize: 7)),
+                    pw.Text(
+                      'Nama : ${_metadata['admin_name'] ?? "Admin KRT"}',
+                      style: const pw.TextStyle(fontSize: 7),
+                    ),
+                    pw.Text(
+                      'Tarikh : _____________________',
+                      style: const pw.TextStyle(fontSize: 7),
+                    ),
                   ],
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('Disahkan oleh :', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
-                    pw.SizedBox(height: 25),
-                    pw.Text('..............................................................', style: const pw.TextStyle(fontSize: 8)),
                     pw.Text(
-                      _selectedLevel == 'daerah' ? '(Tandatangan PPB/PPD)' : '(Tandatangan PPN)',
+                      'Disahkan oleh :',
+                      style: pw.TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 25),
+                    pw.Text(
+                      '..............................................................',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                    pw.Text(
+                      _selectedLevel == 'daerah'
+                          ? '(Tandatangan PPB/PPD)'
+                          : '(Tandatangan PPN)',
                       style: const pw.TextStyle(fontSize: 7),
                     ),
-                    pw.Text('Nama : ______________________', style: const pw.TextStyle(fontSize: 7)),
-                    pw.Text('Tarikh : _____________________', style: const pw.TextStyle(fontSize: 7)),
+                    pw.Text(
+                      'Nama : ______________________',
+                      style: const pw.TextStyle(fontSize: 7),
+                    ),
+                    pw.Text(
+                      'Tarikh : _____________________',
+                      style: const pw.TextStyle(fontSize: 7),
+                    ),
                   ],
                 ),
               ],
@@ -634,7 +884,10 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             pw.Divider(thickness: 0.5, color: PdfColors.grey500),
             pw.Text(
               'Prosedur ini adalah dokumen terkawal dan boleh didapati di laman www.jpnin.gov.my.\nJika prosedur ini dicetak, maka prosedur ini bukan dokumen terkawal.',
-              style: const pw.TextStyle(fontSize: 5.5, color: PdfColors.grey600),
+              style: const pw.TextStyle(
+                fontSize: 5.5,
+                color: PdfColors.grey600,
+              ),
               textAlign: pw.TextAlign.center,
             ),
           ];
@@ -650,36 +903,57 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
 
     _data.forEach((groupName, subcats) {
       // 1. Group Header Row
-      rows.add(DataRow(
-        color: WidgetStateProperty.all(theme.primaryColor.withValues(alpha: 0.05)),
-        cells: [
-          DataCell(Text(groupName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-          const DataCell(Text('')),
-          const DataCell(Text('')),
-          const DataCell(Text('')),
-          const DataCell(Text('')),
-          const DataCell(Text('')),
-          const DataCell(Text('')),
-        ],
-      ));
+      rows.add(
+        DataRow(
+          color: WidgetStateProperty.all(
+            theme.primaryColor.withValues(alpha: 0.05),
+          ),
+          cells: [
+            DataCell(
+              Text(
+                groupName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const DataCell(Text('')),
+            const DataCell(Text('')),
+            const DataCell(Text('')),
+            const DataCell(Text('')),
+            const DataCell(Text('')),
+            const DataCell(Text('')),
+          ],
+        ),
+      );
 
       // 2. Subcategories
       if (subcats is Map) {
         subcats.forEach((name, counts) {
-          rows.add(DataRow(
-            cells: [
-              DataCell(Padding(
-                padding: const EdgeInsets.only(left: 12.0),
-                child: Text(name, style: const TextStyle(fontSize: 12)),
-              )),
-              DataCell(Text(counts['total']?.toString() ?? '0', style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(counts['polis']?.toString() ?? '0')),
-              DataCell(Text(counts['agama']?.toString() ?? '0')),
-              DataCell(Text(counts['pbt']?.toString() ?? '0')),
-              DataCell(Text(counts['obb']?.toString() ?? '0')),
-              DataCell(Text(counts['lain']?.toString() ?? '0')),
-            ],
-          ));
+          rows.add(
+            DataRow(
+              cells: [
+                DataCell(
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12.0),
+                    child: Text(name, style: const TextStyle(fontSize: 12)),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    counts['total']?.toString() ?? '0',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataCell(Text(counts['polis']?.toString() ?? '0')),
+                DataCell(Text(counts['agama']?.toString() ?? '0')),
+                DataCell(Text(counts['pbt']?.toString() ?? '0')),
+                DataCell(Text(counts['obb']?.toString() ?? '0')),
+                DataCell(Text(counts['lain']?.toString() ?? '0')),
+              ],
+            ),
+          );
         });
       }
     });
@@ -706,18 +980,57 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
     });
 
     // Add Grand Total Row
-    rows.add(DataRow(
-      color: WidgetStateProperty.all(theme.primaryColor.withValues(alpha: 0.1)),
-      cells: [
-        DataCell(Text(settings.t('JUMLAH KESELURUHAN'), style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(totalOverall.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(totalPolis.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(totalAgama.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(totalPbt.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(totalObb.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        DataCell(Text(totalLain.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-      ],
-    ));
+    rows.add(
+      DataRow(
+        color: WidgetStateProperty.all(
+          theme.primaryColor.withValues(alpha: 0.1),
+        ),
+        cells: [
+          DataCell(
+            Text(
+              settings.t('JUMLAH KESELURUHAN'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              totalOverall.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              totalPolis.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              totalAgama.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              totalPbt.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              totalObb.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              totalLain.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
 
     return rows;
   }
@@ -734,8 +1047,12 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
         actions: [
           if (!_isLoading && _data.isNotEmpty)
             IconButton(
-              icon: Icon(_showPdfView ? Icons.table_chart : Icons.picture_as_pdf),
-              tooltip: _showPdfView ? settings.t('Tunjuk Jadual Data') : settings.t('Tunjuk PDF Laporan'),
+              icon: Icon(
+                _showPdfView ? Icons.table_chart : Icons.picture_as_pdf,
+              ),
+              tooltip: _showPdfView
+                  ? settings.t('Tunjuk Jadual Data')
+                  : settings.t('Tunjuk PDF Laporan'),
               onPressed: () {
                 setState(() {
                   _showPdfView = !_showPdfView;
@@ -754,9 +1071,14 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
               onTap: () => _selectMonth(context),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.15),
+                  ),
                   borderRadius: BorderRadius.circular(12),
                   color: theme.cardColor,
                 ),
@@ -765,15 +1087,27 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.calendar_month, color: theme.primaryColor, size: 20),
+                        Icon(
+                          Icons.calendar_month,
+                          color: theme.primaryColor,
+                          size: 20,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           '${settings.t("Bulan Laporan")}: $_monthLabel $_yearLabel',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
-                    Icon(Icons.arrow_drop_down, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.6)),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      color: theme.textTheme.bodyLarge?.color?.withValues(
+                        alpha: 0.6,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -801,14 +1135,19 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: _selectedLevel == 'daerah' ? theme.primaryColor : Colors.transparent,
+                          color: _selectedLevel == 'daerah'
+                              ? theme.primaryColor
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
                           child: Text(
                             settings.t('Peringkat Daerah (PPD)'),
                             style: TextStyle(
-                              color: _selectedLevel == 'daerah' ? Colors.white : theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.8),
+                              color: _selectedLevel == 'daerah'
+                                  ? Colors.white
+                                  : theme.textTheme.bodyLarge?.color
+                                        ?.withValues(alpha: 0.8),
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -826,14 +1165,19 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: _selectedLevel == 'negeri' ? theme.primaryColor : Colors.transparent,
+                          color: _selectedLevel == 'negeri'
+                              ? theme.primaryColor
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
                           child: Text(
                             settings.t('Peringkat Negeri (PPN)'),
                             style: TextStyle(
-                              color: _selectedLevel == 'negeri' ? Colors.white : theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.8),
+                              color: _selectedLevel == 'negeri'
+                                  ? Colors.white
+                                  : theme.textTheme.bodyLarge?.color
+                                        ?.withValues(alpha: 0.8),
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -857,7 +1201,9 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 shadowColor: Colors.black.withValues(alpha: 0.05),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+                  side: BorderSide(
+                    color: theme.dividerColor.withValues(alpha: 0.1),
+                  ),
                 ),
                 margin: EdgeInsets.zero,
                 child: Padding(
@@ -872,11 +1218,20 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                             _selectedLevel == 'daerah'
                                 ? '${settings.t("Daerah")}: ${_metadata["daerah"] ?? ""}'
                                 : '${settings.t("Negeri")}: ${_metadata["negeri"] ?? ""}',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor, fontSize: 14),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                              fontSize: 14,
+                            ),
                           ),
                           Text(
                             '$_monthLabel $_yearLabel',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7), fontSize: 14),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: theme.textTheme.bodyLarge?.color
+                                  ?.withValues(alpha: 0.7),
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
@@ -884,7 +1239,12 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                         const SizedBox(height: 6),
                         Text(
                           '${settings.t("Nama SRS")}: ${_metadata["nama_srs"] ?? ""}',
-                          style: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.6), fontSize: 13),
+                          style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color?.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ],
@@ -896,75 +1256,139 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
           // 4. Embedded PDF Preview or Data Table Display
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
+                ? Center(
+                    child: CircularProgressIndicator(color: theme.primaryColor),
+                  )
                 : _data.isEmpty
-                    ? Center(child: Text(settings.t('Tiada rekod untuk bulan ini.')))
-                    : _showPdfView
-                        ? Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Card(
-                              elevation: 4,
-                              clipBehavior: Clip.antiAlias,
-                              margin: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
-                              ),
-                              child: PdfPreview(
-                                build: (format) async {
-                                  final doc = await _buildLampiran6Pdf();
-                                  return doc.save();
-                                },
-                                canChangeOrientation: false,
-                                canChangePageFormat: false,
-                                canDebug: false,
-                                pdfFileName: 'laporan_lampiran_d3c_$_monthLabel.pdf',
-                                actions: [
-                                  PdfPreviewAction(
-                                    icon: Tooltip(
-                                      message: settings.t('Muat Turun PDF'),
-                                      child: const Icon(Icons.download),
-                                    ),
-                                    onPressed: (context, build, pageFormat) async {
-                                      final bytes = await build(pageFormat);
-                                      if (context.mounted) {
-                                        await savePdf(context, bytes, 'laporan_lampiran_d3c_$_monthLabel.pdf');
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
+                ? Center(
+                    child: Text(settings.t('Tiada rekod untuk bulan ini.')),
+                  )
+                : _showPdfView
+                ? Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Card(
+                      elevation: 4,
+                      clipBehavior: Clip.antiAlias,
+                      margin: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: theme.dividerColor.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: PdfPreview(
+                        build: (format) async {
+                          final doc = await _buildLampiran6Pdf();
+                          return doc.save();
+                        },
+                        canChangeOrientation: false,
+                        canChangePageFormat: false,
+                        canDebug: false,
+                        pdfFileName: 'laporan_lampiran_d3c_$_monthLabel.pdf',
+                        actions: [
+                          PdfPreviewAction(
+                            icon: Tooltip(
+                              message: settings.t('Muat Turun PDF'),
+                              child: const Icon(Icons.download),
                             ),
-                          )
-                        : ListView(
-                            padding: const EdgeInsets.all(16),
-                            children: [
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Card(
-                                  elevation: 2,
-                                  margin: EdgeInsets.zero,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+                            onPressed: (context, build, pageFormat) async {
+                              final bytes = await build(pageFormat);
+                              if (context.mounted) {
+                                await savePdf(
+                                  context,
+                                  bytes,
+                                  'laporan_lampiran_d3c_$_monthLabel.pdf',
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Card(
+                          elevation: 2,
+                          margin: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: theme.dividerColor.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: DataTable(
+                            headingRowColor: WidgetStateProperty.resolveWith(
+                              (states) =>
+                                  theme.primaryColor.withValues(alpha: 0.08),
+                            ),
+                            columns: [
+                              DataColumn(
+                                label: Text(
+                                  settings.t('KATEGORI / JENIS KES'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  child: DataTable(
-                                    headingRowColor: WidgetStateProperty.resolveWith((states) => theme.primaryColor.withValues(alpha: 0.08)),
-                                    columns: [
-                                      DataColumn(label: Text(settings.t('KATEGORI / JENIS KES'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text(settings.t('JUM.'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text(settings.t('POLIS'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text(settings.t('JABATAN AGAMA'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text(settings.t('PBT'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text(settings.t('OBB'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataColumn(label: Text(settings.t('LAIN-LAIN'), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    ],
-                                    rows: _buildTableRows(theme, settings),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  settings.t('JUM.'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  settings.t('POLIS'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  settings.t('JABATAN AGAMA'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  settings.t('PBT'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  settings.t('OBB'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  settings.t('LAIN-LAIN'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ],
+                            rows: _buildTableRows(theme, settings),
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),

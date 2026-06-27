@@ -12,7 +12,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
 
@@ -21,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  
+
   bool _obscurePassword = true;
   bool _isHoveringBtn = false;
   LocationOption? _selectedState;
@@ -46,9 +47,18 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
     _loadStates();
   }
@@ -76,7 +86,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            context.read<SettingsProvider>().t('Borang tidak lengkap atau lokasi rondaan belum dipilih.'),
+            context.read<SettingsProvider>().t(
+              'Borang tidak lengkap atau lokasi rondaan belum dipilih.',
+            ),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.orange.shade800,
@@ -106,7 +118,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 380),
             child: Padding(
@@ -131,15 +145,18 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                   Text(
                     context.read<SettingsProvider>().t('Pendaftaran Berjaya'),
                     textAlign: TextAlign.center,
-                    style: Theme.of(dialogContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: Theme.of(dialogContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    context.read<SettingsProvider>().t('Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.'),
+                    context.read<SettingsProvider>().t(
+                      'Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.',
+                    ),
                     textAlign: TextAlign.center,
-                    style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(height: 1.5),
+                    style: Theme.of(
+                      dialogContext,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.5),
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
@@ -155,7 +172,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                         foregroundColor: Colors.white,
                       ),
                       child: Text(
-                        context.read<SettingsProvider>().t('Kembali ke Log Masuk'),
+                        context.read<SettingsProvider>().t(
+                          'Kembali ke Log Masuk',
+                        ),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -169,7 +188,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error, style: const TextStyle(fontWeight: FontWeight.bold)),
+          content: Text(
+            error,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -218,7 +240,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       setState(() => _districts = districts);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _locationLoadError = 'Tidak dapat memuatkan senarai daerah.');
+      setState(
+        () => _locationLoadError = 'Tidak dapat memuatkan senarai daerah.',
+      );
     }
   }
 
@@ -303,7 +327,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Image.asset('assets/icon.png', height: 90),
                 ),
@@ -322,7 +348,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                 Container(width: 60, height: 4, color: _goldenYellow),
                 const SizedBox(height: 24),
                 Text(
-                  settings.t('Daftar sebagai peronda SRS untuk membantu menjaga keselamatan dan keharmonian komuniti setempat.'),
+                  settings.t(
+                    'Daftar sebagai peronda SRS untuk membantu menjaga keselamatan dan keharmonian komuniti setempat.',
+                  ),
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.white.withValues(alpha: 0.85),
@@ -355,7 +383,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.15),
@@ -385,7 +415,12 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     final settings = context.watch<SettingsProvider>();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(top: 60.0, bottom: 40.0, left: 16.0, right: 16.0),
+      padding: const EdgeInsets.only(
+        top: 60.0,
+        bottom: 40.0,
+        left: 16.0,
+        right: 16.0,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [_royalBlue, const Color(0xFF0A295A)],
@@ -399,7 +434,11 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+                size: 20,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
             Expanded(
@@ -479,7 +518,11 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               const SizedBox(height: 8),
               Text(
                 settings.t('Lengkapkan butiran di bawah untuk mendaftar.'),
-                style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.6), height: 1.5),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: textColor.withValues(alpha: 0.6),
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 40),
             ],
@@ -517,11 +560,14 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
             _buildLocationDropdown(
               value: _selectedState,
               items: _states,
-              hint: _isLoadingLocations ? 'Memuatkan negeri...' : 'Pilih Negeri',
+              hint: _isLoadingLocations
+                  ? 'Memuatkan negeri...'
+                  : 'Pilih Negeri',
               icon: Icons.map_outlined,
               enabled: !_isLoadingLocations,
               onChanged: _selectState,
-              validator: (value) => value == null ? settings.t('Sila pilih negeri') : null,
+              validator: (value) =>
+                  value == null ? settings.t('Sila pilih negeri') : null,
               isDark: isDark,
               textColor: textColor,
             ),
@@ -533,7 +579,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               icon: Icons.account_tree_outlined,
               enabled: _selectedState != null && _districts.isNotEmpty,
               onChanged: _selectDistrict,
-              validator: (value) => value == null ? settings.t('Sila pilih daerah') : null,
+              validator: (value) =>
+                  value == null ? settings.t('Sila pilih daerah') : null,
               isDark: isDark,
               textColor: textColor,
             ),
@@ -545,7 +592,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               icon: Icons.location_on_outlined,
               enabled: _selectedDistrict != null && _zones.isNotEmpty,
               onChanged: (value) => setState(() => _selectedZone = value),
-              validator: (value) => value == null ? settings.t('Sila pilih zon') : null,
+              validator: (value) =>
+                  value == null ? settings.t('Sila pilih zon') : null,
               isDark: isDark,
               textColor: textColor,
             ),
@@ -553,12 +601,19 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _locationLoadError!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   TextButton(
@@ -594,7 +649,6 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
             ),
             const SizedBox(height: 32),
             */
-
             _buildSectionTitle(settings.t('Kredensial Sistem')),
             const SizedBox(height: 16),
             _buildTextField(
@@ -612,20 +666,28 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               obscureText: _obscurePassword,
               keyboardType: TextInputType.visiblePassword,
               style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
-              decoration: _inputDecoration(
-                hintText: settings.t('Kata Laluan'),
-                icon: Icons.lock_outline,
-                isDark: isDark,
-              ).copyWith(
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+              decoration:
+                  _inputDecoration(
+                    hintText: settings.t('Kata Laluan'),
+                    icon: Icons.lock_outline,
+                    isDark: isDark,
+                  ).copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: isDark
+                            ? Colors.grey.shade500
+                            : Colors.grey.shade400,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                ),
-              ),
-              validator: (value) => value == null || value.isEmpty ? settings.t('Ruangan ini wajib diisi') : null,
+              validator: (value) => value == null || value.isEmpty
+                  ? settings.t('Ruangan ini wajib diisi')
+                  : null,
             ),
             const SizedBox(height: 48),
 
@@ -636,7 +698,11 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 height: 56,
-                transform: Matrix4.diagonal3Values(_isHoveringBtn ? 1.02 : 1.0, _isHoveringBtn ? 1.02 : 1.0, 1.0),
+                transform: Matrix4.diagonal3Values(
+                  _isHoveringBtn ? 1.02 : 1.0,
+                  _isHoveringBtn ? 1.02 : 1.0,
+                  1.0,
+                ),
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submitRegistration,
                   style: ElevatedButton.styleFrom(
@@ -644,10 +710,19 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                     foregroundColor: Colors.white,
                     elevation: _isHoveringBtn ? 8 : 2,
                     shadowColor: _royalBlue.withValues(alpha: 0.6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -655,7 +730,11 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                             const SizedBox(width: 12),
                             Text(
                               settings.t('HANTAR PERMOHONAN'),
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
                             ),
                           ],
                         ),
@@ -698,17 +777,19 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
       ),
       dropdownColor: Theme.of(context).cardColor,
-      style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w500),
-      decoration: _inputDecoration(
-        hintText: hint,
-        icon: icon,
-        isDark: isDark,
+      style: TextStyle(
+        color: textColor,
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
       ),
+      decoration: _inputDecoration(hintText: hint, icon: icon, isDark: isDark),
       items: items
-          .map((item) => DropdownMenuItem<LocationOption>(
-                value: item,
-                child: Text(item.name, overflow: TextOverflow.ellipsis),
-              ))
+          .map(
+            (item) => DropdownMenuItem<LocationOption>(
+              value: item,
+              child: Text(item.name, overflow: TextOverflow.ellipsis),
+            ),
+          )
           .toList(),
       onChanged: enabled ? onChanged : null,
       validator: validator,
@@ -724,39 +805,51 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   ) {
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? _charcoal;
-    
+
     return TextFormField(
       controller: controller,
       keyboardType: type,
       style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
-      decoration: _inputDecoration(
-        hintText: hint,
-        icon: icon,
-        isDark: isDark,
-      ),
+      decoration: _inputDecoration(hintText: hint, icon: icon, isDark: isDark),
       validator: (value) => value == null || value.isEmpty
           ? context.read<SettingsProvider>().t('Ruangan ini wajib diisi')
           : null,
     );
   }
 
-  InputDecoration _inputDecoration({required String hintText, required IconData icon, required bool isDark}) {
+  InputDecoration _inputDecoration({
+    required String hintText,
+    required IconData icon,
+    required bool isDark,
+  }) {
     final fillColor = isDark ? const Color(0xFF1A1A1A) : Colors.grey.shade50;
-    
+
     return InputDecoration(
       hintText: hintText,
-      hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, fontSize: 14),
-      prefixIcon: Icon(icon, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+      hintStyle: TextStyle(
+        color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+        fontSize: 14,
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+      ),
       filled: true,
       fillColor: fillColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300, width: 1.5),
+        borderSide: BorderSide(
+          color: isDark ? Colors.white24 : Colors.grey.shade300,
+          width: 1.5,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1.5),
+        borderSide: BorderSide(
+          color: isDark ? Colors.white12 : Colors.grey.shade300,
+          width: 1.5,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

@@ -3,14 +3,18 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
-Future<void> savePdf(BuildContext context, Uint8List bytes, String filename) async {
+Future<void> savePdf(
+  BuildContext context,
+  Uint8List bytes,
+  String filename,
+) async {
   final blob = html.Blob([bytes], 'application/pdf');
   final url = html.Url.createObjectUrlFromBlob(blob);
   html.AnchorElement(href: url)
     ..setAttribute("download", filename)
     ..click();
   html.Url.revokeObjectUrl(url);
-  
+
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text('Fail $filename berjaya dimuat turun.')),
   );

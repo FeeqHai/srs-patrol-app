@@ -14,15 +14,14 @@ class AuthService {
   /// Returns null if successful, or an error message string if it fails.
   Future<String?> registerPatroller({
     required String fullName,
-    required String icNumber,       // NEW DATA
-    required String phoneNumber,    // NEW DATA
+    required String icNumber, // NEW DATA
+    required String phoneNumber, // NEW DATA
     required String stateId,
     required String districtId,
     required String zoneId,
     required String email,
     required String password,
   }) async {
-
     // 1. Generate the secure v4 UUID locally
     final String newUserId = _uuid.v4();
 
@@ -30,8 +29,8 @@ class AuthService {
     final Map<String, String> payload = {
       'id': newUserId,
       'full_name': fullName,
-      'ic_number': icNumber,        // NEW DATA
-      'phone_number': phoneNumber,  // NEW DATA
+      'ic_number': icNumber, // NEW DATA
+      'phone_number': phoneNumber, // NEW DATA
       'state_id': stateId,
       'district_id': districtId,
       'zone_id': zoneId,
@@ -52,11 +51,14 @@ class AuthService {
       } else {
         return response['message']; // Return the specific error from PHP (e.g., duplicate email)
       }
-
-   } catch (e, stackTrace) {
+    } catch (e, stackTrace) {
       // 1. Print the exact exception token
-      appLogger.e('=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.registerEndpoint}\n==================================', error: e, stackTrace: stackTrace);
-      
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: ${ApiConstants.registerEndpoint}\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
       return "Network Exception: Unable to communicate with the server.";
     }
   }

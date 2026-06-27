@@ -43,33 +43,53 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
         return AlertDialog(
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 32),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.redAccent,
+                size: 32,
+              ),
               const SizedBox(width: 8),
               Text(
                 settings.t('AMARAN SOS'),
-                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
           content: Text(
-            settings.t('Adakah anda pasti mahu mencetuskan penggera KECEMASAN?'),
+            settings.t(
+              'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?',
+            ),
             style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.7)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text(settings.t('Batal'), style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.5))),
+              child: Text(
+                settings.t('Batal'),
+                style: TextStyle(
+                  color: dialogTextColor?.withValues(alpha: 0.5),
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(settings.t('SAHKAN SOS'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(
+                  settings.t('SAHKAN SOS'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -93,7 +113,9 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
             const SizedBox(height: 16),
             Text(
               settings.t('Sedang Mengesan GPS & Menyiarkan SOS...'),
-              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -215,10 +237,19 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
       showAppBar: !_hideAppBar,
       items: [
         NavigationItem(icon: Icons.dashboard, label: settings.t('Dashboard')),
-        NavigationItem(icon: Icons.calendar_month, label: settings.t('Jadual Rondaan')),
+        NavigationItem(
+          icon: Icons.calendar_month,
+          label: settings.t('Jadual Rondaan'),
+        ),
         NavigationItem(icon: Icons.warning, label: settings.t('Insiden')),
-        NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan Peronda')),
-        NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Rondaan')),
+        NavigationItem(
+          icon: Icons.folder_shared,
+          label: settings.t('Laporan Peronda'),
+        ),
+        NavigationItem(
+          icon: Icons.qr_code_scanner,
+          label: settings.t('Rondaan'),
+        ),
       ],
       onSosPressed: _triggerSOS,
       isSosBroadcasting: _isSosBroadcasting,

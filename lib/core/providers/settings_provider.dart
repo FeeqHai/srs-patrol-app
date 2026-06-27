@@ -136,6 +136,7 @@ class SettingsProvider extends ChangeNotifier {
       'Tiada peralatan dipinjam': 'No equipment borrowed',
       'Sahkan Pemulangan': 'Acknowledge Return',
       'Pemulangan peronda telah disahkan.': 'Patroller return acknowledged.',
+      'Pemulangan telah disahkan.': 'Return has been acknowledged.',
       'Gagal memuatkan pemulangan.': 'Unable to load returns.',
       'Gagal mengesahkan pemulangan.': 'Unable to acknowledge the return.',
       'Gagal memuatkan peralatan dipinjam.':
@@ -148,6 +149,21 @@ class SettingsProvider extends ChangeNotifier {
       'Pemulangan tidak dapat disahkan.': 'The return could not be confirmed.',
       'Menunggu pengesahan Ketua KRT.':
           'Waiting for Ketua KRT acknowledgement.',
+      'Menunggu Pengesahan Ketua KRT': 'Waiting for Ketua KRT Acknowledgement',
+      'Pemulangan anda sedang menunggu pengesahan Ketua KRT.':
+          'Your return is waiting for Ketua KRT acknowledgement.',
+      'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.':
+          'Your return has been submitted. Please wait for Ketua KRT to confirm the equipment handover.',
+      'Semak Status Pemulangan': 'Check Return Status',
+      'Sila kembali ke pos rondaan untuk imbas QR pulang.':
+          'Please return to the patrol post to scan the return QR.',
+      'Semua peralatan perlu ditanda sebelum tamat syif.':
+          'All equipment must be ticked before ending the shift.',
+      'Sistem sedang mengesahkan...': 'System is validating...',
+      'Imbas QR Clock In KRT untuk mula': 'Scan the KRT Clock In QR to start',
+      'Menunggu KRT': 'Waiting for KRT',
+      'MENUNGGU PENGESAHAN': 'WAITING FOR ACKNOWLEDGEMENT',
+      'KEMBALI KE PAPAN PEMUKA': 'BACK TO DASHBOARD',
       'Hantar Pemulangan': 'Submit Return',
       'IMBAS QR PULANG': 'SCAN RETURN QR',
       'Imbas QR Clock Out di Pos Utama':
@@ -593,6 +609,7 @@ class SettingsProvider extends ChangeNotifier {
       'Sahkan Pemulangan': 'Sahkan Pemulangan',
       'Pemulangan peronda telah disahkan.':
           'Pemulangan peronda telah disahkan.',
+      'Pemulangan telah disahkan.': 'Pemulangan telah disahkan.',
       'Gagal memuatkan pemulangan.': 'Gagal memuatkan pemulangan.',
       'Gagal mengesahkan pemulangan.': 'Gagal mengesahkan pemulangan.',
       'Gagal memuatkan peralatan dipinjam.':
@@ -604,6 +621,21 @@ class SettingsProvider extends ChangeNotifier {
           'Tiada peralatan dipinjam untuk shif ini.',
       'Pemulangan tidak dapat disahkan.': 'Pemulangan tidak dapat disahkan.',
       'Menunggu pengesahan Ketua KRT.': 'Menunggu pengesahan Ketua KRT.',
+      'Menunggu Pengesahan Ketua KRT': 'Menunggu Pengesahan Ketua KRT',
+      'Pemulangan anda sedang menunggu pengesahan Ketua KRT.':
+          'Pemulangan anda sedang menunggu pengesahan Ketua KRT.',
+      'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.':
+          'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.',
+      'Semak Status Pemulangan': 'Semak Status Pemulangan',
+      'Sila kembali ke pos rondaan untuk imbas QR pulang.':
+          'Sila kembali ke pos rondaan untuk imbas QR pulang.',
+      'Semua peralatan perlu ditanda sebelum tamat syif.':
+          'Semua peralatan perlu ditanda sebelum tamat syif.',
+      'Sistem sedang mengesahkan...': 'Sistem sedang mengesahkan...',
+      'Imbas QR Clock In KRT untuk mula': 'Imbas QR Clock In KRT untuk mula',
+      'Menunggu KRT': 'Menunggu KRT',
+      'MENUNGGU PENGESAHAN': 'MENUNGGU PENGESAHAN',
+      'KEMBALI KE PAPAN PEMUKA': 'KEMBALI KE PAPAN PEMUKA',
       'Hantar Pemulangan': 'Hantar Pemulangan',
       'IMBAS QR PULANG': 'IMBAS QR PULANG',
       'Imbas QR Clock Out di Pos Utama': 'Imbas QR Clock Out di Pos Utama',

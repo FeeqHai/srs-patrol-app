@@ -16,33 +16,40 @@ class SosAlertService {
   SosAlertService._internal();
 
   Timer? _pollingTimer;
-  final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
   // Track notified SOS IDs to avoid spamming the same alert
   final Set<String> _notifiedSosIds = {};
-  
+
   // We need a navigator key to show dialogs globally
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   bool _isInitialized = false;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
+
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings();
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+
+    await _localNotificationsPlugin.initialize(
+      settings: initializationSettings,
     );
-    
-    await _localNotificationsPlugin.initialize(settings: initializationSettings);
     _isInitialized = true;
   }
 
   void startPolling(BuildContext context) {
     if (_pollingTimer != null && _pollingTimer!.isActive) return;
-    
+
     _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _pollForSos(context);
     });
@@ -67,15 +74,19 @@ class SosAlertService {
       }
 
       final response = await http.get(
-        Uri.parse(ApiConstants.buildApiUrl('incidents/check_sos.php?exclude_user=$currentUserId')),
+        Uri.parse(
+          ApiConstants.buildApiUrl(
+            'incidents/check_sos.php?exclude_user=$currentUserId',
+          ),
+        ),
         headers: headers,
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
           final List<dynamic> sosList = data['data'];
-          
+
           for (var sos in sosList) {
             final sosId = sos['id'].toString();
             if (!_notifiedSosIds.contains(sosId)) {
@@ -102,7 +113,8 @@ class SosAlertService {
             'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
           )
         : null;
-    final String message = '$name memerlukan bantuan SEGERA di $location! ($time)';
+    final String message =
+        '$name memerlukan bantuan SEGERA di $location! ($time)';
 
     // 1. Vibrate (if available)
     bool? hasVibrator = await Vibration.hasVibrator();
@@ -112,19 +124,22 @@ class SosAlertService {
     }
 
     // 2. System Notification
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'srs_sos_channel', 
-      'SOS Alerts',
-      channelDescription: 'Emergency SOS Alerts from Patrollers',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'KECEMASAN SOS',
-      color: Colors.red,
-      enableVibration: true,
-      playSound: true,
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'srs_sos_channel',
+          'SOS Alerts',
+          channelDescription: 'Emergency SOS Alerts from Patrollers',
+          importance: Importance.max,
+          priority: Priority.high,
+          ticker: 'KECEMASAN SOS',
+          color: Colors.red,
+          enableVibration: true,
+          playSound: true,
+        );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
     );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-    
+
     try {
       await _localNotificationsPlugin.show(
         id: DateTime.now().millisecond,
@@ -144,7 +159,10 @@ class SosAlertService {
         barrierDismissible: false, // Must explicitly tap acknowledge
         builder: (BuildContext context) {
           return Dialog(
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 24,
+            ),
             backgroundColor: Colors.transparent,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
@@ -171,10 +189,11 @@ class SosAlertService {
                           Expanded(
                             child: Text(
                               'AMARAN KECEMASAN!',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.w800,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: Colors.redAccent,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                             ),
                           ),
                         ],
@@ -182,10 +201,11 @@ class SosAlertService {
                       const SizedBox(height: 20),
                       Text(
                         '$name telah menekan butang SOS dan memerlukan bantuan segera.',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.35,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
+                            ),
                       ),
                       const SizedBox(height: 20),
                       Container(
@@ -294,7 +314,9 @@ class _SosDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mutedColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62);
+    final mutedColor = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.62);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -11,25 +11,41 @@ class AttendanceService {
 
   Future<Map<String, dynamic>> clockIn(String userId, String qrPayload) async {
     try {
+      if (userId.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Ralat Sesi: Sila log masuk semula.',
+        };
+      }
+
       Position currentPos = await _determinePosition();
       final String attendanceId = _uuid.v4();
       final Map<String, String> payload = {
         'id': attendanceId,
-        'user_id': userId,
         'checkpoint_id': qrPayload,
         'latitude': currentPos.latitude.toString(),
         'longitude': currentPos.longitude.toString(),
       };
 
-      final response = await ApiClient.postData("attendance/clock_in.php", payload);
+      final response = await ApiClient.postData(
+        "attendance/clock_in.php",
+        payload,
+      );
 
       if (response['status'] == 'success') {
-        return {'success': true, 'attendance_id': response['attendance_id'] ?? attendanceId};
+        return {
+          'success': true,
+          'attendance_id': response['attendance_id'] ?? attendanceId,
+        };
       } else {
         return {'success': false, 'message': response['message']};
       }
     } catch (e, stackTrace) {
-      appLogger.e('=== ATTENDANCE HARDWARE/NETWORK EXCEPTION ===\nException: $e', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        '=== ATTENDANCE HARDWARE/NETWORK EXCEPTION ===\nException: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return {'success': false, 'message': "System Exception: $e"};
     }
   }
@@ -47,7 +63,10 @@ class AttendanceService {
         'returned_equipment': json.encode(returnedEquipmentIds),
       };
 
-      final response = await ApiClient.postData("attendance/clock_out.php", payload);
+      final response = await ApiClient.postData(
+        "attendance/clock_out.php",
+        payload,
+      );
       if (response['status'] == 'success') {
         return {'success': true, 'message': response['message']};
       } else {
@@ -59,13 +78,37 @@ class AttendanceService {
     }
   }
 
-  Future<String?> logEquipment(String attendanceId, List<String> equipmentIds) async {
+  Future<Map<String, dynamic>> checkActiveShift() async {
+    try {
+      final response = await ApiClient.getData(
+        "attendance/check_active_shift.php",
+      );
+      return response is Map<String, dynamic>
+          ? response
+          : {'status': 'error', 'message': 'Invalid server response.'};
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Check Active Shift Exception',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return {'status': 'error', 'message': 'System Exception: $e'};
+    }
+  }
+
+  Future<String?> logEquipment(
+    String attendanceId,
+    List<String> equipmentIds,
+  ) async {
     try {
       final Map<String, String> payload = {
         'attendance_id': attendanceId,
         'equipment': json.encode(equipmentIds),
       };
-      final response = await ApiClient.postData("attendance/log_equipment.php", payload);
+      final response = await ApiClient.postData(
+        "attendance/log_equipment.php",
+        payload,
+      );
       if (response['status'] == 'success') {
         return null;
       } else {
@@ -77,7 +120,7 @@ class AttendanceService {
     }
   }
 
-// Standard boilerplate: Industry-Standard Native Request Flow
+  // Standard boilerplate: Industry-Standard Native Request Flow
   Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -85,7 +128,9 @@ class AttendanceService {
     // 1. Check if GPS is enabled at all
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw Exception('Sila aktifkan perkhidmatan lokasi (GPS) pada peranti anda.');
+      throw Exception(
+        'Sila aktifkan perkhidmatan lokasi (GPS) pada peranti anda.',
+      );
     }
 
     // 2. Check permission status
@@ -94,13 +139,17 @@ class AttendanceService {
       // THIS is the standard Shopee/TikTok style prompt
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw Exception('SRS Patrol memerlukan kebenaran lokasi untuk pengesahan shif.');
+        throw Exception(
+          'SRS Patrol memerlukan kebenaran lokasi untuk pengesahan shif.',
+        );
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
       // This is the only time we mention settings, because the OS locked us out
-      throw Exception('Lokasi disekat secara kekal. Sila beri kebenaran di dalam Settings.');
+      throw Exception(
+        'Lokasi disekat secara kekal. Sila beri kebenaran di dalam Settings.',
+      );
     }
 
     // 3. Return the position with the hardware kill-switch

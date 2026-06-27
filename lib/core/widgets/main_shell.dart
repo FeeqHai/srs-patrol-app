@@ -23,12 +23,12 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   bool _isSosBroadcasting = false;
-  
+
   final List<String> _pageTitles = [
     'Dashboard',
     'Jadual Rondaan',
     'Log Insiden',
-    'Pengesahan Rondaan'
+    'Pengesahan Rondaan',
   ];
 
   @override
@@ -41,7 +41,6 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
-
   Future<void> _triggerSOS() async {
     final settings = context.read<SettingsProvider>();
     final bool? confirm = await showDialog<bool>(
@@ -49,36 +48,59 @@ class _MainShellState extends State<MainShell> {
       builder: (context) {
         final dialogTextColor = Theme.of(context).textTheme.bodyMedium?.color;
         return AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 32),
-            const SizedBox(width: 8),
-            Text(settings.t('AMARAN SOS'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.redAccent,
+                size: 32,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                settings.t('AMARAN SOS'),
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            settings.t(
+              'Adakah anda pasti mahu mencetuskan penggera KECEMASAN?',
+            ),
+            style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.7)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                settings.t('Batal'),
+                style: TextStyle(
+                  color: dialogTextColor?.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  settings.t('SAHKAN SOS'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
           ],
-        ),
-        content: Text(
-          settings.t('Adakah anda pasti mahu mencetuskan penggera KECEMASAN?'),
-          style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(settings.t('Batal'), style: TextStyle(color: dialogTextColor?.withValues(alpha: 0.5))),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(settings.t('SAHKAN SOS'), style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      );
+        );
       },
     );
 
@@ -98,7 +120,9 @@ class _MainShellState extends State<MainShell> {
             const SizedBox(height: 16),
             Text(
               settings.t('Sedang Mengesan GPS & Menyiarkan SOS...'),
-              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -108,8 +132,9 @@ class _MainShellState extends State<MainShell> {
 
     try {
       if (!mounted) return;
-      final String reporterId = context.read<AuthProvider>().userId ?? "UNKNOWN";
-      
+      final String reporterId =
+          context.read<AuthProvider>().userId ?? "UNKNOWN";
+
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) throw Exception('Location services are disabled.');
 
@@ -120,9 +145,11 @@ class _MainShellState extends State<MainShell> {
           throw Exception('Location permissions are denied');
         }
       }
-      
+
       Position currentPosition = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       final IncidentService service = IncidentService();
@@ -141,7 +168,11 @@ class _MainShellState extends State<MainShell> {
         Navigator.pop(context); // Close loading dialog
         if (error == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(settings.t('SOS BERJAYA DISIARKAN!')), backgroundColor: Colors.green, duration: const Duration(seconds: 4)),
+            SnackBar(
+              content: Text(settings.t('SOS BERJAYA DISIARKAN!')),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+            ),
           );
           // Switch to Incident Feed tab so they can see the broadcast
           setState(() {
@@ -149,7 +180,10 @@ class _MainShellState extends State<MainShell> {
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${settings.t('RALAT SOS')}: $error'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('${settings.t('RALAT SOS')}: $error'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -157,7 +191,10 @@ class _MainShellState extends State<MainShell> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${settings.t('GAGAL PENGESANAN GPS')}: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('${settings.t('GAGAL PENGESANAN GPS')}: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -199,9 +236,15 @@ class _MainShellState extends State<MainShell> {
       screens: screens,
       items: [
         NavigationItem(icon: Icons.dashboard, label: settings.t('Dashboard')),
-        NavigationItem(icon: Icons.calendar_month, label: settings.t('Jadual Rondaan')),
+        NavigationItem(
+          icon: Icons.calendar_month,
+          label: settings.t('Jadual Rondaan'),
+        ),
         NavigationItem(icon: Icons.warning, label: settings.t('Insiden')),
-        NavigationItem(icon: Icons.qr_code_scanner, label: settings.t('Rondaan')),
+        NavigationItem(
+          icon: Icons.qr_code_scanner,
+          label: settings.t('Rondaan'),
+        ),
       ],
       onSosPressed: _triggerSOS,
       isSosBroadcasting: _isSosBroadcasting,

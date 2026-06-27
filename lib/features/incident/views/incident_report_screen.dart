@@ -79,15 +79,23 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
       }
 
       Position position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-        String address = [place.street, place.subLocality, place.locality]
-            .where((e) => e != null && e.isNotEmpty)
-            .join(', ');
-        
+        String address = [
+          place.street,
+          place.subLocality,
+          place.locality,
+        ].where((e) => e != null && e.isNotEmpty).join(', ');
+
         if (mounted) {
           setState(() {
             _locationController.text = address;
@@ -128,12 +136,18 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedCategory == null || _selectedCategory!.isEmpty) {
-      _showSnackBar(context.read<SettingsProvider>().t('Sila pilih kategori insiden.'), Colors.redAccent);
+      _showSnackBar(
+        context.read<SettingsProvider>().t('Sila pilih kategori insiden.'),
+        Colors.redAccent,
+      );
       return;
     }
 
     if (_selectedReportedTo == null || _selectedReportedTo!.isEmpty) {
-      _showSnackBar(context.read<SettingsProvider>().t('Sila pilih agensi rujukan.'), Colors.redAccent);
+      _showSnackBar(
+        context.read<SettingsProvider>().t('Sila pilih agensi rujukan.'),
+        Colors.redAccent,
+      );
       return;
     }
 
@@ -141,7 +155,12 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
 
     final String? currentUserId = context.read<AuthProvider>().userId;
     if (currentUserId == null) {
-      _showSnackBar(context.read<SettingsProvider>().t('Ralat Sesi: Sila log masuk semula.'), Colors.redAccent);
+      _showSnackBar(
+        context.read<SettingsProvider>().t(
+          'Ralat Sesi: Sila log masuk semula.',
+        ),
+        Colors.redAccent,
+      );
       return;
     }
 
@@ -183,22 +202,33 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 10,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 64),
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.greenAccent,
+                  size: 64,
+                ),
                 const SizedBox(height: 20),
                 Text(
                   context.read<SettingsProvider>().t('Laporan Berjaya'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  context.read<SettingsProvider>().t('Data insiden telah direkodkan ke dalam sistem Buku Nota Harian (Lampiran 4).'),
+                  context.read<SettingsProvider>().t(
+                    'Data insiden telah direkodkan ke dalam sistem Buku Nota Harian (Lampiran 4).',
+                  ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(height: 1.5),
                 ),
@@ -214,7 +244,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                       backgroundColor: Colors.greenAccent,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
                       context.read<SettingsProvider>().t('Selesai'),
@@ -228,13 +260,22 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
         ),
       );
     } else {
-      _showSnackBar('${context.read<SettingsProvider>().t('RALAT:')} ${provider.errorMessage}', Colors.red);
+      _showSnackBar(
+        '${context.read<SettingsProvider>().t('RALAT:')} ${provider.errorMessage}',
+        Colors.red,
+      );
     }
   }
 
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message, style: const TextStyle(fontWeight: FontWeight.bold)), backgroundColor: color),
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: color,
+      ),
     );
   }
 
@@ -243,9 +284,15 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
       padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
       child: Row(
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
           if (isOptional)
-            const Text(' (Pilihan)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text(
+              ' (Pilihan)',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
         ],
       ),
     );
@@ -272,7 +319,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               Card(
                 elevation: 4,
                 shadowColor: Colors.black.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -281,25 +330,44 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                       _buildSectionTitle(settings.t('Kategori Insiden')),
                       Autocomplete<String>(
                         optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text.isEmpty) return _jpninIncidentTypes;
-                          return _jpninIncidentTypes.where((String option) =>
-                              option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                        },
-                        onSelected: (String selection) => setState(() => _selectedCategory = selection),
-                        fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                          return TextFormField(
-                            controller: controller,
-                            focusNode: focusNode,
-                            onEditingComplete: onEditingComplete,
-                            decoration: InputDecoration(
-                              hintText: settings.t('Cari kategori (cth: Samun)...'),
-                              suffixIcon: const Icon(Icons.search),
-                              filled: true,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          if (textEditingValue.text.isEmpty)
+                            return _jpninIncidentTypes;
+                          return _jpninIncidentTypes.where(
+                            (String option) => option.toLowerCase().contains(
+                              textEditingValue.text.toLowerCase(),
                             ),
-                            validator: (value) => value == null || value.isEmpty ? settings.t('Sila pilih kategori') : null,
                           );
                         },
+                        onSelected: (String selection) =>
+                            setState(() => _selectedCategory = selection),
+                        fieldViewBuilder:
+                            (
+                              context,
+                              controller,
+                              focusNode,
+                              onEditingComplete,
+                            ) {
+                              return TextFormField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                onEditingComplete: onEditingComplete,
+                                decoration: InputDecoration(
+                                  hintText: settings.t(
+                                    'Cari kategori (cth: Samun)...',
+                                  ),
+                                  suffixIcon: const Icon(Icons.search),
+                                  filled: true,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                validator: (value) =>
+                                    value == null || value.isEmpty
+                                    ? settings.t('Sila pilih kategori')
+                                    : null,
+                              );
+                            },
                         optionsViewBuilder: (context, onSelected, options) {
                           return Align(
                             alignment: Alignment.topLeft,
@@ -307,38 +375,68 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                               elevation: 4.0,
                               borderRadius: BorderRadius.circular(12),
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxHeight: 250, maxWidth: 300),
+                                constraints: const BoxConstraints(
+                                  maxHeight: 250,
+                                  maxWidth: 300,
+                                ),
                                 child: ListView.builder(
                                   padding: EdgeInsets.zero,
                                   shrinkWrap: true,
                                   itemCount: options.length,
-                                  itemBuilder: (BuildContext context, int index) {
-                                    final String option = options.elementAt(index);
-                                    return InkWell(
-                                      onTap: () => onSelected(option),
-                                      child: Padding(padding: const EdgeInsets.all(16.0), child: Text(option)),
-                                    );
-                                  },
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                        final String option = options.elementAt(
+                                          index,
+                                        );
+                                        return InkWell(
+                                          onTap: () => onSelected(option),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Text(option),
+                                          ),
+                                        );
+                                      },
                                 ),
                               ),
                             ),
                           );
                         },
                       ),
-                      
-                      _buildSectionTitle(settings.t('Agensi Dirujuk (Lampiran 6)')),
+
+                      _buildSectionTitle(
+                        settings.t('Agensi Dirujuk (Lampiran 6)'),
+                      ),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedReportedTo,
                         decoration: InputDecoration(
                           hintText: settings.t('Pilih agensi'),
                           filled: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        items: ['Tiada', 'Polis', 'Jabatan Agama / JAKIM', 'PBT', 'JKM', 'Lain-lain']
-                            .map((String value) => DropdownMenuItem<String>(value: value, child: Text(value)))
-                            .toList(),
-                        onChanged: (newValue) => setState(() => _selectedReportedTo = newValue),
-                        validator: (value) => value == null || value.isEmpty ? settings.t('Sila pilih agensi dirujuk') : null,
+                        items:
+                            [
+                                  'Tiada',
+                                  'Polis',
+                                  'Jabatan Agama / JAKIM',
+                                  'PBT',
+                                  'JKM',
+                                  'Lain-lain',
+                                ]
+                                .map(
+                                  (String value) => DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (newValue) =>
+                            setState(() => _selectedReportedTo = newValue),
+                        validator: (value) => value == null || value.isEmpty
+                            ? settings.t('Sila pilih agensi dirujuk')
+                            : null,
                       ),
                     ],
                   ),
@@ -349,7 +447,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               Card(
                 elevation: 4,
                 shadowColor: Colors.black.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -361,36 +461,64 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                         decoration: InputDecoration(
                           hintText: settings.t('Cth: Pagar rosak'),
                           filled: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        validator: (value) => value == null || value.isEmpty ? settings.t('Sila masukkan tajuk') : null,
+                        validator: (value) => value == null || value.isEmpty
+                            ? settings.t('Sila masukkan tajuk')
+                            : null,
                       ),
-                      
+
                       _buildSectionTitle(settings.t('Lokasi Rondaan')),
                       TextFormField(
                         controller: _locationController,
                         decoration: InputDecoration(
                           hintText: settings.t('Cth: Lorong 39, Scientex'),
                           filled: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          suffixIcon: _isLocating ? const Padding(
-                            padding: EdgeInsets.all(12.0),
-                            child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                          ) : const Icon(Icons.location_on, color: Colors.redAccent),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          suffixIcon: _isLocating
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.location_on,
+                                  color: Colors.redAccent,
+                                ),
                         ),
-                        validator: (value) => value == null || value.isEmpty ? settings.t('Sila masukkan lokasi') : null,
+                        validator: (value) => value == null || value.isEmpty
+                            ? settings.t('Sila masukkan lokasi')
+                            : null,
                       ),
-                      
-                      _buildSectionTitle(settings.t('Peristiwa Berlaku Semasa Rondaan')),
+
+                      _buildSectionTitle(
+                        settings.t('Peristiwa Berlaku Semasa Rondaan'),
+                      ),
                       TextFormField(
                         controller: _descController,
                         maxLines: 4,
                         decoration: InputDecoration(
                           hintText: settings.t('Terangkan butiran...'),
                           filled: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        validator: (value) => value == null || value.isEmpty ? settings.t('Sila terangkan butiran') : null,
+                        validator: (value) => value == null || value.isEmpty
+                            ? settings.t('Sila terangkan butiran')
+                            : null,
                       ),
                     ],
                   ),
@@ -401,63 +529,99 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
               Card(
                 elevation: 4,
                 shadowColor: Colors.black.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildSectionTitle(settings.t('Gambar Bukti'), isOptional: true),
+                      _buildSectionTitle(
+                        settings.t('Gambar Bukti'),
+                        isOptional: true,
+                      ),
                       Container(
                         height: 120,
                         decoration: BoxDecoration(
                           color: theme.scaffoldBackgroundColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.all(12),
                           children: [
-                            ..._images.map((file) => Stack(
-                                  children: [
-                                    Container(
-                                      width: 100,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        image: DecorationImage(image: FileImage(file), fit: BoxFit.cover),
+                            ..._images.map(
+                              (file) => Stack(
+                                children: [
+                                  Container(
+                                    width: 100,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      image: DecorationImage(
+                                        image: FileImage(file),
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
-                                    Positioned(
-                                      right: 16,
-                                      top: 4,
-                                      child: GestureDetector(
-                                        onTap: () => setState(() => _images.remove(file)),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                          child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                  ),
+                                  Positioned(
+                                    right: 16,
+                                    top: 4,
+                                    child: GestureDetector(
+                                      onTap: () =>
+                                          setState(() => _images.remove(file)),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 16,
                                         ),
                                       ),
                                     ),
-                                  ],
-                                )),
+                                  ),
+                                ],
+                              ),
+                            ),
                             GestureDetector(
                               onTap: _takePhoto,
                               child: Container(
                                 width: 100,
                                 decoration: BoxDecoration(
-                                  color: theme.dividerColor.withValues(alpha: 0.1),
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                    color: theme.dividerColor.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
+                                    const Icon(
+                                      Icons.add_a_photo,
+                                      size: 32,
+                                      color: Colors.grey,
+                                    ),
                                     const SizedBox(height: 8),
-                                    Text(settings.t('Tambah'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                    Text(
+                                      settings.t('Tambah'),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -478,12 +642,18 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                   icon: const Icon(Icons.save),
                   label: Text(
                     settings.t('HANTAR BUKU NOTA HARIAN'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 5,
                   ),
                 ),
