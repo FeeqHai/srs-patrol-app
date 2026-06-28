@@ -107,13 +107,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'name': name,
       });
       if (response['success'] == true || response['status'] == 'success') {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(settings.t('Kumpulan berjaya dicipta!'))),
           );
+        }
         _fetchSquads();
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -121,12 +122,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
               ),
             ),
           );
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
+      }
     }
   }
 
@@ -138,13 +141,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'user_id': userId,
       });
       if (response['success'] == true || response['status'] == 'success') {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(settings.t('Ahli berjaya ditambah!'))),
           );
+        }
         _fetchSquads();
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -152,12 +156,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
               ),
             ),
           );
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
+      }
     }
   }
 
@@ -169,13 +175,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'user_id': userId,
       });
       if (response['success'] == true || response['status'] == 'success') {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(settings.t('Ahli berjaya dikeluarkan!'))),
           );
+        }
         _fetchSquads();
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -183,12 +190,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
               ),
             ),
           );
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
+      }
     }
   }
 
@@ -199,13 +208,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         'squad_id': squadId,
       });
       if (response['success'] == true || response['status'] == 'success') {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(settings.t('Kumpulan dipadam!'))),
           );
+        }
         _fetchSquads();
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -213,12 +223,14 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
               ),
             ),
           );
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(settings.t('Ralat memadam kumpulan'))),
         );
+      }
     }
   }
 
@@ -491,10 +503,11 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
     final theme = Theme.of(context);
-    if (_isLoading)
+    if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(color: theme.primaryColor),
       );
+    }
 
     return Container(
       color: theme.scaffoldBackgroundColor,
@@ -868,13 +881,14 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
         'end_time': endTime,
       });
       if (response['success'] == true || response['status'] == 'success') {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(settings.t('Jadual berjaya ditetap!'))),
           );
+        }
         _fetchSchedules();
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -882,12 +896,14 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
               ),
             ),
           );
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
+      }
     }
   }
 
@@ -898,13 +914,14 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
         'schedule_id': scheduleId,
       });
       if (response['success'] == true || response['status'] == 'success') {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(settings.t('Jadual berjaya dipadam!'))),
           );
+        }
         _fetchSchedules();
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -912,12 +929,14 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
               ),
             ),
           );
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('${settings.t("Ralat")}: $e')));
+      }
     }
   }
 
@@ -1225,10 +1244,11 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
     final theme = Theme.of(context);
-    if (_isLoading)
+    if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(color: theme.primaryColor),
       );
+    }
 
     return Container(
       color: theme.scaffoldBackgroundColor,

@@ -227,7 +227,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                 const SizedBox(height: 12),
                 Text(
                   context.read<SettingsProvider>().t(
-                    'Data insiden telah direkodkan ke dalam sistem Buku Nota Harian (Lampiran 4).',
+                    'Data insiden telah direkodkan ke dalam sistem Nota Harian.',
                   ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(height: 1.5),
@@ -306,7 +306,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(settings.t('Buku Nota Harian (Lampiran 4)')),
+        title: Text(settings.t('Nota Harian')),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -330,8 +330,9 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                       _buildSectionTitle(settings.t('Kategori Insiden')),
                       Autocomplete<String>(
                         optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text.isEmpty)
+                          if (textEditingValue.text.isEmpty) {
                             return _jpninIncidentTypes;
+                          }
                           return _jpninIncidentTypes.where(
                             (String option) => option.toLowerCase().contains(
                               textEditingValue.text.toLowerCase(),
@@ -641,7 +642,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                   onPressed: _submitReport,
                   icon: const Icon(Icons.save),
                   label: Text(
-                    settings.t('HANTAR BUKU NOTA HARIAN'),
+                    settings.t('HANTAR NOTA HARIAN'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

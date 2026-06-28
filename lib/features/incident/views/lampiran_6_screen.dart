@@ -9,6 +9,8 @@ import 'package:printing/printing.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/models/location_option.dart';
+import '../../auth/services/auth_service.dart';
 import '../../../core/utils/pdf_saver.dart';
 
 class Lampiran6Screen extends StatefulWidget {
@@ -40,28 +42,91 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
   bool _showPdfView =
       true; // default to inline PDF preview for better mobile UX
   bool _isLoading = true;
+  bool _isLoadingFilters = false;
   Map<String, dynamic> _data = {};
   String _monthLabel = '';
   String _yearLabel = '';
   Map<String, dynamic> _metadata = {};
+  final AuthService _authService = AuthService();
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+  String? _filterError;
 
   @override
   void initState() {
     super.initState();
-    _fetchSummary();
+    _initializeFilters();
+  }
+
+  Future<void> _initializeFilters() async {
+    final auth = context.read<AuthProvider>();
+    setState(() => _isLoadingFilters = true);
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() {
+          _states = states;
+          _isLoadingFilters = false;
+          _filterError = null;
+        });
+      } else {
+        if (auth.districtId != null) {
+          final zones = await _authService.fetchLocations(
+            level: 'zones',
+            parentId: auth.districtId,
+          );
+          if (!mounted) return;
+          setState(() {
+            _zones = zones;
+            _isLoadingFilters = false;
+            _filterError = null;
+          });
+        } else {
+          setState(() => _isLoadingFilters = false);
+        }
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingFilters = false;
+        _filterError = 'Tidak dapat memuatkan senarai lokasi.';
+      });
+    }
+    await _fetchSummary();
   }
 
   Future<void> _fetchSummary() async {
     setState(() => _isLoading = true);
     try {
       final authProvider = context.read<AuthProvider>();
-      final userId = authProvider.userId ?? '';
-
-      final endpoint = ApiConstants.buildApiUrl(
-        'incidents/get_lampiran_6_summary.php',
+      final endpoint = Uri.parse(
+        ApiConstants.buildApiUrl('incidents/get_lampiran_6_summary.php'),
       );
-      final url =
-          '$endpoint?month_offset=$_monthOffset&user_id=$userId&level=$_selectedLevel';
+      final query = <String, String>{
+        'month_offset': '$_monthOffset',
+        'level': _selectedLevel,
+      };
+      if (authProvider.role == 'super_admin') {
+        if (_selectedState != null) query['state_id'] = _selectedState!.id;
+        if (_selectedDistrict != null) {
+          query['district_id'] = _selectedDistrict!.id;
+        }
+        if (_selectedZone != null) query['zone_id'] = _selectedZone!.id;
+      } else {
+        if (authProvider.stateId != null) {
+          query['state_id'] = authProvider.stateId!;
+        }
+        if (authProvider.districtId != null) {
+          query['district_id'] = authProvider.districtId!;
+        }
+        if (_selectedZone != null) query['zone_id'] = _selectedZone!.id;
+      }
+      final url = endpoint.replace(queryParameters: query);
 
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
@@ -70,7 +135,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await http.get(url, headers: headers);
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
         if (body['status'] == 'success') {
@@ -102,6 +167,59 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
         );
       }
     }
+  }
+
+  Future<void> _selectState(LocationOption? state) async {
+    setState(() {
+      _selectedState = state;
+      _selectedDistrict = null;
+      _selectedZone = null;
+      _districts = const [];
+      _zones = const [];
+      _filterError = null;
+    });
+    if (state != null) {
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || _selectedState?.id != state.id) return;
+        setState(() => _districts = districts);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _filterError = 'Tidak dapat memuatkan daerah.');
+      }
+    }
+    await _fetchSummary();
+  }
+
+  Future<void> _selectDistrict(LocationOption? district) async {
+    setState(() {
+      _selectedDistrict = district;
+      _selectedZone = null;
+      _zones = const [];
+      _filterError = null;
+    });
+    if (district != null) {
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted || _selectedDistrict?.id != district.id) return;
+        setState(() => _zones = zones);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _filterError = 'Tidak dapat memuatkan zon.');
+      }
+    }
+    await _fetchSummary();
+  }
+
+  Future<void> _selectZone(LocationOption? zone) async {
+    setState(() => _selectedZone = zone);
+    await _fetchSummary();
   }
 
   Future<void> _selectMonth(BuildContext context) async {
@@ -540,14 +658,31 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(
-                  _selectedLevel == 'daerah'
-                      ? 'Daerah : ${_metadata['daerah'] ?? "ALOR GAJAH"}'
-                      : 'Negeri : ${_metadata['negeri'] ?? "MELAKA"}',
-                  style: pw.TextStyle(
-                    fontSize: 8,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Negeri : ${_metadata['negeri'] ?? "-"}',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'Daerah : ${_metadata['daerah'] ?? "-"}',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'Zon : ${_metadata['zone'] ?? "-"}',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 pw.Row(
                   children: [
@@ -1035,6 +1170,138 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
     return rows;
   }
 
+  Widget _buildLocationFilters(SettingsProvider settings, ThemeData theme) {
+    final auth = context.watch<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+
+    Widget dropdown({
+      required String label,
+      required LocationOption? value,
+      required List<LocationOption> items,
+      required String allLabel,
+      required ValueChanged<LocationOption?> onChanged,
+      bool enabled = true,
+    }) {
+      return DropdownButtonFormField<LocationOption?>(
+        initialValue: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+        ),
+        items: [
+          DropdownMenuItem<LocationOption?>(
+            value: null,
+            child: Text(allLabel, overflow: TextOverflow.ellipsis),
+          ),
+          ...items.map(
+            (item) => DropdownMenuItem<LocationOption?>(
+              value: item,
+              child: Text(item.name, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: enabled ? onChanged : null,
+      );
+    }
+
+    if (!isSuperAdmin) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        color: theme.cardColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${settings.t("Negeri")}: ${auth.stateName ?? "-"}  |  ${settings.t("Daerah")}: ${auth.districtName ?? "-"}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            dropdown(
+              label: settings.t('Zon'),
+              value: _selectedZone,
+              items: _zones,
+              allLabel: settings.t('Semua Zon'),
+              onChanged: _selectZone,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      color: theme.cardColor,
+      child: Column(
+        children: [
+          if (_isLoadingFilters)
+            LinearProgressIndicator(color: theme.primaryColor),
+          if (_filterError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _filterError!,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 680;
+              final children = [
+                dropdown(
+                  label: settings.t('Negeri'),
+                  value: _selectedState,
+                  items: _states,
+                  allLabel: settings.t('Semua Negeri'),
+                  onChanged: _selectState,
+                ),
+                dropdown(
+                  label: settings.t('Daerah'),
+                  value: _selectedDistrict,
+                  items: _districts,
+                  allLabel: settings.t('Semua Daerah'),
+                  enabled: _selectedState != null,
+                  onChanged: _selectDistrict,
+                ),
+                dropdown(
+                  label: settings.t('Zon'),
+                  value: _selectedZone,
+                  items: _zones,
+                  allLabel: settings.t('Semua Zon'),
+                  enabled: _selectedDistrict != null,
+                  onChanged: _selectZone,
+                ),
+              ];
+
+              if (!isWide) {
+                return Column(
+                  children: [
+                    for (final child in children) ...[
+                      child,
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  for (var i = 0; i < children.length; i++) ...[
+                    Expanded(child: children[i]),
+                    if (i != children.length - 1) const SizedBox(width: 12),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -1191,6 +1458,8 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
             ),
           ),
 
+          _buildLocationFilters(settings, theme),
+
           // 3. Metadata Display Card (Only visible in Table mode)
           if (!_isLoading && _metadata.isNotEmpty && !_showPdfView)
             Padding(
@@ -1215,9 +1484,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _selectedLevel == 'daerah'
-                                ? '${settings.t("Daerah")}: ${_metadata["daerah"] ?? ""}'
-                                : '${settings.t("Negeri")}: ${_metadata["negeri"] ?? ""}',
+                            '${settings.t("Negeri")}: ${_metadata["negeri"] ?? ""}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: theme.primaryColor,
@@ -1235,18 +1502,26 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                           ),
                         ],
                       ),
-                      if (_selectedLevel == 'daerah') ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          '${settings.t("Nama SRS")}: ${_metadata["nama_srs"] ?? ""}',
-                          style: TextStyle(
-                            color: theme.textTheme.bodyLarge?.color?.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontSize: 13,
+                      const SizedBox(height: 6),
+                      Text(
+                        '${settings.t("Daerah")}: ${_metadata["daerah"] ?? ""}  |  ${settings.t("Zon")}: ${_metadata["zone"] ?? ""}',
+                        style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color?.withValues(
+                            alpha: 0.6,
                           ),
+                          fontSize: 13,
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${settings.t("Nama SRS")}: ${_metadata["nama_srs"] ?? ""}',
+                        style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color?.withValues(
+                            alpha: 0.6,
+                          ),
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),

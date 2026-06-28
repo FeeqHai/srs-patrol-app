@@ -9,6 +9,35 @@ This document provides a comprehensive log of codebase modifications, categorise
 
 ---
 
+## 2026-06-27 Update: Super Admin Location Report Scope
+
+Implemented on branch `feature/super-admin-location-report`.
+
+- Added location-aware Lampiran D3(C) filters and backend report scoping for `super_admin` and `ketua_krt`.
+- Added super-admin member management actions for profile edit, role update including `ketua_krt`, location transfer, and password reset.
+- Added forced password-change flow using `users.must_change_password`.
+- Added super-admin-only location management UI and `admin/locations.php`.
+- Added migration `srs_api/migrations/20260627_super_admin_location_report.sql`.
+- Verification: DB backup/migration passed, live API smoke tests passed, PHP lint passed for changed PHP files, and `flutter analyze` passed.
+- Remaining: emulator UI walkthrough and full patrol regression flows still need hands-on testing.
+
+Full details: `docs/SUPER_ADMIN_TEST_REPORT.md`.
+
+---
+
+## 2026-06-27 Follow-up: Super Admin Mobile Navigation
+
+Manual retesting found that the super-admin mobile FAB navbar did not appear after
+adding the eighth admin tab, which hid Member Management and therefore blocked
+super-admin password reset testing. `ResponsiveShell` now handles any non-SOS
+admin tab count of five or more, keeping `Super Admin`, `Lokasi`, `Skuad`, and
+`Ahli` visible while moving the middle tools into the FAB menu. Ketua KRT
+analytics also now shows a visible district-scope banner.
+
+Verification: `flutter analyze` passed.
+
+---
+
 ## 1. Codebase Modifications Summary
 
 ### 📊 Metric Overview

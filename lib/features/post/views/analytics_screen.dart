@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../incident/services/incident_service.dart';
 import '../../../core/network/api_client.dart';
 import '../../incident/views/lampiran_6_screen.dart';
@@ -234,6 +235,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final settings = context.watch<SettingsProvider>();
+    final auth = context.watch<AuthProvider>();
 
     if (_isLoading) {
       return Center(
@@ -425,6 +427,51 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
               ],
             ),
+            if (auth.role == 'ketua_krt') ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.primaryColor.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.location_city_outlined,
+                      color: theme.primaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${settings.t("Skop Daerah")}: ${auth.districtName ?? "-"}',
+                            style: TextStyle(
+                              color: theme.primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${auth.stateName ?? "-"} / ${auth.zoneName ?? settings.t("Semua Zon")}',
+                            style: TextStyle(
+                              color: subtitleColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
             // KPI Metrics Row (3-Cards)

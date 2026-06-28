@@ -9,17 +9,25 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   String? _userId;
   String? _role;
+  String? _stateId;
+  String? _districtId;
+  String? _zoneId;
   String? _stateName;
   String? _districtName;
   String? _zoneName;
+  bool _mustChangePassword = false;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get userId => _userId;
   String? get role => _role;
+  String? get stateId => _stateId;
+  String? get districtId => _districtId;
+  String? get zoneId => _zoneId;
   String? get stateName => _stateName;
   String? get districtName => _districtName;
   String? get zoneName => _zoneName;
+  bool get mustChangePassword => _mustChangePassword;
   bool get isAuthenticated => _userId != null;
 
   AuthProvider() {
@@ -30,9 +38,13 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('user_id');
     _role = prefs.getString('user_role');
+    _stateId = prefs.getString('user_state_id');
+    _districtId = prefs.getString('user_district_id');
+    _zoneId = prefs.getString('user_zone_id');
     _stateName = prefs.getString('user_state_name');
     _districtName = prefs.getString('user_district_name');
     _zoneName = prefs.getString('user_zone_name');
+    _mustChangePassword = prefs.getBool('must_change_password') ?? false;
     notifyListeners();
   }
 
@@ -58,17 +70,27 @@ class AuthProvider extends ChangeNotifier {
       if (data['status'] == 'success') {
         _userId = data['data']['id'];
         _role = data['data']['role'];
+        _stateId = data['data']['state_id'] as String?;
+        _districtId = data['data']['district_id'] as String?;
+        _zoneId = data['data']['zone_id'] as String?;
         _stateName = data['data']['state_name'] as String?;
         _districtName = data['data']['district_name'] as String?;
         _zoneName = data['data']['zone_name'] as String?;
+        _mustChangePassword = _parseMustChangePassword(
+          data['data']['must_change_password'],
+        );
         final String? token = data['token'];
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', _userId!);
         await prefs.setString('user_role', _role!);
+        await _saveOptionalString(prefs, 'user_state_id', _stateId);
+        await _saveOptionalString(prefs, 'user_district_id', _districtId);
+        await _saveOptionalString(prefs, 'user_zone_id', _zoneId);
         await _saveOptionalString(prefs, 'user_state_name', _stateName);
         await _saveOptionalString(prefs, 'user_district_name', _districtName);
         await _saveOptionalString(prefs, 'user_zone_name', _zoneName);
+        await prefs.setBool('must_change_password', _mustChangePassword);
         if (token != null) {
           await prefs.setString('jwt_token', token);
         }
@@ -103,15 +125,62 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove('user_id');
     await prefs.remove('user_role');
     await prefs.remove('jwt_token');
+    await prefs.remove('user_state_id');
+    await prefs.remove('user_district_id');
+    await prefs.remove('user_zone_id');
     await prefs.remove('user_state_name');
     await prefs.remove('user_district_name');
     await prefs.remove('user_zone_name');
+    await prefs.remove('must_change_password');
     _userId = null;
     _role = null;
+    _stateId = null;
+    _districtId = null;
+    _zoneId = null;
     _stateName = null;
     _districtName = null;
     _zoneName = null;
+    _mustChangePassword = false;
     notifyListeners();
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final data = await ApiClient.postData('auth/change_password.php', {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      });
+      if (data['status'] == 'success') {
+        _mustChangePassword = false;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('must_change_password', false);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      _errorMessage = data['message'] ?? 'Password change failed.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e, stackTrace) {
+      appLogger.e(
+        '=== PASSWORD CHANGE EXCEPTION ===\nException: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorMessage =
+          "Network Exception: Unable to communicate with the server.";
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> _saveOptionalString(
@@ -124,5 +193,15 @@ class AuthProvider extends ChangeNotifier {
     } else {
       await prefs.setString(key, value);
     }
+  }
+
+  bool _parseMustChangePassword(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value.toInt() == 1;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized == '1' || normalized == 'true' || normalized == 'yes';
+    }
+    return false;
   }
 }

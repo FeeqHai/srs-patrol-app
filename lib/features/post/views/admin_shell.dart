@@ -12,6 +12,7 @@ import 'admin_squad_schedule_screen.dart';
 import 'admin_member_screen.dart';
 import 'admin_equipment_screen.dart';
 import 'super_admin_screen.dart';
+import 'admin_location_screen.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -40,11 +41,13 @@ class _AdminShellState extends State<AdminShell> {
 
     final List<String> pageTitles = [
       if (isSuperAdmin) 'Super Admin',
+      if (isSuperAdmin) 'Pengurusan Lokasi',
       ..._pageTitles,
     ];
 
     final List<Widget> screens = [
       if (isSuperAdmin) const SuperAdminScreen(),
+      if (isSuperAdmin) const AdminLocationScreen(),
       const AnalyticsScreen(),
       const QrGeneratorScreen(),
       const AdminEquipmentScreen(),
@@ -74,6 +77,11 @@ class _AdminShellState extends State<AdminShell> {
           NavigationItem(
             icon: Icons.security_outlined,
             label: settings.t('Super Admin'),
+          ),
+        if (isSuperAdmin)
+          NavigationItem(
+            icon: Icons.location_city_outlined,
+            label: settings.t('Lokasi'),
           ),
         NavigationItem(icon: Icons.dashboard, label: settings.t('Pantau')),
         NavigationItem(

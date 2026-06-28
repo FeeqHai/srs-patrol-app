@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'features/auth/views/login_screen.dart';
 import 'features/auth/views/register_screen.dart';
+import 'features/auth/views/change_password_screen.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/incident/providers/incident_provider.dart';
 import 'core/widgets/main_shell.dart';
@@ -284,6 +285,9 @@ class RootRouter extends StatelessWidget {
       builder: (context, authProvider, child) {
         if (authProvider.isAuthenticated) {
           SosAlertService().startPolling(context);
+          if (authProvider.mustChangePassword) {
+            return const ChangePasswordScreen();
+          }
           if (authProvider.role == 'ketua_krt' ||
               authProvider.role == 'ketua' ||
               authProvider.role == 'super_admin') {

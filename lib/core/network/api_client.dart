@@ -36,7 +36,11 @@ class ApiClient {
       // 200 means "OK" from the server
       if (response.statusCode == 200) {
         // We expect our PHP scripts to always return JSON (e.g., {"status": "success", "message": "..."})
-        return json.decode(response.body);
+        try {
+          return json.decode(response.body);
+        } on FormatException {
+          throw Exception(_cleanNonJsonResponse(response.body));
+        }
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
@@ -66,7 +70,11 @@ class ApiClient {
       final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        try {
+          return json.decode(response.body);
+        } on FormatException {
+          throw Exception(_cleanNonJsonResponse(response.body));
+        }
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
@@ -78,5 +86,20 @@ class ApiClient {
       );
       throw Exception("Network connection failed: $e");
     }
+  }
+
+  static String _cleanNonJsonResponse(String body) {
+    final withoutTags = body
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (withoutTags.isEmpty) {
+      return 'Server returned an invalid non-JSON response.';
+    }
+    return 'Server returned an invalid response: $withoutTags';
   }
 }

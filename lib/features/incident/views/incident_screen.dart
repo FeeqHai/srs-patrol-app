@@ -109,7 +109,7 @@ class _IncidentScreenState extends State<IncidentScreen>
       if (_selectedFilter != 'Semua') {
         url += '&category=${Uri.encodeComponent(_selectedFilter)}';
       }
-      if (_selectedZone != 'Semua') {
+      if (authProvider.role != 'peronda' && _selectedZone != 'Semua') {
         url += '&zone=${Uri.encodeComponent(_selectedZone)}';
       }
 
@@ -450,7 +450,9 @@ class _IncidentScreenState extends State<IncidentScreen>
 
   void _showFilterBottomSheet() {
     final settings = context.read<SettingsProvider>();
+    final authProvider = context.read<AuthProvider>();
     final theme = Theme.of(context);
+    final bool showZoneFilter = authProvider.role != 'peronda';
     String tempCategory = _selectedFilter;
     String tempZone = _selectedZone;
     final List<String> zonesList = [
@@ -522,34 +524,36 @@ class _IncidentScreenState extends State<IncidentScreen>
                       }
                     },
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    settings.t("Zon Rondaan"),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: tempZone,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
+                  if (showZoneFilter) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      settings.t("Zon Rondaan"),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    items: zonesList.map((String val) {
-                      return DropdownMenuItem<String>(
-                        value: val,
-                        child: Text(val),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setSheetState(() => tempZone = val);
-                      }
-                    },
-                  ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      initialValue: tempZone,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: theme.dividerColor.withValues(alpha: 0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      items: zonesList.map((String val) {
+                        return DropdownMenuItem<String>(
+                          value: val,
+                          child: Text(val),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setSheetState(() => tempZone = val);
+                        }
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Text(
                     settings.t("Pilih Tarikh"),
@@ -645,7 +649,9 @@ class _IncidentScreenState extends State<IncidentScreen>
                           onPressed: () {
                             setState(() {
                               _selectedFilter = tempCategory;
-                              _selectedZone = tempZone;
+                              _selectedZone = showZoneFilter
+                                  ? tempZone
+                                  : 'Semua';
                             });
                             Navigator.pop(context);
                             _refresh();

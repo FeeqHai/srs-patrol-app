@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../auth/models/location_option.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/services/auth_service.dart';
 
-/// Status-filter values used by the segmented control. `'all'` shows every
-/// member; the others constrain to a single [AccountStatus].
-const String _kFilterAll = 'all';
-const String _kFilterPending = 'pending';
-const String _kFilterActive = 'active';
-const String _kFilterInactive = 'inactive';
+const String _all = 'all';
 
 class AdminMemberScreen extends StatefulWidget {
   const AdminMemberScreen({super.key});
@@ -19,368 +18,160 @@ class AdminMemberScreen extends StatefulWidget {
 }
 
 class _AdminMemberScreenState extends State<AdminMemberScreen> {
+  final AuthService _authService = AuthService();
+  final _searchController = TextEditingController();
+
   List<UserModel> _members = [];
-  String _searchQuery = '';
-  String _selectedZone = 'Semua Zon';
-  String _statusFilter = _kFilterAll;
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+  LocationOption? _state;
+  LocationOption? _district;
+  LocationOption? _zone;
+  String _status = _all;
+  String _role = _all;
   bool _isLoading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchMembers();
+    _loadInitial();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitial() async {
+    await Future.wait([_fetchMembers(), _loadLocationFilters()]);
+  }
+
+  Future<void> _loadLocationFilters() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() => _states = states);
+      } else if (auth.districtId != null) {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: auth.districtId,
+        );
+        if (!mounted) return;
+        setState(() => _zones = zones);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Tidak dapat memuatkan lokasi.');
+    }
   }
 
   Future<void> _fetchMembers() async {
+    setState(() => _isLoading = true);
     try {
       final data =
           await ApiClient.getData('auth/get_patrollers.php')
               as Map<String, dynamic>;
-      if (data['status'] == 'success') {
-        final list = (data['data'] as List<dynamic>)
-            .map((j) => UserModel.fromJson(j as Map<String, dynamic>))
-            .toList();
-        if (!mounted) return;
-        setState(() {
-          _members = list;
-          _isLoading = false;
-          _error = null;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() {
-          _error = (data['message'] ?? 'Gagal memuatkan ahli.').toString();
-          _isLoading = false;
-        });
+      if (data['status'] != 'success') {
+        throw Exception(data['message'] ?? 'Gagal memuatkan ahli.');
       }
+      final members = (data['data'] as List<dynamic>? ?? [])
+          .map((item) => UserModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _members = members;
+        _isLoading = false;
+        _error = null;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Ralat Rangkaian: $e';
         _isLoading = false;
+        _error = 'Ralat Rangkaian: $e';
       });
     }
   }
 
-  Widget _buildStatusChip(AccountStatus status, SettingsProvider settings) {
-    Color bgColor;
-    Color textColor;
-    String text;
-
-    switch (status) {
-      case AccountStatus.active:
-        bgColor = Colors.green.withValues(alpha: 0.15);
-        textColor = Colors.green.shade800;
-        text = settings.t('Aktif');
-      case AccountStatus.pending:
-        bgColor = Colors.orange.withValues(alpha: 0.15);
-        textColor = Colors.orange.shade800;
-        text = settings.t('Menunggu');
-      case AccountStatus.inactive:
-        bgColor = Colors.red.withValues(alpha: 0.15);
-        textColor = Colors.red.shade800;
-        text = settings.t('Nyahaktif');
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-      ),
+  Future<void> _selectState(LocationOption? state) async {
+    setState(() {
+      _state = state;
+      _district = null;
+      _zone = null;
+      _districts = const [];
+      _zones = const [];
+    });
+    if (state == null) return;
+    final districts = await _authService.fetchLocations(
+      level: 'districts',
+      parentId: state.id,
     );
+    if (!mounted || _state?.id != state.id) return;
+    setState(() => _districts = districts);
   }
 
-  Widget _buildRoleChip(String role, SettingsProvider settings) {
-    Color bgColor;
-    Color textColor;
-    String text;
-
-    if (role == 'ketua_peronda') {
-      bgColor = Colors.amber.withValues(alpha: 0.15);
-      textColor = Colors.amber.shade900;
-      text = settings.t('Ketua Peronda');
-    } else {
-      bgColor = Colors.blue.withValues(alpha: 0.15);
-      textColor = Colors.blue.shade800;
-      text = settings.t('Peronda');
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-      ),
+  Future<void> _selectDistrict(LocationOption? district) async {
+    setState(() {
+      _district = district;
+      _zone = null;
+      _zones = const [];
+    });
+    if (district == null) return;
+    final zones = await _authService.fetchLocations(
+      level: 'zones',
+      parentId: district.id,
     );
+    if (!mounted || _district?.id != district.id) return;
+    setState(() => _zones = zones);
   }
 
-  void _showStatusBottomSheet(
-    BuildContext context,
-    UserModel member,
-    SettingsProvider settings,
-  ) {
-    AccountStatus selected = member.accountStatusEnum;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24.0, 12.0, 24.0, 32.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${settings.t('Tukar Status')}: ${member.fullName}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  SegmentedButton<AccountStatus>(
-                    segments: [
-                      ButtonSegment<AccountStatus>(
-                        value: AccountStatus.active,
-                        label: Text(settings.t('Aktif')),
-                        icon: const Icon(Icons.check_circle_outline),
-                      ),
-                      ButtonSegment<AccountStatus>(
-                        value: AccountStatus.pending,
-                        label: Text(settings.t('Menunggu')),
-                        icon: const Icon(Icons.hourglass_empty),
-                      ),
-                      ButtonSegment<AccountStatus>(
-                        value: AccountStatus.inactive,
-                        label: Text(settings.t('Nyahaktif')),
-                        icon: const Icon(Icons.block),
-                      ),
-                    ],
-                    selected: {selected},
-                    onSelectionChanged: (Set<AccountStatus> newSelection) {
-                      setModalState(() {
-                        selected = newSelection.first;
-                      });
-                    },
-                    style: SegmentedButton.styleFrom(
-                      selectedForegroundColor: Colors.white,
-                      selectedBackgroundColor: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(settings.t('Batal')),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _updateUserStatus(member.id, selected);
-                          },
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Theme.of(context).primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(settings.t('Tukar')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+  List<UserModel> get _filteredMembers {
+    final search = _searchController.text.trim().toLowerCase();
+    return _members.where((member) {
+      final text = [
+        member.fullName,
+        member.email ?? '',
+        member.icNumber ?? '',
+        member.phoneNumber ?? '',
+      ].join(' ').toLowerCase();
+      final matchesSearch = search.isEmpty || text.contains(search);
+      final matchesState = _state == null || member.stateId == _state!.id;
+      final matchesDistrict =
+          _district == null || member.districtId == _district!.id;
+      final matchesZone = _zone == null || member.zoneId == _zone!.id;
+      final matchesStatus =
+          _status == _all || member.accountStatusEnum.wireValue == _status;
+      final matchesRole = _role == _all || member.role == _role;
+      return matchesSearch &&
+          matchesState &&
+          matchesDistrict &&
+          matchesZone &&
+          matchesStatus &&
+          matchesRole;
+    }).toList();
   }
 
-  void _showRoleBottomSheet(
-    BuildContext context,
-    UserModel member,
-    SettingsProvider settings,
-  ) {
-    String selectedRole = member.role;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24.0, 12.0, 24.0, 32.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${settings.t('Tukar Peranan')}: ${member.fullName}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment<String>(
-                        value: 'peronda',
-                        label: Text(settings.t('Peronda')),
-                        icon: const Icon(Icons.person_outline),
-                      ),
-                      ButtonSegment<String>(
-                        value: 'ketua_peronda',
-                        label: Text(settings.t('Ketua Peronda')),
-                        icon: const Icon(Icons.admin_panel_settings_outlined),
-                      ),
-                    ],
-                    selected: {selectedRole},
-                    onSelectionChanged: (Set<String> newSelection) {
-                      setModalState(() {
-                        selectedRole = newSelection.first;
-                      });
-                    },
-                    style: SegmentedButton.styleFrom(
-                      selectedForegroundColor: Colors.white,
-                      selectedBackgroundColor: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(settings.t('Batal')),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _updateUserRole(member.id, selectedRole);
-                          },
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Theme.of(context).primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(settings.t('Tukar')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _updateUserStatus(String userId, AccountStatus status) async {
+  Future<void> _postAction(Map<String, String> body) async {
     final settings = context.read<SettingsProvider>();
     final messenger = ScaffoldMessenger.of(context);
-
     try {
-      final data = await ApiClient.postData('admin/update_user.php', {
-        'action': 'update_status',
-        'user_id': userId,
-        'account_status': status.wireValue,
-      });
-
-      if (data['status'] == 'success') {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(settings.t('Kemas kini berjaya')),
-            backgroundColor: Colors.green,
-          ),
-        );
+      final data = await ApiClient.postData('admin/update_user.php', body);
+      final ok = data['status'] == 'success';
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(data['message'] ?? settings.t('Kemas kini selesai')),
+          backgroundColor: ok ? Colors.green : Colors.redAccent,
+        ),
+      );
+      if (ok) {
+        if (data['temporary_password'] != null && mounted) {
+          await _showTempPassword(data['temporary_password'].toString());
+        }
         await _fetchMembers();
-      } else {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(data['message'] ?? settings.t('Kemas kini gagal')),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
       }
     } catch (e) {
       messenger.showSnackBar(
@@ -392,497 +183,650 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
     }
   }
 
-  Future<void> _updateUserRole(String userId, String role) async {
+  Future<void> _showTempPassword(String password) async {
     final settings = context.read<SettingsProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      final data = await ApiClient.postData('admin/update_user.php', {
-        'action': 'promote_role',
-        'user_id': userId,
-        'role': role,
-      });
-
-      if (data['status'] == 'success') {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(settings.t('Kemas kini berjaya')),
-            backgroundColor: Colors.green,
-          ),
-        );
-        await _fetchMembers();
-      } else {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(data['message'] ?? settings.t('Kemas kini gagal')),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('${settings.t('Ralat Rangkaian')}: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
-  }
-
-  /// Confirms rejection before setting the member to `inactive`. Approve is
-  /// reversible so it skips confirmation; reject feels destructive.
-  void _confirmReject(UserModel member) {
-    final settings = context.read<SettingsProvider>();
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.person_remove_outlined, size: 40),
-        title: Text(settings.t('Tolak Pendaftaran')),
-        content: Text(
-          settings.t('Adakah anda pasti ingin menolak pendaftaran ahli ini?'),
+      builder: (context) => AlertDialog(
+        title: Text(settings.t('Kata Laluan Sementara')),
+        content: SelectableText(
+          password,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(settings.t('Batal')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _updateUserStatus(member.id, AccountStatus.inactive);
-            },
-            child: Text(settings.t('Ya, Tolak')),
+            onPressed: () => Navigator.pop(context),
+            child: Text(settings.t('Tutup')),
           ),
         ],
       ),
     );
   }
 
-  void _showFilterBottomSheet() {
+  void _showStatusSheet(UserModel member) {
     final settings = context.read<SettingsProvider>();
-    final theme = Theme.of(context);
-    String tempStatus = _statusFilter;
-    String tempZone = _selectedZone;
-
-    final Set<String> zonesSet = {'Semua Zon'};
-    for (final m in _members) {
-      final z = m.districtZone;
-      if (z != null && z.isNotEmpty) zonesSet.add(z);
-    }
-    final List<String> zonesList = zonesSet.toList();
-
-    showModalBottomSheet(
+    AccountStatus selected = member.accountStatusEnum;
+    showModalBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: theme.cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                24.0,
-                16.0,
-                24.0,
-                24.0 + MediaQuery.of(context).viewInsets.bottom,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${settings.t('Tukar Status')}: ${member.fullName}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+              const SizedBox(height: 16),
+              SegmentedButton<AccountStatus>(
+                selected: {selected},
+                segments: [
+                  ButtonSegment(
+                    value: AccountStatus.pending,
+                    label: Text(settings.t('Menunggu')),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        settings.t("Tapis Pengurusan Ahli"),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
+                  ButtonSegment(
+                    value: AccountStatus.active,
+                    label: Text(settings.t('Aktif')),
                   ),
-                  const Divider(),
-                  const SizedBox(height: 12),
-                  Text(
-                    settings.t("Status Akaun"),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                  ButtonSegment(
+                    value: AccountStatus.inactive,
+                    label: Text(settings.t('Nyahaktif')),
                   ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: tempStatus,
-                    dropdownColor: theme.cardColor,
-                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                ],
+                onSelectionChanged: (value) =>
+                    setSheetState(() => selected = value.first),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _postAction({
+                    'action': 'update_status',
+                    'user_id': member.id,
+                    'account_status': selected.wireValue,
+                  });
+                },
+                child: Text(settings.t('Simpan')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRoleSheet(UserModel member) {
+    final settings = context.read<SettingsProvider>();
+    final isSuperAdmin = context.read<AuthProvider>().role == 'super_admin';
+    final roles = ['peronda', 'ketua_peronda', if (isSuperAdmin) 'ketua_krt'];
+    String selected = roles.contains(member.role) ? member.role : 'peronda';
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${settings.t('Tukar Peranan')}: ${member.fullName}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: selected,
+                items: roles
+                    .map(
+                      (role) => DropdownMenuItem(
+                        value: role,
+                        child: Text(_roleLabel(role, settings)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setSheetState(() => selected = value);
+                },
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _postAction({
+                    'action': 'promote_role',
+                    'user_id': member.id,
+                    'role': selected,
+                  });
+                },
+                child: Text(settings.t('Simpan')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditProfileDialog(UserModel member) async {
+    final settings = context.read<SettingsProvider>();
+    final name = TextEditingController(text: member.fullName);
+    final ic = TextEditingController(text: member.icNumber ?? '');
+    final phone = TextEditingController(text: member.phoneNumber ?? '');
+    final email = TextEditingController(text: member.email ?? '');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(settings.t('Edit Profil Ahli')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                decoration: InputDecoration(
+                  labelText: settings.t('Nama Penuh'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ic,
+                decoration: InputDecoration(
+                  labelText: settings.t('No. Kad Pengenalan'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phone,
+                decoration: InputDecoration(
+                  labelText: settings.t('No. Telefon'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: email,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(settings.t('Batal')),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _postAction({
+                'action': 'update_profile',
+                'user_id': member.id,
+                'full_name': name.text.trim(),
+                'ic_number': ic.text.trim(),
+                'phone_number': phone.text.trim(),
+                'email': email.text.trim(),
+              });
+            },
+            child: Text(settings.t('Simpan')),
+          ),
+        ],
+      ),
+    );
+    name.dispose();
+    ic.dispose();
+    phone.dispose();
+    email.dispose();
+  }
+
+  Future<void> _showTransferDialog(UserModel member) async {
+    final settings = context.read<SettingsProvider>();
+    LocationOption? state;
+    LocationOption? district;
+    LocationOption? zone;
+    List<LocationOption> districts = const [];
+    List<LocationOption> zones = const [];
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(settings.t('Pindah Lokasi Ahli')),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _locationDropdown(
+                  label: settings.t('Negeri'),
+                  value: state,
+                  items: _states,
+                  onChanged: (value) async {
+                    setDialogState(() {
+                      state = value;
+                      district = null;
+                      zone = null;
+                      districts = const [];
+                      zones = const [];
+                    });
+                    if (value == null) return;
+                    final loaded = await _authService.fetchLocations(
+                      level: 'districts',
+                      parentId: value.id,
+                    );
+                    if (context.mounted) {
+                      setDialogState(() => districts = loaded);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _locationDropdown(
+                  label: settings.t('Daerah'),
+                  value: district,
+                  items: districts,
+                  onChanged: state == null
+                      ? null
+                      : (value) async {
+                          setDialogState(() {
+                            district = value;
+                            zone = null;
+                            zones = const [];
+                          });
+                          if (value == null) return;
+                          final loaded = await _authService.fetchLocations(
+                            level: 'zones',
+                            parentId: value.id,
+                          );
+                          if (context.mounted) {
+                            setDialogState(() => zones = loaded);
+                          }
+                        },
+                ),
+                const SizedBox(height: 12),
+                _locationDropdown(
+                  label: settings.t('Zon'),
+                  value: zone,
+                  items: zones,
+                  onChanged: district == null
+                      ? null
+                      : (value) => setDialogState(() => zone = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(settings.t('Batal')),
+            ),
+            FilledButton(
+              onPressed: state == null || district == null || zone == null
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _postAction({
+                        'action': 'transfer_location',
+                        'user_id': member.id,
+                        'state_id': state!.id,
+                        'district_id': district!.id,
+                        'zone_id': zone!.id,
+                      });
+                    },
+              child: Text(settings.t('Pindah')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _resetPassword(UserModel member) async {
+    final settings = context.read<SettingsProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(settings.t('Reset Kata Laluan')),
+        content: Text(
+          '${settings.t('Jana kata laluan sementara untuk')} ${member.fullName}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(settings.t('Batal')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(settings.t('Reset')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _postAction({'action': 'reset_password', 'user_id': member.id});
+    }
+  }
+
+  Widget _locationDropdown({
+    required String label,
+    required LocationOption? value,
+    required List<LocationOption> items,
+    required ValueChanged<LocationOption?>? onChanged,
+  }) {
+    return DropdownButtonFormField<LocationOption>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label),
+      items: items
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(item.name, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  String _roleLabel(String role, SettingsProvider settings) {
+    switch (role) {
+      case 'super_admin':
+        return settings.t('Super Admin');
+      case 'ketua_krt':
+        return settings.t('Ketua KRT');
+      case 'ketua_peronda':
+        return settings.t('Ketua Peronda');
+      default:
+        return settings.t('Peronda');
+    }
+  }
+
+  Widget _chip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(SettingsProvider settings, ThemeData theme) {
+    final isSuperAdmin = context.watch<AuthProvider>().role == 'super_admin';
+    return Material(
+      color: theme.cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: settings.t('Cari nama, IC, telefon atau e-mel...'),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                SizedBox(
+                  width: 180,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _status,
                     decoration: InputDecoration(
-                      filled: true,
-                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      labelText: settings.t('Status'),
                     ),
                     items: [
                       DropdownMenuItem(
-                        value: _kFilterAll,
+                        value: _all,
                         child: Text(settings.t('Semua')),
                       ),
                       DropdownMenuItem(
-                        value: _kFilterActive,
-                        child: Text(settings.t('Aktif')),
-                      ),
-                      DropdownMenuItem(
-                        value: _kFilterPending,
+                        value: 'pending',
                         child: Text(settings.t('Menunggu')),
                       ),
                       DropdownMenuItem(
-                        value: _kFilterInactive,
+                        value: 'active',
+                        child: Text(settings.t('Aktif')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'inactive',
                         child: Text(settings.t('Nyahaktif')),
                       ),
                     ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setSheetState(() => tempStatus = val);
-                      }
-                    },
+                    onChanged: (value) =>
+                        setState(() => _status = value ?? _all),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    settings.t("Zon Rondaan"),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: tempZone,
-                    dropdownColor: theme.cardColor,
-                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                ),
+                SizedBox(
+                  width: 190,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _role,
                     decoration: InputDecoration(
-                      filled: true,
-                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      labelText: settings.t('Peranan'),
                     ),
-                    items: zonesList.map((String zone) {
-                      return DropdownMenuItem(
-                        value: zone,
-                        child: Text(
-                          zone == 'Semua Zon' ? settings.t(zone) : zone,
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setSheetState(() => tempZone = val);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _statusFilter = _kFilterAll;
-                              _selectedZone = 'Semua Zon';
-                            });
-                            Navigator.pop(context);
-                          },
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(settings.t('Reset')),
-                        ),
+                    items: [
+                      DropdownMenuItem(
+                        value: _all,
+                        child: Text(settings.t('Semua')),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            setState(() {
-                              _statusFilter = tempStatus;
-                              _selectedZone = tempZone;
-                            });
-                            Navigator.pop(context);
-                          },
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: theme.primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(settings.t('Tapis')),
-                        ),
+                      DropdownMenuItem(
+                        value: 'peronda',
+                        child: Text(settings.t('Peronda')),
                       ),
+                      DropdownMenuItem(
+                        value: 'ketua_peronda',
+                        child: Text(settings.t('Ketua Peronda')),
+                      ),
+                      if (isSuperAdmin)
+                        DropdownMenuItem(
+                          value: 'ketua_krt',
+                          child: Text(settings.t('Ketua KRT')),
+                        ),
                     ],
+                    onChanged: (value) => setState(() => _role = value ?? _all),
+                  ),
+                ),
+                if (isSuperAdmin) ...[
+                  SizedBox(
+                    width: 190,
+                    child: _nullableLocationDropdown(
+                      label: settings.t('Negeri'),
+                      value: _state,
+                      items: _states,
+                      allLabel: settings.t('Semua Negeri'),
+                      onChanged: _selectState,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 190,
+                    child: _nullableLocationDropdown(
+                      label: settings.t('Daerah'),
+                      value: _district,
+                      items: _districts,
+                      allLabel: settings.t('Semua Daerah'),
+                      enabled: _state != null,
+                      onChanged: _selectDistrict,
+                    ),
                   ),
                 ],
-              ),
-            );
-          },
-        );
-      },
+                SizedBox(
+                  width: 190,
+                  child: _nullableLocationDropdown(
+                    label: settings.t('Zon'),
+                    value: _zone,
+                    items: _zones,
+                    allLabel: settings.t('Semua Zon'),
+                    enabled: isSuperAdmin ? _district != null : true,
+                    onChanged: (value) => setState(() => _zone = value),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _nullableLocationDropdown({
+    required String label,
+    required LocationOption? value,
+    required List<LocationOption> items,
+    required String allLabel,
+    required ValueChanged<LocationOption?> onChanged,
+    bool enabled = true,
+  }) {
+    return DropdownButtonFormField<LocationOption?>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        DropdownMenuItem<LocationOption?>(
+          value: null,
+          child: Text(allLabel, overflow: TextOverflow.ellipsis),
+        ),
+        ...items.map(
+          (item) => DropdownMenuItem<LocationOption?>(
+            value: item,
+            child: Text(item.name, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: enabled ? onChanged : null,
     );
   }
 
   Widget _buildMemberCard(UserModel member, SettingsProvider settings) {
-    final theme = Theme.of(context);
+    final isSuperAdmin = context.read<AuthProvider>().role == 'super_admin';
     final status = member.accountStatusEnum;
-    final isPending = status == AccountStatus.pending;
+    final statusColor = status == AccountStatus.active
+        ? Colors.green.shade700
+        : status == AccountStatus.pending
+        ? Colors.orange.shade800
+        : Colors.redAccent;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shadowColor: Colors.black.withValues(alpha: 0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200, width: 1),
-      ),
-      color: theme.cardColor,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Profile Circle with status indicator dot
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: theme.primaryColor.withValues(
-                        alpha: 0.1,
-                      ),
-                      child: Text(
-                        member.fullName.isNotEmpty
-                            ? member.fullName[0].toUpperCase()
-                            : 'P',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: theme.primaryColor,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: status == AccountStatus.active
-                              ? Colors.green
-                              : status == AccountStatus.pending
-                              ? Colors.orange
-                              : Colors.grey,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
+                CircleAvatar(
+                  child: Text(
+                    member.fullName.isEmpty
+                        ? '?'
+                        : member.fullName[0].toUpperCase(),
+                  ),
                 ),
-                const SizedBox(width: 16),
-                // Details
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         member.fullName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
-                        runSpacing: 4,
                         children: [
-                          _buildRoleChip(member.role, settings),
-                          _buildStatusChip(status, settings),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              '${settings.t('Zon')}: ${member.districtZone ?? settings.t('Tiada')}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.badge_outlined,
-                            size: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'IC: ${member.icNumber ?? '-'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.phone_outlined,
-                            size: 14,
-                            color: theme.primaryColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            member.phoneNumber ?? '-',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          _chip(_roleLabel(member.role, settings), Colors.blue),
+                          _chip(settings.t(status.wireValue), statusColor),
                         ],
                       ),
                     ],
                   ),
                 ),
-                // Trailing Action Menu (status + role). Kept on every card so
-                // admins can still promote role / re-open a pending member.
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
                   onSelected: (value) {
-                    if (value == 'status') {
-                      _showStatusBottomSheet(context, member, settings);
-                    } else if (value == 'role') {
-                      _showRoleBottomSheet(context, member, settings);
-                    }
+                    if (value == 'status') _showStatusSheet(member);
+                    if (value == 'role') _showRoleSheet(member);
+                    if (value == 'profile') _showEditProfileDialog(member);
+                    if (value == 'location') _showTransferDialog(member);
+                    if (value == 'password') _resetPassword(member);
                   },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        PopupMenuItem<String>(
-                          value: 'status',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.shield_outlined,
-                                size: 18,
-                                color: theme.primaryColor,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(settings.t('Tukar Status')),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'role',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.admin_panel_settings_outlined,
-                                size: 18,
-                                color: theme.primaryColor,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(settings.t('Tukar Peranan')),
-                            ],
-                          ),
-                        ),
-                      ],
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'status',
+                      child: Text(settings.t('Tukar Status')),
+                    ),
+                    PopupMenuItem(
+                      value: 'role',
+                      child: Text(settings.t('Tukar Peranan')),
+                    ),
+                    if (isSuperAdmin) ...[
+                      PopupMenuItem(
+                        value: 'profile',
+                        child: Text(settings.t('Edit Profil')),
+                      ),
+                      PopupMenuItem(
+                        value: 'location',
+                        child: Text(settings.t('Pindah Lokasi')),
+                      ),
+                      PopupMenuItem(
+                        value: 'password',
+                        child: Text(settings.t('Reset Kata Laluan')),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
-            // Inline Approve/Reject actions for pending members.
-            if (isPending) ...[
-              const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            Text(
+              '${settings.t('Negeri')} / ${settings.t('Daerah')} / ${settings.t('Zon')}: '
+              '${member.stateName ?? '-'} / ${member.districtName ?? '-'} / ${member.zoneName ?? member.districtZone ?? '-'}',
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'IC: ${member.icNumber ?? '-'}  |  ${member.phoneNumber ?? '-'}',
+            ),
+            if (member.email != null) ...[
+              const SizedBox(height: 4),
+              Text(member.email!),
+            ],
+            if (status == AccountStatus.pending) ...[
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: () =>
-                          _updateUserStatus(member.id, AccountStatus.active),
-                      icon: const Icon(Icons.check, size: 18),
+                      onPressed: () => _postAction({
+                        'action': 'update_status',
+                        'user_id': member.id,
+                        'account_status': 'active',
+                      }),
+                      icon: const Icon(Icons.check),
                       label: Text(settings.t('Lulus')),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _confirmReject(member),
-                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => _postAction({
+                        'action': 'update_status',
+                        'user_id': member.id,
+                        'account_status': 'inactive',
+                      }),
+                      icon: const Icon(Icons.close),
                       label: Text(settings.t('Tolak')),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                        side: const BorderSide(color: Colors.redAccent),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -898,231 +842,42 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = Theme.of(context);
-
-    // Full-screen initial load only; afterwards the filter bar stays visible
-    // so admins can retry / filter even on an empty (filtered) result set.
-    if (_isLoading && _members.isEmpty) {
-      return Center(
-        child: CircularProgressIndicator(color: theme.primaryColor),
-      );
-    }
-
-    if (_error != null && _members.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 56, color: Colors.red.shade300),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.redAccent),
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () {
-                setState(() => _isLoading = true);
-                _fetchMembers();
-              },
-              icon: const Icon(Icons.refresh),
-              label: Text(settings.t('Cuba Lagi')),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_members.isEmpty) {
-      return Center(
-        child: Text(
-          settings.t('Tiada peronda dijumpai.'),
-          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-        ),
-      );
-    }
-
-    // Build the zone dropdown values.
-    final Set<String> zones = {'Semua Zon'};
-    for (final m in _members) {
-      final z = m.districtZone;
-      if (z != null && z.isNotEmpty) zones.add(z);
-    }
-
-    // Filter pipeline: search ∩ zone ∩ statusFilter.
-    final filtered = _members.where((m) {
-      final matchesSearch = m.fullName.toLowerCase().contains(
-        _searchQuery.toLowerCase(),
-      );
-      final matchesZone =
-          _selectedZone == 'Semua Zon' || m.districtZone == _selectedZone;
-      final matchesStatus =
-          _statusFilter == _kFilterAll ||
-          m.accountStatusEnum.wireValue == _statusFilter;
-      return matchesSearch && matchesZone && matchesStatus;
-    }).toList();
-
-    final bool isFilterActive =
-        _statusFilter != _kFilterAll || _selectedZone != 'Semua Zon';
+    final filtered = _filteredMembers;
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                  decoration: InputDecoration(
-                    hintText: settings.t('Cari nama peronda...'),
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                    prefixIcon: Icon(Icons.search, color: theme.primaryColor),
-                    filled: true,
-                    fillColor: theme.cardColor,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Colors.grey.shade200,
-                        width: 1,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Colors.grey.shade200,
-                        width: 1,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: theme.primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() => _searchQuery = value);
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.filter_list,
-                      color: isFilterActive ? Colors.white : theme.primaryColor,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: isFilterActive
-                          ? theme.primaryColor
-                          : theme.cardColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isFilterActive
-                              ? Colors.transparent
-                              : Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                    ),
-                    onPressed: _showFilterBottomSheet,
-                  ),
-                  if (isFilterActive)
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
+        _buildFilterBar(settings, theme),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              _error!,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
           ),
-        ),
-        // List (pull-to-refresh + empty states).
         Expanded(
           child: RefreshIndicator(
             onRefresh: _fetchMembers,
-            color: theme.primaryColor,
-            child: filtered.isEmpty
+            child: _isLoading
                 ? ListView(
-                    // Keep RefreshIndicator working even when empty.
                     children: [
-                      const SizedBox(height: 80),
+                      const SizedBox(height: 180),
                       Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              _statusFilter == _kFilterPending
-                                  ? Icons.check_circle_outline
-                                  : _statusFilter == _kFilterInactive
-                                  ? Icons.block
-                                  : Icons.search_off,
-                              size: 64,
-                              color: theme.disabledColor.withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _statusFilter == _kFilterPending
-                                  ? settings.t(
-                                      'Tiada ahli menunggu pengesahan.',
-                                    )
-                                  : _statusFilter == _kFilterInactive
-                                  ? settings.t('Tiada ahli nyahaktif.')
-                                  : settings.t('Tiada padanan carian.'),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: theme.textTheme.bodyLarge?.color
-                                    ?.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _statusFilter == _kFilterPending
-                                  ? settings.t(
-                                      'Semua pendaftaran baharu telah diluluskan.',
-                                    )
-                                  : _statusFilter == _kFilterInactive
-                                  ? settings.t(
-                                      'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.',
-                                    )
-                                  : settings.t(
-                                      'Cuba cari dengan e-mel atau no. kad pengenalan lain.',
-                                    ),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: theme.textTheme.bodyLarge?.color
-                                    ?.withValues(alpha: 0.4),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                        child: CircularProgressIndicator(
+                          color: theme.primaryColor,
                         ),
                       ),
                     ],
                   )
+                : filtered.isEmpty
+                ? ListView(
+                    children: [
+                      const SizedBox(height: 160),
+                      Center(child: Text(settings.t('Tiada ahli dijumpai.'))),
+                    ],
+                  )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    padding: const EdgeInsets.only(top: 12),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) =>
                         _buildMemberCard(filtered[index], settings),

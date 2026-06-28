@@ -51,18 +51,17 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
         fabItemIndices: [1, 3],
         hasSos: true,
       );
-    } else if (widget.items.length == 6 && widget.onSosPressed == null) {
+    } else if (widget.onSosPressed == null && widget.items.length >= 5) {
+      final lastIndex = widget.items.length - 1;
+      final visibleIndices = <int>{0, 1, lastIndex - 1, lastIndex};
+      final fabIndices = List<int>.generate(
+        widget.items.length,
+        (index) => index,
+      ).where((index) => !visibleIndices.contains(index)).toList();
       return _BottomBarConfig(
         leftItemIndices: [0, 1],
-        rightItemIndices: [4, 5],
-        fabItemIndices: [3, 2],
-        hasSos: false,
-      );
-    } else if (widget.items.length == 7 && widget.onSosPressed == null) {
-      return _BottomBarConfig(
-        leftItemIndices: [0, 1],
-        rightItemIndices: [5, 6],
-        fabItemIndices: [2, 3, 4],
+        rightItemIndices: [lastIndex - 1, lastIndex],
+        fabItemIndices: fabIndices,
         hasSos: false,
       );
     } else {
@@ -355,8 +354,10 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                       vertical: 12.0,
                       horizontal: 16.0,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
                       children: config.fabItemIndices.map((index) {
                         final item = widget.items[index];
                         final isSelected = widget.currentIndex == index;
@@ -370,7 +371,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
+                              horizontal: 12.0,
                               vertical: 8.0,
                             ),
                             child: Column(
