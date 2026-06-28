@@ -7,6 +7,16 @@
 
 ---
 
+## Current Implementation Note - 2026-06-27
+
+Super-admin location/report work is implemented on branch `feature/super-admin-location-report`.
+See `docs/SUPER_ADMIN_TEST_REPORT.md` for changed files, database migration details,
+verification results, and blocked manual tests. The key new backend migration is
+`srs_api/migrations/20260627_super_admin_location_report.sql`; apply it after
+starting XAMPP MariaDB and taking a full `srs_db` backup.
+
+---
+
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
