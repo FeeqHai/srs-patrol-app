@@ -246,6 +246,32 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> removeProfilePhoto() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authService.removeProfilePhoto();
+      _profileImageUrl = null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_profile_image_url');
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e, stackTrace) {
+      appLogger.e(
+        '=== PROFILE PHOTO REMOVE PROVIDER EXCEPTION ===\nException: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> updateCurrentUserProfile(UserModel user) async {
     _userId = user.id;
     _fullName = user.fullName;

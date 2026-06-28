@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
   Locale _locale = const Locale('ms');
+  bool _allowExternalNotifications = true;
+  bool _dailyNoteNotifications = true;
 
   SettingsProvider() {
     _loadSettings();
@@ -10,6 +12,9 @@ class SettingsProvider extends ChangeNotifier {
 
   Locale get locale => _locale;
   bool get isEnglish => _locale.languageCode == 'en';
+  bool get allowExternalNotifications => _allowExternalNotifications;
+  bool get dailyNoteNotifications => _dailyNoteNotifications;
+  bool get sosAlertsEnabled => true;
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -22,6 +27,10 @@ class SettingsProvider extends ChangeNotifier {
       _locale = const Locale('ms');
     }
 
+    _allowExternalNotifications =
+        prefs.getBool('allowExternalNotifications') ?? true;
+    _dailyNoteNotifications = prefs.getBool('dailyNoteNotifications') ?? true;
+
     notifyListeners();
   }
 
@@ -30,6 +39,20 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     prefs.setString('languageCode', langCode);
+  }
+
+  Future<void> setAllowExternalNotifications(bool value) async {
+    _allowExternalNotifications = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('allowExternalNotifications', value);
+  }
+
+  Future<void> setDailyNoteNotifications(bool value) async {
+    _dailyNoteNotifications = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('dailyNoteNotifications', value);
   }
 
   // --- VERY BASIC TRANSLATION MAP ---
@@ -227,6 +250,29 @@ class SettingsProvider extends ChangeNotifier {
       'Ahli': 'Members',
       'Skuad': 'Squad',
       // Profile Strings
+      'account': 'Account',
+      'settings': 'Settings',
+      'profile_photo': 'Profile photo',
+      'remove_profile_photo': 'Remove profile photo',
+      'remove_profile_photo_confirmation':
+          'Are you sure you want to remove your profile photo?',
+      'photo_remove_success': 'Profile photo removed successfully',
+      'photo_remove_failed': 'Failed to remove profile photo',
+      'notifications': 'Notifications',
+      'allow_external_notifications': 'Allow notifications outside the app',
+      'daily_note_notifications': 'Daily note notifications',
+      'sos_alerts': 'SOS alerts',
+      'accessibility': 'Accessibility',
+      'language': 'Language',
+      'font_size': 'Font size',
+      'high_contrast': 'High contrast',
+      'coming_soon': 'Coming soon',
+      'new_daily_note': 'New Daily Note',
+      'daily_note_received': 'Daily note received',
+      'no_notifications': 'No notifications',
+      'mark_as_read': 'Mark as read',
+      'Malay': 'Malay',
+      'English Language': 'English',
       'profile': 'Profile',
       'personal_information': 'Personal Information',
       'user_id': 'User ID',
@@ -776,6 +822,29 @@ class SettingsProvider extends ChangeNotifier {
       'Paling Banyak Nota': 'Paling Banyak Nota',
       'Tiada Nota': 'Tiada Nota',
       // Profile Strings
+      'account': 'Akaun',
+      'settings': 'Tetapan',
+      'profile_photo': 'Gambar Profil',
+      'remove_profile_photo': 'Buang Gambar Profil',
+      'remove_profile_photo_confirmation':
+          'Adakah anda pasti mahu membuang gambar profil anda?',
+      'photo_remove_success': 'Gambar profil berjaya dibuang',
+      'photo_remove_failed': 'Gagal membuang gambar profil',
+      'notifications': 'Notifikasi',
+      'allow_external_notifications': 'Benarkan notifikasi luar aplikasi',
+      'daily_note_notifications': 'Notifikasi nota harian',
+      'sos_alerts': 'Amaran SOS',
+      'accessibility': 'Kebolehcapaian',
+      'language': 'Bahasa',
+      'font_size': 'Saiz Font',
+      'high_contrast': 'Kontras Tinggi',
+      'coming_soon': 'Akan datang',
+      'new_daily_note': 'Nota Harian Baharu',
+      'daily_note_received': 'Nota harian diterima',
+      'no_notifications': 'Tiada notifikasi',
+      'mark_as_read': 'Tanda sudah dibaca',
+      'Malay': 'Bahasa Melayu',
+      'English Language': 'Bahasa Inggeris',
       'profile': 'Profil',
       'personal_information': 'Maklumat Peribadi',
       'user_id': 'ID Pengguna',

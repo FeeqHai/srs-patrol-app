@@ -154,4 +154,23 @@ class AuthService {
       throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
+
+  Future<void> removeProfilePhoto() async {
+    try {
+      final response = await ApiClient.postData(
+        'auth/remove_profile_photo.php',
+        const {},
+      );
+      if (response['status'] != 'success') {
+        throw Exception(response['message'] ?? 'Profile photo remove failed.');
+      }
+    } catch (e, stackTrace) {
+      appLogger.e(
+        '=== PROFILE PHOTO REMOVE EXCEPTION ===\nException: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
 }

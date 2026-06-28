@@ -15,6 +15,7 @@ import 'core/providers/settings_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/services/sos_alert_service.dart';
+import 'features/notifications/services/notification_service.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -23,6 +24,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await SosAlertService().initialize();
+  await NotificationService().initialize();
 
   runApp(const SRSPatrolApp());
 }
@@ -285,6 +287,7 @@ class RootRouter extends StatelessWidget {
       builder: (context, authProvider, child) {
         if (authProvider.isAuthenticated) {
           SosAlertService().startPolling(context);
+          NotificationService().startPolling(context);
           if (authProvider.mustChangePassword) {
             return const ChangePasswordScreen();
           }
@@ -299,6 +302,7 @@ class RootRouter extends StatelessWidget {
           }
         } else {
           SosAlertService().stopPolling();
+          NotificationService().stopPolling();
           return const LoginScreen();
         }
       },
