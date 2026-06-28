@@ -262,13 +262,8 @@ class _IncidentScreenState extends State<IncidentScreen>
         final res = json.decode(response.body);
         if (res['status'] == 'success') {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(settings.t("Laporan berjaya dihantar.")),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _refresh();
+          await _showReportSuccessfulDialog();
+          await _refresh();
         } else {
           throw Exception(res['message']);
         }
@@ -382,26 +377,19 @@ class _IncidentScreenState extends State<IncidentScreen>
     final settings = context.read<SettingsProvider>();
     if (_selectedIncidentIds.isEmpty) return;
 
-    final hasSubmitted = _selectedIncidentIds.any((id) {
+    final pendingIds = _selectedIncidentIds.where((id) {
       final incident = _incidents.firstWhere(
         (inc) => inc['id'].toString() == id,
         orElse: () => null,
       );
-      if (incident != null) {
-        final status = incident['status'] ?? 'Pending';
-        return status.toLowerCase() == 'submitted';
-      }
-      return false;
-    });
+      if (incident == null) return false;
+      return _isPendingStatus(incident['status'] ?? 'Pending');
+    }).toList();
 
-    if (hasSubmitted) {
+    if (pendingIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            settings.t(
-              "Terdapat laporan yang telah dihantar dalam pilihan anda.",
-            ),
-          ),
+          content: Text(settings.t('note_pending_submission')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -413,7 +401,7 @@ class _IncidentScreenState extends State<IncidentScreen>
     final token = prefs.getString('jwt_token');
 
     int successCount = 0;
-    for (final id in _selectedIncidentIds) {
+    for (final id in pendingIds) {
       try {
         final response = await http.post(
           Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
@@ -432,20 +420,96 @@ class _IncidentScreenState extends State<IncidentScreen>
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "$successCount ${settings.t("laporan berjaya dihantar.")}",
+    final failedCount = pendingIds.length - successCount;
+    if (successCount > 0) {
+      await _showReportSuccessfulDialog(count: successCount);
+    }
+    if (!mounted) return;
+    if (failedCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$successCount berjaya, $failedCount gagal'),
+          backgroundColor: Colors.redAccent,
         ),
-        backgroundColor: Colors.green,
-      ),
-    );
+      );
+    }
 
     setState(() {
       _selectedIncidentIds.clear();
       _isBatchMode = false;
     });
     _refresh();
+  }
+
+  bool _isPendingStatus(dynamic status) {
+    final normalized = (status ?? '').toString().toLowerCase();
+    return normalized == 'pending' || normalized == 'draft';
+  }
+
+  Future<void> _showReportSuccessfulDialog({int? count}) async {
+    final settings = context.read<SettingsProvider>();
+    final message = count == null
+        ? settings.t(
+            'Data insiden telah direkodkan ke dalam sistem Nota Harian.',
+          )
+        : settings
+              .t('daily_notes_submitted_count')
+              .replaceFirst('X', count.toString());
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 10,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle_outline,
+                color: Color(0xFF2DA44E),
+                size: 64,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                settings.t('report_successful'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2DA44E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    settings.t('Selesai'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFilterBottomSheet() {
@@ -870,24 +934,31 @@ class _IncidentScreenState extends State<IncidentScreen>
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: widget.patrollerIdFilter == null
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 70.0),
-              child: FloatingActionButton(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const IncidentReportScreen(),
+          ? FloatingActionButton(
+              heroTag: 'incident_add_daily_note_fab',
+              tooltip: settings.t('add_daily_note'),
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.white,
+              onPressed: () async {
+                final saved = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const IncidentReportScreen(),
+                  ),
+                );
+                if (saved == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(settings.t('daily_note_saved_message')),
+                      backgroundColor: const Color(0xFF2DA44E),
                     ),
                   );
-                  await _refresh();
-                },
-                child: const Icon(Icons.add),
-              ),
+                }
+                await _refresh();
+              },
+              child: const Icon(Icons.edit_note_rounded),
             )
           : null,
     );
@@ -1115,15 +1186,14 @@ class _IncidentScreenState extends State<IncidentScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Status submit icon (separate submit icon)
-                      if (status.toLowerCase() == 'pending' ||
-                          status.toLowerCase() == 'draft')
+                      if (_isPendingStatus(status))
                         IconButton(
                           icon: const Icon(
                             Icons.send_outlined,
                             color: Colors.green,
                             size: 21,
                           ),
-                          tooltip: settings.t("Hantar Laporan"),
+                          tooltip: settings.t("send_to_krt"),
                           onPressed: () => _submitIncident(id),
                           constraints: const BoxConstraints(
                             minWidth: 50,

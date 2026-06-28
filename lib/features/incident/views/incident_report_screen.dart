@@ -174,7 +174,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
             Text(
-              context.read<SettingsProvider>().t('Menghantar Laporan...'),
+              context.read<SettingsProvider>().t('Preparing note...'),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],
@@ -198,67 +198,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     Navigator.pop(context); // close dialog
 
     if (success) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 10,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.greenAccent,
-                  size: 64,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  context.read<SettingsProvider>().t('Laporan Berjaya'),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  context.read<SettingsProvider>().t(
-                    'Data insiden telah direkodkan ke dalam sistem Nota Harian.',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(height: 1.5),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      if (Navigator.canPop(context)) Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.greenAccent,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      context.read<SettingsProvider>().t('Selesai'),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      Navigator.pop(context, true);
     } else {
       _showSnackBar(
         '${context.read<SettingsProvider>().t('RALAT:')} ${provider.errorMessage}',
@@ -305,10 +245,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(settings.t('Nota Harian')),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: Text(settings.t('Nota Harian')), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -650,7 +587,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
+                    backgroundColor: const Color(0xFF2DA44E),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
