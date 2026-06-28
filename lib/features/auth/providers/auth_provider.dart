@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart'; // INJECTED: The centralized network layer
 import '../../../core/utils/logger.dart';
+import '../models/user_model.dart';
+import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   String? _errorMessage;
   String? _userId;
+  String? _fullName;
+  String? _email;
+  String? _profileImageUrl;
   String? _role;
   String? _stateId;
   String? _districtId;
@@ -20,6 +27,9 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get userId => _userId;
+  String? get fullName => _fullName;
+  String? get email => _email;
+  String? get profileImageUrl => _profileImageUrl;
   String? get role => _role;
   String? get stateId => _stateId;
   String? get districtId => _districtId;
@@ -37,6 +47,9 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _loadSession() async {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('user_id');
+    _fullName = prefs.getString('user_full_name');
+    _email = prefs.getString('user_email');
+    _profileImageUrl = prefs.getString('user_profile_image_url');
     _role = prefs.getString('user_role');
     _stateId = prefs.getString('user_state_id');
     _districtId = prefs.getString('user_district_id');
@@ -69,6 +82,13 @@ class AuthProvider extends ChangeNotifier {
       // 3. Evaluate the validated JSON response
       if (data['status'] == 'success') {
         _userId = data['data']['id'];
+        _fullName = data['data']['full_name'] as String?;
+        _email = data['data']['email'] as String?;
+        _profileImageUrl =
+            (data['data']['profile_image_url'] ??
+                    data['data']['profileImageUrl'] ??
+                    data['data']['profile_image_path'])
+                as String?;
         _role = data['data']['role'];
         _stateId = data['data']['state_id'] as String?;
         _districtId = data['data']['district_id'] as String?;
@@ -83,6 +103,13 @@ class AuthProvider extends ChangeNotifier {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', _userId!);
+        await _saveOptionalString(prefs, 'user_full_name', _fullName);
+        await _saveOptionalString(prefs, 'user_email', _email);
+        await _saveOptionalString(
+          prefs,
+          'user_profile_image_url',
+          _profileImageUrl,
+        );
         await prefs.setString('user_role', _role!);
         await _saveOptionalString(prefs, 'user_state_id', _stateId);
         await _saveOptionalString(prefs, 'user_district_id', _districtId);
@@ -123,6 +150,9 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_id');
+    await prefs.remove('user_full_name');
+    await prefs.remove('user_email');
+    await prefs.remove('user_profile_image_url');
     await prefs.remove('user_role');
     await prefs.remove('jwt_token');
     await prefs.remove('user_state_id');
@@ -133,6 +163,9 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove('user_zone_name');
     await prefs.remove('must_change_password');
     _userId = null;
+    _fullName = null;
+    _email = null;
+    _profileImageUrl = null;
     _role = null;
     _stateId = null;
     _districtId = null;
@@ -181,6 +214,68 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<bool> updateProfilePhoto(XFile imageFile) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final imageUrl = await _authService.uploadProfilePhoto(imageFile);
+      _profileImageUrl = imageUrl;
+      final prefs = await SharedPreferences.getInstance();
+      await _saveOptionalString(
+        prefs,
+        'user_profile_image_url',
+        _profileImageUrl,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e, stackTrace) {
+      appLogger.e(
+        '=== PROFILE PHOTO PROVIDER EXCEPTION ===\nException: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> updateCurrentUserProfile(UserModel user) async {
+    _userId = user.id;
+    _fullName = user.fullName;
+    _email = user.email;
+    _profileImageUrl = user.effectiveProfileImageUrl;
+    _role = user.role;
+    _stateId = user.stateId;
+    _districtId = user.districtId;
+    _zoneId = user.zoneId;
+    _stateName = user.stateName;
+    _districtName = user.districtName;
+    _zoneName = user.zoneName;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_id', user.id);
+    await _saveOptionalString(prefs, 'user_full_name', _fullName);
+    await _saveOptionalString(prefs, 'user_email', _email);
+    await _saveOptionalString(
+      prefs,
+      'user_profile_image_url',
+      _profileImageUrl,
+    );
+    await prefs.setString('user_role', _role!);
+    await _saveOptionalString(prefs, 'user_state_id', _stateId);
+    await _saveOptionalString(prefs, 'user_district_id', _districtId);
+    await _saveOptionalString(prefs, 'user_zone_id', _zoneId);
+    await _saveOptionalString(prefs, 'user_state_name', _stateName);
+    await _saveOptionalString(prefs, 'user_district_name', _districtName);
+    await _saveOptionalString(prefs, 'user_zone_name', _zoneName);
+    notifyListeners();
   }
 
   Future<void> _saveOptionalString(

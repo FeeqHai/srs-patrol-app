@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/user_avatar.dart';
 
 class SuperAdminScreen extends StatefulWidget {
   const SuperAdminScreen({super.key});
@@ -1109,14 +1110,13 @@ class _KrtAdminPreviewRow extends StatelessWidget {
     return ListTile(
       minVerticalPadding: 8,
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: Theme.of(
-          context,
-        ).colorScheme.primary.withValues(alpha: 0.12),
-        child: Icon(
-          Icons.person_outline,
-          color: Theme.of(context).colorScheme.primary,
+      leading: UserAvatar(
+        imageUrl: admin['profile_image_url'] as String?,
+        initials: UserAvatar.initialsFromName(
+          admin['full_name'] as String?,
+          fallback: 'KK',
         ),
+        radius: 20,
       ),
       title: Text(
         admin['full_name']?.toString() ?? settings.t('Ketua KRT'),

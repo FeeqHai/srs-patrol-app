@@ -36,6 +36,7 @@ class UserModel {
   final String? icNumber;
   final String? phoneNumber;
   final String? email;
+  final String? profileImageUrl;
   final String? profileImagePath;
   final String? districtZone;
   final String? stateId;
@@ -44,6 +45,7 @@ class UserModel {
   final String? stateName;
   final String? districtName;
   final String? zoneName;
+  final String? squadName;
   final String role;
   final String? accountStatus;
 
@@ -53,6 +55,7 @@ class UserModel {
     this.icNumber,
     this.phoneNumber,
     this.email,
+    this.profileImageUrl,
     this.profileImagePath,
     this.districtZone,
     this.stateId,
@@ -61,6 +64,7 @@ class UserModel {
     this.stateName,
     this.districtName,
     this.zoneName,
+    this.squadName,
     required this.role,
     this.accountStatus,
   });
@@ -77,6 +81,8 @@ class UserModel {
       icNumber: json['ic_number'] as String?,
       phoneNumber: json['phone_number'] as String?,
       email: json['email'] as String?,
+      profileImageUrl:
+          (json['profile_image_url'] ?? json['profileImageUrl']) as String?,
       profileImagePath: json['profile_image_path'] as String?,
       districtZone: json['district_zone'] as String?,
       stateId: json['state_id'] as String?,
@@ -85,6 +91,7 @@ class UserModel {
       stateName: json['state_name'] as String?,
       districtName: json['district_name'] as String?,
       zoneName: json['zone_name'] as String?,
+      squadName: json['squad_name'] as String?,
       role: json['role'] as String? ?? 'peronda',
       // `account_status` is the canonical key; legacy `get_patrollers.php`
       // responses once used `status`, so tolerate both on read.
@@ -99,6 +106,8 @@ class UserModel {
       'ic_number': icNumber,
       'phone_number': phoneNumber,
       'email': email,
+      'profile_image_url': profileImageUrl,
+      'profileImageUrl': profileImageUrl,
       'profile_image_path': profileImagePath,
       'district_zone': districtZone,
       'state_id': stateId,
@@ -107,8 +116,51 @@ class UserModel {
       'state_name': stateName,
       'district_name': districtName,
       'zone_name': zoneName,
+      'squad_name': squadName,
       'role': role,
       'account_status': accountStatus,
     };
+  }
+
+  String? get effectiveProfileImageUrl => profileImageUrl ?? profileImagePath;
+
+  UserModel copyWith({
+    String? id,
+    String? fullName,
+    String? icNumber,
+    String? phoneNumber,
+    String? email,
+    String? profileImageUrl,
+    String? profileImagePath,
+    String? districtZone,
+    String? stateId,
+    String? districtId,
+    String? zoneId,
+    String? stateName,
+    String? districtName,
+    String? zoneName,
+    String? squadName,
+    String? role,
+    String? accountStatus,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      icNumber: icNumber ?? this.icNumber,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      email: email ?? this.email,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      profileImagePath: profileImagePath ?? this.profileImagePath,
+      districtZone: districtZone ?? this.districtZone,
+      stateId: stateId ?? this.stateId,
+      districtId: districtId ?? this.districtId,
+      zoneId: zoneId ?? this.zoneId,
+      stateName: stateName ?? this.stateName,
+      districtName: districtName ?? this.districtName,
+      zoneName: zoneName ?? this.zoneName,
+      squadName: squadName ?? this.squadName,
+      role: role ?? this.role,
+      accountStatus: accountStatus ?? this.accountStatus,
+    );
   }
 }

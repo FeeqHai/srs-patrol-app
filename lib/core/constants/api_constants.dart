@@ -36,9 +36,7 @@ class ApiConstants {
 
     final uri = Uri.tryParse(value);
     if (uri != null && uri.hasScheme) {
-      final uploadIndex = uri.path.indexOf('/uploads/');
-      if (uploadIndex == -1) return value;
-      return buildApiUrl(uri.path.substring(uploadIndex + 1));
+      return value;
     }
 
     return buildApiUrl(value);

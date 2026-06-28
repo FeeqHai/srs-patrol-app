@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/models/location_option.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -727,12 +728,13 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  child: Text(
-                    member.fullName.isEmpty
-                        ? '?'
-                        : member.fullName[0].toUpperCase(),
+                UserAvatar(
+                  imageUrl: member.effectiveProfileImageUrl,
+                  initials: UserAvatar.initialsFromName(
+                    member.fullName,
+                    fallback: '?',
                   ),
+                  radius: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

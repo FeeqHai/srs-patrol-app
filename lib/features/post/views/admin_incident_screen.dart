@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../incident/views/incident_screen.dart';
 
 class AdminIncidentScreen extends StatefulWidget {
@@ -491,9 +492,13 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                           horizontal: 20,
                           vertical: 8,
                         ),
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFF0F3D87),
-                          child: Icon(Icons.folder_shared, color: Colors.white),
+                        leading: UserAvatar(
+                          imageUrl: patroller['profile_image_url'] as String?,
+                          initials: UserAvatar.initialsFromName(
+                            patroller['full_name'] as String?,
+                            fallback: 'P',
+                          ),
+                          radius: 22,
                         ),
                         title: Text(
                           patroller['full_name'],

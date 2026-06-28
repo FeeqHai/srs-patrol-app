@@ -9,7 +9,9 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../attendance/providers/attendance_provider.dart';
+import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../incident/views/incident_detail_screen.dart';
 import '../../incident/views/lampiran_6_screen.dart';
@@ -76,29 +78,20 @@ class _DashboardScreenState extends State<DashboardScreen>
         final Map<String, dynamic> body = json.decode(response.body);
         if (body['status'] == 'success') {
           final data = body['data'];
-          if (mounted) {
-            setState(() {
-              _fullName = data['full_name'] ?? 'Peronda';
-              _zoneName = data['zone'] ?? data['district_zone'] ?? '';
-            });
-          }
+          if (!mounted) return;
+          await context.read<AuthProvider>().updateCurrentUserProfile(
+            UserModel.fromJson(data as Map<String, dynamic>),
+          );
+          if (!mounted) return;
+          setState(() {
+            _fullName = data['full_name'] ?? 'Peronda';
+            _zoneName = data['zone'] ?? data['district_zone'] ?? '';
+          });
         }
       }
     } catch (_) {
       // Keep defaults
     }
-  }
-
-  String _getInitials(String name) {
-    final names = name.trim().split(" ");
-    String initials = "";
-    int numWords = names.length > 2 ? 2 : names.length;
-    for (var i = 0; i < numWords; i++) {
-      if (names[i].isNotEmpty) {
-        initials += names[i][0];
-      }
-    }
-    return initials.isEmpty ? "P" : initials.toUpperCase();
   }
 
   @override
@@ -375,16 +368,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                           'LEADER';
 
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isLeader
-                              ? colorScheme.secondary.withValues(alpha: 0.2)
-                              : colorScheme.primary.withValues(alpha: 0.1),
-                          child: Icon(
-                            isLeader ? Icons.shield : Icons.person,
-                            color: isLeader
-                                ? colorScheme.secondary
-                                : colorScheme.primary,
+                        leading: UserAvatar(
+                          imageUrl: member['profile_image_url'] as String?,
+                          initials: UserAvatar.initialsFromName(
+                            name,
+                            fallback: isLeader ? 'KP' : 'P',
                           ),
+                          radius: 20,
                         ),
                         title: Text(
                           name,
@@ -535,18 +525,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ],
                       ),
                     ),
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: theme.primaryColor.withValues(
-                        alpha: 0.1,
-                      ),
-                      child: Text(
-                        _getInitials(_fullName),
-                        style: TextStyle(
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) => UserAvatar(
+                        imageUrl: auth.profileImageUrl,
+                        initials: UserAvatar.initialsFromName(
+                          auth.fullName ?? _fullName,
+                          fallback: 'P',
                         ),
+                        radius: 26,
                       ),
                     ),
                   ],

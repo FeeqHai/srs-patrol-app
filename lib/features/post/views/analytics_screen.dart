@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/user_avatar.dart';
+import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../incident/services/incident_service.dart';
 import '../../../core/network/api_client.dart';
@@ -68,11 +70,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final Map<String, dynamic> body = json.decode(response.body);
         if (body['status'] == 'success') {
           final data = body['data'];
-          if (mounted) {
-            setState(() {
-              _fullName = data['full_name'] ?? 'Admin';
-            });
-          }
+          if (!mounted) return;
+          await context.read<AuthProvider>().updateCurrentUserProfile(
+            UserModel.fromJson(data as Map<String, dynamic>),
+          );
+          if (!mounted) return;
+          setState(() {
+            _fullName = data['full_name'] ?? 'Admin';
+          });
         }
       }
     } catch (_) {
@@ -217,18 +222,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       default:
         return '';
     }
-  }
-
-  String _getInitials(String name) {
-    final names = name.trim().split(" ");
-    String initials = "";
-    int numWords = names.length > 2 ? 2 : names.length;
-    for (var i = 0; i < numWords; i++) {
-      if (names[i].isNotEmpty) {
-        initials += names[i][0];
-      }
-    }
-    return initials.isEmpty ? "A" : initials.toUpperCase();
   }
 
   @override
@@ -413,16 +406,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ],
                   ),
                 ),
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                  child: Text(
-                    _getInitials(_fullName),
-                    style: TextStyle(
-                      color: theme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                Consumer<AuthProvider>(
+                  builder: (context, auth, _) => UserAvatar(
+                    imageUrl: auth.profileImageUrl,
+                    initials: UserAvatar.initialsFromName(
+                      auth.fullName ?? _fullName,
+                      fallback: 'A',
                     ),
+                    radius: 26,
                   ),
                 ),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/user_avatar.dart';
 
 class AdminSquadScheduleScreen extends StatefulWidget {
   const AdminSquadScheduleScreen({super.key});
@@ -403,15 +404,13 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                   side: BorderSide(color: theme.dividerColor),
                                 ),
                                 child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: isAssigned
-                                        ? theme.disabledColor
-                                        : theme.primaryColor,
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                      size: 20,
+                                  leading: UserAvatar(
+                                    imageUrl: p['profile_image_url'] as String?,
+                                    initials: UserAvatar.initialsFromName(
+                                      p['full_name'] as String?,
+                                      fallback: 'P',
                                     ),
+                                    radius: 20,
                                   ),
                                   title: Text(
                                     p['full_name'],
@@ -704,14 +703,16 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                               const EdgeInsets.symmetric(
                                                 horizontal: 24,
                                               ),
-                                          leading: CircleAvatar(
+                                          leading: UserAvatar(
+                                            imageUrl:
+                                                m['profile_image_url']
+                                                    as String?,
+                                            initials:
+                                                UserAvatar.initialsFromName(
+                                                  m['full_name'] as String?,
+                                                  fallback: 'P',
+                                                ),
                                             radius: 16,
-                                            backgroundColor: theme.cardColor,
-                                            child: Icon(
-                                              Icons.person,
-                                              size: 16,
-                                              color: theme.disabledColor,
-                                            ),
                                           ),
                                           title: Text(
                                             m['full_name'],

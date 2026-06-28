@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -275,16 +276,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           'LEADER';
 
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isLeader
-                              ? colorScheme.secondary.withValues(alpha: 0.2)
-                              : colorScheme.primary.withValues(alpha: 0.1),
-                          child: Icon(
-                            isLeader ? Icons.shield : Icons.person,
-                            color: isLeader
-                                ? colorScheme.secondary
-                                : colorScheme.primary,
+                        leading: UserAvatar(
+                          imageUrl: member['profile_image_url'] as String?,
+                          initials: UserAvatar.initialsFromName(
+                            name,
+                            fallback: isLeader ? 'KP' : 'P',
                           ),
+                          radius: 20,
                         ),
                         title: Text(
                           name,

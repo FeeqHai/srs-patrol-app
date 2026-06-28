@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/views/profile_screen.dart';
+import 'user_avatar.dart';
 
 enum GlobalMenuAction { profile, settings, logout }
 
@@ -13,23 +14,36 @@ class GlobalMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final auth = context.watch<AuthProvider>();
+    final initials = UserAvatar.initialsFromName(
+      auth.fullName,
+      fallback: auth.role == 'ketua_krt' ? 'KK' : 'U',
+    );
 
     return PopupMenuButton<GlobalMenuAction>(
-      icon: const Icon(Icons.more_vert),
-      tooltip: settings.t('Menu'),
+      tooltip: settings.t('profile'),
+      offset: const Offset(0, 10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: UserAvatar(
+          imageUrl: auth.profileImageUrl,
+          initials: initials,
+          radius: 18,
+        ),
+      ),
       onSelected: (GlobalMenuAction action) async {
         switch (action) {
           case GlobalMenuAction.profile:
-            _showProfileModal(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            );
             break;
           case GlobalMenuAction.settings:
             _showSettingsDialog(context);
             break;
           case GlobalMenuAction.logout:
-            await context.read<AuthProvider>().logout();
-            if (context.mounted) {
-              Navigator.pushReplacementNamed(context, '/login');
-            }
+            await _confirmAndLogout(context);
             break;
         }
       },
@@ -43,7 +57,7 @@ class GlobalMenuButton extends StatelessWidget {
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
               const SizedBox(width: 8),
-              Text(settings.t('Profil')),
+              Text(settings.t('profile')),
             ],
           ),
         ),
@@ -65,12 +79,12 @@ class GlobalMenuButton extends StatelessWidget {
           value: GlobalMenuAction.logout,
           child: Row(
             children: [
-              const Icon(Icons.logout, color: Colors.redAccent),
+              Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
               const SizedBox(width: 8),
               Text(
-                settings.t('Log Keluar'),
-                style: const TextStyle(
-                  color: Colors.redAccent,
+                settings.t('logout'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -81,40 +95,36 @@ class GlobalMenuButton extends StatelessWidget {
     );
   }
 
-  void _showProfileModal(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> _confirmAndLogout(BuildContext context) async {
+    final settings = context.read<SettingsProvider>();
+    final colorScheme = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(settings.t('logout_confirmation_title')),
+        content: Text(settings.t('logout_confirmation_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(settings.t('cancel')),
           ),
-          height: MediaQuery.of(context).size.height * 0.85,
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 8),
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  child: ProfileScreen(), // The existing ProfileScreen
-                ),
-              ),
-            ],
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: colorScheme.error,
+              foregroundColor: colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(settings.t('confirm_logout')),
           ),
-        );
-      },
+        ],
+      ),
     );
+
+    if (confirmed != true || !context.mounted) return;
+    await context.read<AuthProvider>().logout();
+    if (context.mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   void _showSettingsDialog(BuildContext context) {
