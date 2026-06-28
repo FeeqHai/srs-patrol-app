@@ -18,22 +18,27 @@ class GlobalMenuButton extends StatelessWidget {
       fallback: auth.role == 'ketua_krt' ? 'KK' : 'U',
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Tooltip(
-        message: settings.t('account'),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AccountScreen()),
-            );
-          },
-          child: UserAvatar(
-            imageUrl: auth.profileImageUrl,
-            initials: initials,
-            radius: 18,
+    return Tooltip(
+      message: settings.t('account'),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(end: 8),
+        child: SizedBox.square(
+          dimension: 48,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AccountScreen()),
+              );
+            },
+            child: Center(
+              child: UserAvatar(
+                imageUrl: auth.profileImageUrl,
+                initials: initials,
+                radius: 16,
+              ),
+            ),
           ),
         ),
       ),

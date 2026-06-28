@@ -85,6 +85,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
           appBar: (isLargeScreen || !widget.showAppBar)
               ? null
               : AppBar(
+                  toolbarHeight: 64,
                   title: Text(
                     widget.title,
                     maxLines: 1,
@@ -93,7 +94,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                   ),
                   elevation: 0,
                   centerTitle: true,
-                  actions: widget.actions,
+                  actions: [...?widget.actions, const SizedBox(width: 4)],
                 ),
           endDrawer: widget.endDrawer,
           body: isLargeScreen

@@ -17,6 +17,26 @@ class AppNotification {
   final String createdAt;
   final String? relatedId;
 
+  AppNotification copyWith({
+    String? id,
+    String? type,
+    String? title,
+    String? body,
+    bool? isRead,
+    String? createdAt,
+    String? relatedId,
+  }) {
+    return AppNotification(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+      relatedId: relatedId ?? this.relatedId,
+    );
+  }
+
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
       id: json['id']?.toString() ?? '',

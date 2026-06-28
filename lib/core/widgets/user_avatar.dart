@@ -48,7 +48,9 @@ class UserAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: colorScheme.primary.withValues(alpha: 0.1),
+        color: radius <= 18
+            ? colorScheme.primary
+            : colorScheme.primary.withValues(alpha: 0.1),
         border: Border.all(
           color: colorScheme.surface.withValues(alpha: 0.9),
           width: radius >= 40 ? 3 : 1,
@@ -132,9 +134,12 @@ class _AvatarFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final fontSize = radius < 24 ? radius * 0.62 : radius * 0.42;
+    final foreground = radius <= 18
+        ? colorScheme.onPrimary
+        : colorScheme.primary;
 
     if (label == null || label!.isEmpty) {
-      return Icon(Icons.person, size: radius, color: colorScheme.primary);
+      return Icon(Icons.person, size: radius, color: foreground);
     }
 
     return Center(
@@ -143,7 +148,7 @@ class _AvatarFallback extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.clip,
         style: TextStyle(
-          color: colorScheme.primary,
+          color: foreground,
           fontWeight: FontWeight.w800,
           fontSize: fontSize,
         ),

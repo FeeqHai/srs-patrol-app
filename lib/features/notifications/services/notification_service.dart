@@ -11,6 +11,16 @@ import '../../../core/utils/logger.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/app_notification.dart';
 
+class NotificationFetchResult {
+  const NotificationFetchResult({
+    required this.notifications,
+    required this.unreadCount,
+  });
+
+  final List<AppNotification> notifications;
+  final int unreadCount;
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -50,7 +60,7 @@ class NotificationService {
     _pollingTimer = null;
   }
 
-  Future<List<AppNotification>> fetchNotifications() async {
+  Future<NotificationFetchResult> fetchNotificationPayload() async {
     final response = await ApiClient.getData(
       'notifications/get_notifications.php',
     );
@@ -58,16 +68,46 @@ class NotificationService {
       throw Exception(response['message'] ?? 'Unable to load notifications.');
     }
 
-    final data = response['data'] as List<dynamic>? ?? const [];
-    return data
+    final rawData = response['data'];
+    final List<dynamic> data = rawData is Map<String, dynamic>
+        ? rawData['notifications'] as List<dynamic>? ?? const []
+        : rawData as List<dynamic>? ?? const [];
+    final notifications = data
         .map((item) => AppNotification.fromJson(item as Map<String, dynamic>))
         .toList();
+    final unreadCount = rawData is Map<String, dynamic>
+        ? int.tryParse(rawData['unread_count']?.toString() ?? '') ??
+              notifications.where((item) => !item.isRead).length
+        : notifications.where((item) => !item.isRead).length;
+
+    return NotificationFetchResult(
+      notifications: notifications,
+      unreadCount: unreadCount,
+    );
+  }
+
+  Future<List<AppNotification>> fetchNotifications() async {
+    final result = await fetchNotificationPayload();
+    return result.notifications;
   }
 
   Future<void> markRead(String notificationId) async {
     await ApiClient.postData('notifications/mark_read.php', {
-      'id': notificationId,
+      'notification_id': notificationId,
     });
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    await ApiClient.postData('notifications/delete_notification.php', {
+      'notification_id': notificationId,
+    });
+  }
+
+  Future<void> clearHistory() async {
+    await ApiClient.postData(
+      'notifications/clear_history.php',
+      <String, String>{},
+    );
   }
 
   Future<void> _pollForDailyNotes(BuildContext context) async {

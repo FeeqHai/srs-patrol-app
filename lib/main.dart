@@ -15,6 +15,7 @@ import 'core/providers/settings_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/services/sos_alert_service.dart';
+import 'features/notifications/providers/notification_provider.dart';
 import 'features/notifications/services/notification_service.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -41,6 +42,7 @@ class SRSPatrolApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => TrackingProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {

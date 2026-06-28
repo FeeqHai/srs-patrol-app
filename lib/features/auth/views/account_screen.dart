@@ -85,7 +85,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(
                         horizontalPadding,
-                        20,
+                        28,
                         horizontalPadding,
                         32,
                       ),

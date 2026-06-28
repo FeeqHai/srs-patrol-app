@@ -184,7 +184,7 @@ class _PersonalInformationScreenState extends State<PersonalInformationScreen> {
                   return SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
-                      20,
+                      28,
                       horizontalPadding,
                       32,
                     ),

@@ -843,6 +843,9 @@ class _ScheduleManagementTab extends StatefulWidget {
 class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   List<dynamic> _schedules = [];
   bool _isLoading = true;
+  DateTime _selectedDate = DateTime.now();
+  bool _showHistory = false;
+  String? _selectedZoneId;
 
   SettingsProvider get settings =>
       Provider.of<SettingsProvider>(context, listen: false);
@@ -856,7 +859,8 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   Future<void> _fetchSchedules() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiClient.getData('admin/schedules.php');
+      final query = _selectedZoneId == null ? '' : '?zone_id=$_selectedZoneId';
+      final response = await ApiClient.getData('admin/schedules.php$query');
       if (response['success'] == true || response['status'] == 'success') {
         setState(() => _schedules = response['data'] ?? []);
       }
@@ -884,7 +888,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
       if (response['success'] == true || response['status'] == 'success') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(settings.t('Jadual berjaya ditetap!'))),
+            SnackBar(content: Text(settings.t('shift_assigned_success'))),
           );
         }
         _fetchSchedules();
@@ -917,7 +921,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
       if (response['success'] == true || response['status'] == 'success') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(settings.t('Jadual berjaya dipadam!'))),
+            SnackBar(content: Text(settings.t('schedule_deleted_success'))),
           );
         }
         _fetchSchedules();
@@ -980,8 +984,25 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
       return;
     }
 
-    String? selectedSquadId = squads[0]['id'];
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    final assignZones = _zoneOptionsFromSquads(squads);
+    String? selectedAssignZoneId =
+        _selectedZoneId ??
+        (assignZones.isNotEmpty ? assignZones.first.id : null);
+    List<dynamic> filteredSquads() => selectedAssignZoneId == null
+        ? squads
+        : squads
+              .where(
+                (squad) => squad['zone_id']?.toString() == selectedAssignZoneId,
+              )
+              .toList();
+    var availableSquads = filteredSquads();
+    String? selectedSquadId = availableSquads.isNotEmpty
+        ? availableSquads[0]['id']?.toString()
+        : squads[0]['id']?.toString();
+    DateTime selectedDate =
+        _dateOnly(_selectedDate).isBefore(_dateOnly(DateTime.now()))
+        ? DateTime.now()
+        : _selectedDate;
     TimeOfDay startTime = const TimeOfDay(hour: 22, minute: 0);
     TimeOfDay endTime = const TimeOfDay(hour: 2, minute: 0);
 
@@ -1009,7 +1030,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    settings.t('Tetapkan Jadual Rondaan'),
+                    settings.t('assign_shift'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1018,46 +1039,44 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                   ),
                   const SizedBox(height: 16),
 
+                  if (assignZones.isNotEmpty) ...[
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedAssignZoneId,
+                      dropdownColor: theme.cardColor,
+                      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                      decoration: _dialogInputDecoration(
+                        theme,
+                        settings.t('filter_by_zone'),
+                      ),
+                      items: assignZones.map<DropdownMenuItem<String>>((zone) {
+                        return DropdownMenuItem<String>(
+                          value: zone.id,
+                          child: Text(zone.name),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setModalState(() {
+                          selectedAssignZoneId = val;
+                          availableSquads = filteredSquads();
+                          selectedSquadId = availableSquads.isNotEmpty
+                              ? availableSquads[0]['id']?.toString()
+                              : null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   DropdownButtonFormField<String>(
+                    key: ValueKey('squad-$selectedAssignZoneId'),
                     initialValue: selectedSquadId,
                     dropdownColor: theme.cardColor,
                     style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                    decoration: InputDecoration(
-                      labelText: settings.t('Pilih Kumpulan'),
-                      labelStyle: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: theme.primaryColor,
-                          width: 2,
-                        ),
-                      ),
+                    decoration: _dialogInputDecoration(
+                      theme,
+                      settings.t('choose_squad'),
                     ),
-                    items: squads.map<DropdownMenuItem<String>>((s) {
+                    items: availableSquads.map<DropdownMenuItem<String>>((s) {
                       return DropdownMenuItem<String>(
                         value: s['id'].toString(),
                         child: Text(s['name']),
@@ -1076,7 +1095,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                       color: theme.primaryColor,
                     ),
                     title: Text(
-                      settings.t('Tarikh Rondaan'),
+                      settings.t('choose_date'),
                       style: TextStyle(
                         fontSize: 14,
                         color: theme.textTheme.bodyMedium?.color?.withValues(
@@ -1098,10 +1117,13 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                         side: BorderSide(color: theme.primaryColor),
                       ),
                       onPressed: () async {
+                        final today = _dateOnly(DateTime.now());
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime.now(),
+                          initialDate: _dateOnly(selectedDate).isBefore(today)
+                              ? today
+                              : selectedDate,
+                          firstDate: today,
                           lastDate: DateTime.now().add(
                             const Duration(days: 365),
                           ),
@@ -1119,7 +1141,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.access_time, color: theme.primaryColor),
                     title: Text(
-                      settings.t('Masa Mula Rondaan'),
+                      settings.t('choose_start_time'),
                       style: TextStyle(
                         fontSize: 14,
                         color: theme.textTheme.bodyMedium?.color?.withValues(
@@ -1161,7 +1183,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                       color: Colors.redAccent,
                     ),
                     title: Text(
-                      settings.t('Masa Tamat Rondaan'),
+                      settings.t('choose_end_time'),
                       style: TextStyle(
                         fontSize: 14,
                         color: theme.textTheme.bodyMedium?.color?.withValues(
@@ -1216,6 +1238,22 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                           final endStr =
                               "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00";
 
+                          if (_hasLocalScheduleOverlap(
+                            selectedSquadId!,
+                            dateStr,
+                            startStr,
+                            endStr,
+                          )) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  settings.t('schedule_overlap_error'),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
                           Navigator.pop(context);
                           _createSchedule(
                             selectedSquadId!,
@@ -1226,7 +1264,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                         }
                       },
                       child: Text(
-                        settings.t('Simpan Jadual'),
+                        settings.t('assign_shift'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -1241,29 +1279,119 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
     );
   }
 
+  InputDecoration _dialogInputDecoration(ThemeData theme, String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(
+        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+      ),
+      filled: true,
+      fillColor: theme.dividerColor.withValues(alpha: 0.05),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: theme.primaryColor, width: 2),
+      ),
+    );
+  }
+
+  bool _hasLocalScheduleOverlap(
+    String squadId,
+    String shiftDate,
+    String startTime,
+    String endTime,
+  ) {
+    final candidate = _scheduleWindow(shiftDate, startTime, endTime);
+    if (candidate == null) return false;
+
+    for (final schedule in _schedules) {
+      if (schedule['squad_id']?.toString() != squadId) continue;
+      final existing = _scheduleWindow(
+        schedule['shift_date']?.toString() ?? '',
+        schedule['start_time']?.toString() ?? '',
+        schedule['end_time']?.toString() ?? '',
+      );
+      if (existing == null) continue;
+      final overlaps =
+          candidate.start.isBefore(existing.end) &&
+          candidate.end.isAfter(existing.start);
+      if (overlaps) return true;
+    }
+    return false;
+  }
+
+  _ScheduleWindow? _scheduleWindow(
+    String shiftDate,
+    String startTime,
+    String endTime,
+  ) {
+    final date = DateTime.tryParse(shiftDate);
+    if (date == null) return null;
+    final startParts = startTime.split(':');
+    final endParts = endTime.split(':');
+    if (startParts.length < 2 || endParts.length < 2) return null;
+
+    final start = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      int.tryParse(startParts[0]) ?? 0,
+      int.tryParse(startParts[1]) ?? 0,
+    );
+    var end = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      int.tryParse(endParts[0]) ?? 0,
+      int.tryParse(endParts[1]) ?? 0,
+    );
+    if (!end.isAfter(start)) {
+      end = end.add(const Duration(days: 1));
+    }
+    return _ScheduleWindow(start, end);
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(color: theme.primaryColor),
       );
     }
 
+    final selectedDateSchedules = _schedules.where((schedule) {
+      return schedule['shift_date']?.toString() == _dateKey(_selectedDate);
+    }).toList();
+    final visibleSchedules = _showHistory
+        ? _historySchedules()
+        : _upcomingSchedules();
+    final zones = _zoneOptions();
+
     return Container(
       color: theme.scaffoldBackgroundColor,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: FilledButton.icon(
+      child: RefreshIndicator(
+        onRefresh: _fetchSchedules,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            FilledButton.icon(
               onPressed: _showCreateScheduleDialog,
               icon: const Icon(Icons.calendar_month_outlined),
-              label: Text(settings.t('Tetapkan Jadual Rondaan')),
+              label: Text(settings.t('assign_shift')),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                backgroundColor: theme.primaryColor,
+                backgroundColor: colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -1274,190 +1402,683 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: _schedules.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 64,
-                          color: theme.disabledColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          settings.t('Tiada Jadual Rondaan Direkodkan'),
-                          style: TextStyle(
-                            color: theme.textTheme.bodyMedium?.color
-                                ?.withValues(alpha: 0.6),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+            const SizedBox(height: 16),
+            _ScheduleCalendar(
+              selectedDate: _selectedDate,
+              scheduleDates: _scheduleDateKeys(),
+              onDateChanged: (date) => setState(() => _selectedDate = date),
+            ),
+            const SizedBox(height: 16),
+            if (zones.isNotEmpty)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(settings.t('all_zones')),
+                        selected: _selectedZoneId == null,
+                        onSelected: (_) {
+                          setState(() => _selectedZoneId = null);
+                          _fetchSchedules();
+                        },
+                      ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _schedules.length,
-                    itemBuilder: (context, index) {
-                      final schedule = _schedules[index];
-                      final shiftDate = schedule['shift_date'] ?? '';
-                      final squadName =
-                          schedule['squad_name'] ??
-                          settings.t('Kumpulan Tanpa Nama');
-                      final startTime = schedule['start_time'] ?? '';
-                      final endTime = schedule['end_time'] ?? '';
-
-                      final displayStart = startTime.length > 5
-                          ? startTime.substring(0, 5)
-                          : startTime;
-                      final displayEnd = endTime.length > 5
-                          ? endTime.substring(0, 5)
-                          : endTime;
-
-                      return Card(
-                        elevation: 2,
-                        shadowColor: Colors.black.withValues(alpha: 0.05),
-                        color: theme.cardColor,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: theme.brightness == Brightness.dark
-                                ? Colors.white12
-                                : Colors.grey.shade200,
-                            width: 1,
-                          ),
+                    ...zones.map(
+                      (zone) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(zone.name),
+                          selected: zone.id == _selectedZoneId,
+                          onSelected: (_) {
+                            setState(() => _selectedZoneId = zone.id);
+                            _fetchSchedules();
+                          },
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFFFD100,
-                                  ).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.event_note,
-                                  color: theme.primaryColor,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      squadName,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.calendar_today,
-                                          size: 14,
-                                          color: theme
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.color
-                                              ?.withValues(alpha: 0.6),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          shiftDate,
-                                          style: TextStyle(
-                                            color: theme
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.color
-                                                ?.withValues(alpha: 0.6),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Icon(
-                                          Icons.access_time,
-                                          size: 14,
-                                          color: theme
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.color
-                                              ?.withValues(alpha: 0.6),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '$displayStart - $displayEnd',
-                                          style: TextStyle(
-                                            color: theme
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.color
-                                                ?.withValues(alpha: 0.6),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
-                                ),
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: Text(settings.t('Padam Jadual')),
-                                      content: Text(
-                                        '${settings.t("Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan")} "$squadName" ${settings.t("pada tarikh")} $shiftDate?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context),
-                                          child: Text(settings.t('Batal')),
-                                        ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.redAccent,
-                                          ),
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _deleteSchedule(schedule['id']);
-                                          },
-                                          child: Text(
-                                            settings.t('Padam'),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            _SectionHeader(
+              title:
+                  '${settings.t('selected_date')} - ${_dateKey(_selectedDate)}',
+            ),
+            const SizedBox(height: 8),
+            if (selectedDateSchedules.isEmpty)
+              _ScheduleEmptyState(
+                message: settings.t('Tiada Jadual Rondaan Direkodkan'),
+              )
+            else
+              ...selectedDateSchedules.map(
+                (schedule) => _ScheduleCard(
+                  schedule: schedule,
+                  onDelete: () => _confirmDeleteSchedule(schedule),
+                ),
+              ),
+            const SizedBox(height: 16),
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  icon: const Icon(Icons.upcoming_outlined),
+                  label: Text(settings.t('upcoming_schedules')),
+                ),
+                ButtonSegment(
+                  value: true,
+                  icon: const Icon(Icons.history_outlined),
+                  label: Text(settings.t('schedule_history')),
+                ),
+              ],
+              selected: {_showHistory},
+              onSelectionChanged: (selection) {
+                setState(() => _showHistory = selection.first);
+              },
+            ),
+            const SizedBox(height: 12),
+            if (visibleSchedules.isEmpty)
+              _ScheduleEmptyState(
+                message: settings.t('Tiada Jadual Rondaan Direkodkan'),
+              )
+            else
+              ...visibleSchedules.map(
+                (schedule) => _ScheduleCard(
+                  schedule: schedule,
+                  onDelete: () => _confirmDeleteSchedule(schedule),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteSchedule(Map<String, dynamic> schedule) async {
+    final squadName =
+        schedule['squad_name'] ?? settings.t('Kumpulan Tanpa Nama');
+    final shiftDate = schedule['shift_date'] ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(settings.t('Padam Jadual')),
+        content: Text(
+          '${settings.t("Adakah anda pasti untuk memadam jadual rondaan bagi kumpulan")} "$squadName" ${settings.t("pada tarikh")} $shiftDate?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(settings.t('Batal')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(settings.t('Padam')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _deleteSchedule(schedule['id'].toString());
+    }
+  }
+
+  List<dynamic> _upcomingSchedules() {
+    final today = _dateOnly(DateTime.now());
+    final items = _schedules.where((schedule) {
+      final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
+      return date != null && !_dateOnly(date).isBefore(today);
+    }).toList();
+    items.sort((a, b) => _scheduleDateTime(a).compareTo(_scheduleDateTime(b)));
+    return items;
+  }
+
+  List<dynamic> _historySchedules() {
+    final today = _dateOnly(DateTime.now());
+    final items = _schedules.where((schedule) {
+      final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
+      return date != null && _dateOnly(date).isBefore(today);
+    }).toList();
+    items.sort((a, b) => _scheduleDateTime(b).compareTo(_scheduleDateTime(a)));
+    return items;
+  }
+
+  Set<String> _scheduleDateKeys() {
+    return _schedules
+        .map((schedule) => schedule['shift_date']?.toString() ?? '')
+        .where((date) => date.isNotEmpty)
+        .toSet();
+  }
+
+  List<_ZoneOption> _zoneOptions() {
+    final zones = <String, _ZoneOption>{};
+    for (final schedule in _schedules) {
+      final id = schedule['zone_id']?.toString();
+      final name = schedule['zone_name']?.toString();
+      if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
+        zones[id] = _ZoneOption(id, name);
+      }
+    }
+    return zones.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  List<_ZoneOption> _zoneOptionsFromSquads(List<dynamic> squads) {
+    final zones = <String, _ZoneOption>{};
+    for (final squad in squads) {
+      final id = squad['zone_id']?.toString();
+      final name = squad['zone_name']?.toString();
+      if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
+        zones[id] = _ZoneOption(id, name);
+      }
+    }
+    return zones.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  DateTime _scheduleDateTime(dynamic schedule) {
+    final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
+    final time = schedule['start_time']?.toString() ?? '00:00:00';
+    if (date == null) return DateTime.fromMillisecondsSinceEpoch(0);
+    final parts = time.split(':');
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0,
+      parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
+    );
+  }
+
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+}
+
+class _ZoneOption {
+  const _ZoneOption(this.id, this.name);
+
+  final String id;
+  final String name;
+}
+
+class _ScheduleWindow {
+  const _ScheduleWindow(this.start, this.end);
+
+  final DateTime start;
+  final DateTime end;
+}
+
+class _ScheduleCalendar extends StatefulWidget {
+  const _ScheduleCalendar({
+    required this.selectedDate,
+    required this.scheduleDates,
+    required this.onDateChanged,
+  });
+
+  final DateTime selectedDate;
+  final Set<String> scheduleDates;
+  final ValueChanged<DateTime> onDateChanged;
+
+  @override
+  State<_ScheduleCalendar> createState() => _ScheduleCalendarState();
+}
+
+class _ScheduleCalendarState extends State<_ScheduleCalendar> {
+  late DateTime _visibleMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _visibleMonth = DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _ScheduleCalendar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDate.year != widget.selectedDate.year ||
+        oldWidget.selectedDate.month != widget.selectedDate.month) {
+      _visibleMonth = DateTime(
+        widget.selectedDate.year,
+        widget.selectedDate.month,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final monthLabel =
+        '${_monthName(_visibleMonth.month, settings)} ${_visibleMonth.year}';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                tooltip: settings.t('previous_months'),
+                onPressed: () => setState(() {
+                  _visibleMonth = DateTime(
+                    _visibleMonth.year,
+                    _visibleMonth.month - 1,
+                  );
+                }),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Expanded(
+                child: Text(
+                  monthLabel,
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
+                ),
+              ),
+              IconButton(
+                tooltip: settings.t('this_month'),
+                onPressed: () => setState(() {
+                  _visibleMonth = DateTime(
+                    _visibleMonth.year,
+                    _visibleMonth.month + 1,
+                  );
+                }),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                .map(
+                  (day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.55),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          ..._calendarRows().map(
+            (week) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: week
+                    .map(
+                      (date) => Expanded(
+                        child: _CalendarDayCell(
+                          date: date,
+                          selectedDate: widget.selectedDate,
+                          hasSchedule:
+                              date != null &&
+                              widget.scheduleDates.contains(_dateKey(date)),
+                          onTap: date == null
+                              ? null
+                              : () => widget.onDateChanged(date),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () {
+              final today = DateTime.now();
+              widget.onDateChanged(today);
+              setState(() => _visibleMonth = DateTime(today.year, today.month));
+            },
+            icon: const Icon(Icons.today_outlined),
+            label: Text(settings.t('today')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<List<DateTime?>> _calendarRows() {
+    final firstDay = DateTime(_visibleMonth.year, _visibleMonth.month);
+    final daysInMonth = DateTime(
+      _visibleMonth.year,
+      _visibleMonth.month + 1,
+      0,
+    ).day;
+    final leadingBlanks = firstDay.weekday - 1;
+    final cells = <DateTime?>[
+      ...List<DateTime?>.filled(leadingBlanks, null),
+      ...List.generate(
+        daysInMonth,
+        (index) => DateTime(_visibleMonth.year, _visibleMonth.month, index + 1),
+      ),
+    ];
+    while (cells.length % 7 != 0) {
+      cells.add(null);
+    }
+    return [for (var i = 0; i < cells.length; i += 7) cells.sublist(i, i + 7)];
+  }
+
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _monthName(int month, SettingsProvider settings) {
+    const english = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const malay = [
+      'Januari',
+      'Februari',
+      'Mac',
+      'April',
+      'Mei',
+      'Jun',
+      'Julai',
+      'Ogos',
+      'September',
+      'Oktober',
+      'November',
+      'Disember',
+    ];
+    return settings.isEnglish ? english[month - 1] : malay[month - 1];
+  }
+}
+
+class _CalendarDayCell extends StatelessWidget {
+  const _CalendarDayCell({
+    required this.date,
+    required this.selectedDate,
+    required this.hasSchedule,
+    required this.onTap,
+  });
+
+  final DateTime? date;
+  final DateTime selectedDate;
+  final bool hasSchedule;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final today = DateTime.now();
+    final isSelected =
+        date != null &&
+        date!.year == selectedDate.year &&
+        date!.month == selectedDate.month &&
+        date!.day == selectedDate.day;
+    final isToday =
+        date != null &&
+        date!.year == today.year &&
+        date!.month == today.month &&
+        date!.day == today.day;
+
+    if (date == null) {
+      return const SizedBox(height: 44);
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: SizedBox(
+        height: 44,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 30,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isSelected ? colorScheme.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: isToday && !isSelected
+                    ? Border.all(color: colorScheme.primary, width: 1.2)
+                    : null,
+              ),
+              child: Text(
+                date!.day.toString(),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: isSelected
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurface,
+                  fontWeight: isSelected || isToday
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 3),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: hasSchedule ? 6 : 0,
+              height: hasSchedule ? 6 : 0,
+              decoration: BoxDecoration(
+                color: isSelected ? colorScheme.secondary : colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+    );
+  }
+}
+
+class _ScheduleCard extends StatelessWidget {
+  const _ScheduleCard({required this.schedule, required this.onDelete});
+
+  final dynamic schedule;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+    final shiftDate = schedule['shift_date']?.toString() ?? '';
+    final startTime = _shortTime(schedule['start_time']?.toString() ?? '');
+    final endTime = _shortTime(schedule['end_time']?.toString() ?? '');
+    final date = DateTime.tryParse(shiftDate);
+    final today = DateTime.now();
+    final isPast =
+        date != null &&
+        DateTime(
+          date.year,
+          date.month,
+          date.day,
+        ).isBefore(DateTime(today.year, today.month, today.day));
+    final isToday =
+        date != null &&
+        date.year == today.year &&
+        date.month == today.month &&
+        date.day == today.day;
+    final status = isPast
+        ? settings.t('completed')
+        : isToday
+        ? settings.t('current_schedules')
+        : settings.t('upcoming');
+
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.05),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.event_note, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    schedule['squad_name']?.toString() ??
+                        settings.t('Kumpulan Tanpa Nama'),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    children: [
+                      _Meta(
+                        icon: Icons.place_outlined,
+                        text: schedule['zone_name']?.toString() ?? '-',
+                      ),
+                      _Meta(
+                        icon: Icons.calendar_today_outlined,
+                        text: shiftDate,
+                      ),
+                      _Meta(
+                        icon: Icons.schedule_outlined,
+                        text: '$startTime - $endTime',
+                      ),
+                      _Meta(
+                        icon: Icons.groups_outlined,
+                        text:
+                            '${schedule['member_count'] ?? 0} ${settings.t('ahli')}',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              children: [
+                Chip(
+                  label: Text(status),
+                  visualDensity: VisualDensity.compact,
+                  side: BorderSide.none,
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                  onPressed: onDelete,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _shortTime(String value) =>
+      value.length > 5 ? value.substring(0, 5) : value;
+}
+
+class _Meta extends StatelessWidget {
+  const _Meta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleEmptyState extends StatelessWidget {
+  const _ScheduleEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(
+            Icons.calendar_today_outlined,
+            size: 42,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),

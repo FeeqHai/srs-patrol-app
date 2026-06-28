@@ -140,6 +140,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         : settings.t('Tiada Kumpulan');
     final authProvider = context.read<AuthProvider>();
     final String userRole = authProvider.role ?? '';
+    final upcomingSchedules = _upcomingSchedules();
+    final historySchedules = _historySchedules();
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -177,14 +179,14 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             const SizedBox(height: 12),
 
             // --- Schedule List ---
-            _schedules.isEmpty
+            upcomingSchedules.isEmpty
                 ? _buildEmptyState(settings, theme)
                 : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _schedules.length,
+                    itemCount: upcomingSchedules.length,
                     itemBuilder: (context, index) {
-                      final schedule = _schedules[index];
+                      final schedule = upcomingSchedules[index];
                       return AnimatedBuilder(
                         animation: _animationController,
                         builder: (context, child) {
@@ -214,9 +216,83 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       );
                     },
                   ),
+            if (historySchedules.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Icon(
+                    Icons.history_outlined,
+                    color: colorScheme.primary,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    settings.t('schedule_history'),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: historySchedules.length,
+                itemBuilder: (context, index) => Opacity(
+                  opacity: 0.72,
+                  child: _buildScheduleCard(
+                    settings,
+                    theme,
+                    colorScheme,
+                    historySchedules[index],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  List<dynamic> _upcomingSchedules() {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final items = _schedules.where((schedule) {
+      final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
+      if (date == null) return false;
+      return !DateTime(date.year, date.month, date.day).isBefore(todayOnly);
+    }).toList();
+    items.sort((a, b) => _scheduleDateTime(a).compareTo(_scheduleDateTime(b)));
+    return items;
+  }
+
+  List<dynamic> _historySchedules() {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final items = _schedules.where((schedule) {
+      final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
+      if (date == null) return false;
+      return DateTime(date.year, date.month, date.day).isBefore(todayOnly);
+    }).toList();
+    items.sort((a, b) => _scheduleDateTime(b).compareTo(_scheduleDateTime(a)));
+    return items;
+  }
+
+  DateTime _scheduleDateTime(dynamic schedule) {
+    final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
+    final time = schedule['start_time']?.toString() ?? '00:00:00';
+    if (date == null) return DateTime.fromMillisecondsSinceEpoch(0);
+    final parts = time.split(':');
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0,
+      parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
     );
   }
 
