@@ -121,6 +121,7 @@ class SettingsProvider extends ChangeNotifier {
       'Pindah Lokasi Ahli': 'Transfer Member Location',
       'Pindah Lokasi': 'Transfer Location',
       'Reset Kata Laluan': 'Reset Password',
+      'Perlu Tukar Kata Laluan': 'Password Reset',
       'Jana kata laluan sementara untuk': 'Generate a temporary password for',
       'Cari nama, IC, telefon atau e-mel...':
           'Search name, IC, phone or email...',
@@ -148,8 +149,8 @@ class SettingsProvider extends ChangeNotifier {
       'Belum dikemas kini': 'Not updated yet',
       'Skop Semasa': 'Current Scope',
       'Dikemas kini': 'Updated',
-      'Malaysia / Semua Negeri / Semua Daerah / Semua Zon':
-          'Malaysia / All States / All Districts / All Zones',
+      'Malaysia • Semua Negeri • Semua Daerah • Semua Zon':
+          'Malaysia • All States • All Districts • All Zones',
       'Tukar Skop': 'Change Scope',
       'Perlu Tindakan': 'Action Required',
       'Jumlah Pengguna': 'Total Users',
@@ -172,7 +173,7 @@ class SettingsProvider extends ChangeNotifier {
       'Semak': 'Review',
       'Malaysia': 'Malaysia',
       'Semua negeri, daerah dan zon': 'All states, districts and zones',
-      'Negeri / Daerah / Zon': 'State / District / Zone',
+      'Negeri • Daerah • Zon': 'State • District • Zone',
       'Penapis skop belum disambungkan.':
           'Scope filters are not connected yet.',
       'Cari Ketua KRT...': 'Search KRT admins...',
@@ -570,7 +571,18 @@ class SettingsProvider extends ChangeNotifier {
           'All registered members are active or pending approval.',
       'Tapis Pengurusan Ahli': 'Filter Member Management',
       'Tapis Laporan Insiden': 'Filter Incident Reports',
+      'Tapis Kumpulan': 'Filter Squads',
+      'Cari kumpulan atau ahli...': 'Search squad or member...',
       'Ketua Peronda': 'Squad Leader',
+      'Pilih Ketua Peronda': 'Select Squad Leader',
+      'Nama Kumpulan diperlukan.': 'Squad name is required.',
+      'Pilih negeri dan daerah untuk kumpulan ini.':
+          'Select a state and district for this squad.',
+      'Pilih daerah dan ketua peronda dahulu.':
+          'Select a district and squad leader first.',
+      'Pilih 2 hingga 20 peronda.': 'Select 2 to 20 patrollers.',
+      'Maksimum 20 peronda dibenarkan.':
+          'A maximum of 20 patrollers is allowed.',
       'Pilih Status Baru': 'Select New Status',
       'Pilih Peranan Baru': 'Select New Role',
       'Kemas kini berjaya': 'Update successful',
@@ -734,6 +746,7 @@ class SettingsProvider extends ChangeNotifier {
       'Pindah Lokasi Ahli': 'Pindah Lokasi Ahli',
       'Pindah Lokasi': 'Pindah Lokasi',
       'Reset Kata Laluan': 'Reset Kata Laluan',
+      'Perlu Tukar Kata Laluan': 'Reset Kata Laluan',
       'Jana kata laluan sementara untuk': 'Jana kata laluan sementara untuk',
       'Cari nama, IC, telefon atau e-mel...':
           'Cari nama, IC, telefon atau e-mel...',
@@ -761,8 +774,8 @@ class SettingsProvider extends ChangeNotifier {
       'Belum dikemas kini': 'Belum dikemas kini',
       'Skop Semasa': 'Skop Semasa',
       'Dikemas kini': 'Dikemas kini',
-      'Malaysia / Semua Negeri / Semua Daerah / Semua Zon':
-          'Malaysia / Semua Negeri / Semua Daerah / Semua Zon',
+      'Malaysia • Semua Negeri • Semua Daerah • Semua Zon':
+          'Malaysia • Semua Negeri • Semua Daerah • Semua Zon',
       'Tukar Skop': 'Tukar Skop',
       'Perlu Tindakan': 'Perlu Tindakan',
       'Jumlah Pengguna': 'Jumlah Pengguna',
@@ -785,7 +798,7 @@ class SettingsProvider extends ChangeNotifier {
       'Semak': 'Semak',
       'Malaysia': 'Malaysia',
       'Semua negeri, daerah dan zon': 'Semua negeri, daerah dan zon',
-      'Negeri / Daerah / Zon': 'Negeri / Daerah / Zon',
+      'Negeri • Daerah • Zon': 'Negeri • Daerah • Zon',
       'Penapis skop belum disambungkan.': 'Penapis skop belum disambungkan.',
       'Cari Ketua KRT...': 'Cari Ketua KRT...',
       'Cari daerah...': 'Cari daerah...',
@@ -1183,7 +1196,17 @@ class SettingsProvider extends ChangeNotifier {
           'Semua ahli berdaftar adalah aktif atau menunggu pengesahan.',
       'Tapis Pengurusan Ahli': 'Tapis Pengurusan Ahli',
       'Tapis Laporan Insiden': 'Tapis Laporan Insiden',
+      'Tapis Kumpulan': 'Tapis Kumpulan',
+      'Cari kumpulan atau ahli...': 'Cari kumpulan atau ahli...',
       'Ketua Peronda': 'Ketua Peronda',
+      'Pilih Ketua Peronda': 'Pilih Ketua Peronda',
+      'Nama Kumpulan diperlukan.': 'Nama Kumpulan diperlukan.',
+      'Pilih negeri dan daerah untuk kumpulan ini.':
+          'Pilih negeri dan daerah untuk kumpulan ini.',
+      'Pilih daerah dan ketua peronda dahulu.':
+          'Pilih daerah dan ketua peronda dahulu.',
+      'Pilih 2 hingga 20 peronda.': 'Pilih 2 hingga 20 peronda.',
+      'Maksimum 20 peronda dibenarkan.': 'Maksimum 20 peronda dibenarkan.',
       'Pilih Status Baru': 'Pilih Status Baru',
       'Pilih Peranan Baru': 'Pilih Peranan Baru',
       'Kemas kini berjaya': 'Kemas kini berjaya',

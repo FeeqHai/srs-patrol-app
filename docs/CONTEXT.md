@@ -2,7 +2,7 @@
 
 > **Project**: Skim Rondaan Sukarela (SRS) Digital Patrol System
 > **Author**: Rafeeq (B032410536) — FYP, Universiti Teknikal Malaysia Melaka (UTeM)
-> **Last Updated**: 2026-06-17
+> **Last Updated**: 2026-06-30
 > **Status**: Active Development — FYP Submission Phase
 
 ---
@@ -14,6 +14,16 @@ See `docs/SUPER_ADMIN_TEST_REPORT.md` for changed files, database migration deta
 verification results, and blocked manual tests. The key new backend migration is
 `srs_api/migrations/20260627_super_admin_location_report.sql`; apply it after
 starting XAMPP MariaDB and taking a full `srs_db` backup.
+
+## Current Implementation Note - 2026-06-30
+
+Squad and schedule management now uses normalized location filters and explicit
+schedule patrol locations. Admin can filter squads and schedules by State →
+District → Zone. Ketua KRT remains district-scoped but can assign a squad to
+patrol any zone within their district, independent of the squad's home zone.
+Apply `srs_api/migrations/20260630_schedule_patrol_location.sql` after backing
+up `srs_db`; it adds `state_id`, `district_id`, and `zone_id` to `schedules`
+and backfills existing schedules from their squad location.
 
 ---
 
@@ -284,7 +294,7 @@ srs_api/
 Consumer<AuthProvider>(
   builder: (context, authProvider, child) {
     if (!authProvider.isAuthenticated) → LoginScreen
-    if (role == 'ketua_krt' || role == 'ketua') → AdminShell     // Responsive web+mobile
+    if (role == 'super_admin' || role == 'ketua_krt' || role == 'ketua') -> AdminShell     // Responsive web+mobile
     if (role == 'ketua_peronda') → KetuaMobileLayout              // Mobile only
     if (role == 'peronda') → MainShell                            // Mobile only
   }
@@ -297,6 +307,7 @@ Consumer<AuthProvider>(
 | `peronda`       | `MainShell`         | Dashboard, Incidents, Attendance                              | Mobile       | Yes (center FAB) |
 | `ketua_peronda` | `KetuaMobileLayout` | Dashboard, Incidents, Admin Incident Reports, Attendance      | Mobile       | Yes (center FAB) |
 | `ketua_krt`     | `AdminShell`        | Analytics, QR Generator, Incident Reports, Squads & Schedules | Web + Mobile | No               |
+| `super_admin`   | `AdminShell`        | Super Admin, Location, Members, Analytics, Reports, Squads & Schedules | Web + Mobile | No               |
 
 ### 3.4 State Management
 
@@ -374,11 +385,13 @@ users ─┬── 1:N ──→ incidents
        ├── 1:N ──→ attendance ──── 1:N ──→ equipment_logs
        └── M:N ──→ squad_members ──→ squads ──── 1:N ──→ schedules
                                       │                     ↑
-                                      └── zone   attendance.schedule_id ──┘ (nullable FK)
+                                      └── home location     attendance.schedule_id ──┘ (nullable FK)
 
 equipment_inventory ←── equipment_logs.equipment_id
 
-users.state / users.district / users.zone  ← Location hierarchy (see 4.4)
+users.state_id / users.district_id / users.zone_id <- Location hierarchy (see 4.4)
+squads.state_id / squads.district_id / squads.zone_id = squad home location
+schedules.state_id / schedules.district_id / schedules.zone_id = shift patrol location
 ```
 
 ### 4.2 Table Definitions
@@ -387,68 +400,79 @@ users.state / users.district / users.zone  ← Location hierarchy (see 4.4)
 
 | Column             | Type         | Constraints               | Notes                                         |
 | ------------------ | ------------ | ------------------------- | --------------------------------------------- |
-| `id`             | VARCHAR(36)  | PK                        | UUID v4                                       |
-| `full_name`      | VARCHAR(255) | NOT NULL                  |                                               |
-| `ic_number`      | VARCHAR(20)  | UNIQUE, NOT NULL          | Malaysian IC                                  |
-| `phone_number`   | VARCHAR(20)  |                           |                                               |
-| `email`          | VARCHAR(255) | UNIQUE, NOT NULL          |                                               |
-| `password_hash`  | VARCHAR(255) | NOT NULL                  | bcrypt                                        |
-| `state`          | VARCHAR(100) | NOT NULL, INDEX           | Negeri — e.g.,`Melaka`                     |
-| `district`       | VARCHAR(100) | NOT NULL, INDEX           | Daerah — e.g.,`Alor Gajah`                 |
-| `zone`           | VARCHAR(100) | NOT NULL, INDEX           | Zon Rondaan — e.g.,`Zon Pusat`             |
-| `role`           | ENUM         | NOT NULL                  | `peronda`, `ketua_peronda`, `ketua_krt` |
-| `account_status` | ENUM         | DEFAULT `pending`       | `pending`, `active`, `inactive`         |
-| `created_at`     | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP |                                               |
+| `id`               | VARCHAR(36)  | PK                        | UUID v4                                       |
+| `full_name`        | VARCHAR(255) | NOT NULL                  |                                               |
+| `ic_number`        | VARCHAR(20)  | UNIQUE, NOT NULL          | Malaysian IC                                  |
+| `phone_number`     | VARCHAR(20)  |                           |                                               |
+| `email`            | VARCHAR(255) | UNIQUE, NOT NULL          |                                               |
+| `password_hash`    | VARCHAR(255) | NOT NULL                  | bcrypt                                        |
+| `district_zone`    | VARCHAR(100) | Legacy compatibility      | Older display fallback only                   |
+| `state_id`         | VARCHAR(36)  | FK to `states`, INDEX     | User home / registration state                |
+| `district_id`      | VARCHAR(36)  | FK to `districts`, INDEX  | User home / registration district             |
+| `zone_id`          | VARCHAR(36)  | FK to `zones`, INDEX      | User home / registration zone                 |
+| `role`             | ENUM         | NOT NULL                  | `peronda`, `ketua_peronda`, `ketua_krt`, `super_admin` |
+| `account_status`   | ENUM         | DEFAULT `pending`         | `pending`, `active`, `inactive`               |
+| `created_at`       | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP |                                               |
 
-> **Migration note**: The old `district_zone` column (e.g., `'Zon Pusat'`) is replaced by three separate columns: `state`, `district`, `zone`. See Section 4.4 for the location hierarchy.
+> **Migration note**: `district_zone` is no longer authoritative. Current app logic uses normalized `state_id`, `district_id`, and `zone_id`, with names joined from `states`, `districts`, and `zones`.
 
 #### `squads`
 
-| Column         | Type         | Constraints               | Notes                                 |
-| -------------- | ------------ | ------------------------- | ------------------------------------- |
-| `id`         | VARCHAR(36)  | PK (UUID)                 |                                       |
-| `name`       | VARCHAR(255) | NOT NULL                  |                                       |
-| `zone`       | VARCHAR(100) | DEFAULT NULL              | Links squad to a specific patrol zone |
-| `created_at` | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP |                                       |
+| Column        | Type         | Constraints              | Notes                  |
+| ------------- | ------------ | ------------------------ | ---------------------- |
+| `id`          | VARCHAR(36)  | PK (UUID)                |                        |
+| `name`        | VARCHAR(255) | NOT NULL                 |                        |
+| `state_id`    | VARCHAR(36)  | FK to `states`, INDEX    | Squad home state       |
+| `district_id` | VARCHAR(36)  | FK to `districts`, INDEX | Squad home district    |
+| `zone_id`     | VARCHAR(36)  | FK to `zones`, INDEX     | Squad home zone        |
+| `created_at`  | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP|                        |
 
 #### `squad_members`
 
-| Column       | Type        | Constraints                                    |
-| ------------ | ----------- | ---------------------------------------------- |
-| `squad_id` | VARCHAR(36) | PK (composite), FK → squads ON DELETE CASCADE |
-| `user_id`  | VARCHAR(36) | PK (composite), FK → users ON DELETE CASCADE  |
-| `role`     | ENUM        | `leader`, `member`                         |
+| Column       | Type        | Constraints                                             |
+| ------------ | ----------- | ------------------------------------------------------- |
+| `squad_id`   | VARCHAR(36) | PK (composite), FK to squads ON DELETE CASCADE          |
+| `user_id`    | VARCHAR(36) | PK (composite), UNIQUE, FK to users ON DELETE CASCADE   |
+| `role`       | ENUM        | `leader`, `member`                                      |
 
 #### `schedules`
 
-| Column         | Type        | Constraints                    |
-| -------------- | ----------- | ------------------------------ |
-| `id`         | VARCHAR(36) | PK (UUID)                      |
-| `squad_id`   | VARCHAR(36) | FK → squads ON DELETE CASCADE |
-| `shift_date` | DATE        | NOT NULL                       |
-| `start_time` | TIME        | NOT NULL                       |
-| `end_time`   | TIME        | NOT NULL                       |
-| `created_at` | TIMESTAMP   | DEFAULT CURRENT_TIMESTAMP      |
+| Column        | Type        | Constraints                    |
+| ------------- | ----------- | ------------------------------ |
+| `id`          | VARCHAR(36) | PK (UUID)                      |
+| `squad_id`    | VARCHAR(36) | FK to squads ON DELETE CASCADE |
+| `state_id`    | VARCHAR(36) | FK to `states`, INDEX          |
+| `district_id` | VARCHAR(36) | FK to `districts`, INDEX       |
+| `zone_id`     | VARCHAR(36) | FK to `zones`, INDEX           |
+| `shift_date`  | DATE        | NOT NULL                       |
+| `start_time`  | TIME        | NOT NULL                       |
+| `end_time`    | TIME        | NOT NULL                       |
+| `created_at`  | TIMESTAMP   | DEFAULT CURRENT_TIMESTAMP      |
+
+> Schedule location is the patrol location for that shift. It can differ from the squad home zone, so a Ketua KRT can assign a squad to patrol another zone in the same district. Legacy reads fall back to the squad location when schedule location is blank.
 
 #### `attendance`
 
 | Column                     | Type          | Constraints                                                                        |
 | -------------------------- | ------------- | ---------------------------------------------------------------------------------- |
-| `id`                     | VARCHAR(36)   | PK (UUID)                                                                          |
-| `user_id`                | VARCHAR(36)   | FK → users ON DELETE CASCADE                                                      |
-| `schedule_id`            | VARCHAR(36)   | FK → schedules ON DELETE SET NULL (nullable)                                      |
-| `checkpoint_id`          | VARCHAR(255)  |                                                                                    |
-| `latitude`               | DECIMAL(10,8) | Clock-in GPS                                                                       |
-| `longitude`              | DECIMAL(11,8) | Clock-in GPS                                                                       |
-| `clock_in_time`          | DATETIME      |                                                                                    |
-| `clock_out_time`         | DATETIME      | Nullable (null = still on shift)                                                   |
-| `clock_out_latitude`     | DECIMAL(10,8) |                                                                                    |
-| `clock_out_longitude`    | DECIMAL(11,8) |                                                                                    |
-| `return_status`          | ENUM          | `active`, `pending_acknowledgement`, `completed`, or `equipment_exception` |
-| `return_requested_at`    | TIMESTAMP     | Patroller's return QR scan time                                                    |
-| `return_acknowledged_at` | TIMESTAMP     | KRT acknowledgement time                                                           |
-| `return_acknowledged_by` | VARCHAR(36)   | Confirming KRT user ID                                                             |
-| `created_at`             | TIMESTAMP     | DEFAULT CURRENT_TIMESTAMP                                                          |
+| `id`                       | VARCHAR(36)   | PK (UUID)                                                                          |
+| `user_id`                  | VARCHAR(36)   | FK to users ON DELETE CASCADE                                                      |
+| `state_id`                 | VARCHAR(36)   | Snapshot of patrol/reporting state                                                 |
+| `district_id`              | VARCHAR(36)   | Snapshot of patrol/reporting district                                              |
+| `zone_id`                  | VARCHAR(36)   | Snapshot of patrol/reporting zone                                                  |
+| `schedule_id`              | VARCHAR(36)   | FK to schedules ON DELETE SET NULL (nullable)                                      |
+| `checkpoint_id`            | VARCHAR(255)  |                                                                                    |
+| `latitude`                 | DECIMAL(10,8) | Clock-in GPS                                                                       |
+| `longitude`                | DECIMAL(11,8) | Clock-in GPS                                                                       |
+| `clock_in_time`            | DATETIME      |                                                                                    |
+| `clock_out_time`           | DATETIME      | Nullable (null = still on shift)                                                   |
+| `clock_out_latitude`       | DECIMAL(10,8) |                                                                                    |
+| `clock_out_longitude`      | DECIMAL(11,8) |                                                                                    |
+| `return_status`            | ENUM          | `active`, `pending_acknowledgement`, `completed`, or `equipment_exception`         |
+| `return_requested_at`      | TIMESTAMP     | Patroller's return QR scan time                                                    |
+| `return_acknowledged_at`   | TIMESTAMP     | KRT acknowledgement time                                                           |
+| `return_acknowledged_by`   | VARCHAR(36)   | Confirming KRT user ID                                                             |
+| `created_at`               | TIMESTAMP     | DEFAULT CURRENT_TIMESTAMP                                                          |
 
 #### `incidents`
 
@@ -467,7 +491,7 @@ users.state / users.district / users.zone  ← Location hierarchy (see 4.4)
 | `reported_to`   | VARCHAR(100)  | Agency name                   |
 | `created_at`    | TIMESTAMP     | DEFAULT CURRENT_TIMESTAMP     |
 
-> **Note**: Incident zone/district/state is derived from the reporter's `users` record via JOIN. Patrollers only report incidents within their assigned zone per SRS workflow.
+> **Note**: Incident state/district/zone is snapshotted on the incident row at submission time from the reporting actor, so historical reports remain stable after future user transfers.
 
 #### `equipment_inventory`
 
@@ -499,79 +523,47 @@ users.state / users.district / users.zone  ← Location hierarchy (see 4.4)
 
 ### 4.4 Location Hierarchy
 
-Malaysia's administrative structure relevant to SRS:
+The app now uses normalized location tables rather than hardcoded state/district/zone strings:
+
+| Table       | Purpose                                      |
+| ----------- | -------------------------------------------- |
+| `states`    | Negeri master list, e.g. `Melaka`            |
+| `districts` | Daerah list linked by `districts.state_id`   |
+| `zones`     | Patrol/KRT zone list linked by `zones.district_id` |
+
+**Cascading dropdown logic:**
 
 ```
-State (Negeri)
-└── District (Daerah / PPD)
-    └── Zone (Zon Rondaan) — SRS-specific patrol area within a district
+State selector
+  -> fetch auth/get_locations.php?level=districts&parent_id=<state_id>
+      -> District selector
+          -> fetch auth/get_locations.php?level=zones&parent_id=<district_id>
+              -> Zone selector
 ```
 
-**Current deployment hierarchy:**
+**Where location is used:**
 
-| State  | District      | Zones                                        |
-| ------ | ------------- | -------------------------------------------- |
-| Melaka | Alor Gajah    | Zon Pusat, Zon Utara, Zon Selatan, Zon Barat |
-| Melaka | Jasin         | Zon Timur                                    |
-| Melaka | Melaka Tengah | Zon Pusat, Zon Timur, Zon Barat              |
+- Users store home/registration location in `users.state_id`, `users.district_id`, `users.zone_id`.
+- Squads store home/origin location in `squads.state_id`, `squads.district_id`, `squads.zone_id`.
+- Schedules store patrol location in `schedules.state_id`, `schedules.district_id`, `schedules.zone_id`; this can differ from the squad home zone.
+- Attendance and incidents snapshot reporting/patrol location with `state_id`, `district_id`, `zone_id` so historical reports do not change after future user transfers.
+- Lampiran 6 metadata is derived from normalized IDs and joined location names.
 
-**Registration cascading dropdown logic:**
+### 4.5 Location Migrations
 
-```
-State selector (e.g., "Melaka")
-  └── District selector (filtered by selected state)
-      └── Zone selector (filtered by selected district)
-```
+Apply migrations after a full `srs_db` backup. The current normalized-location baseline is:
 
-The location hierarchy is hardcoded as a hierarchical map in the Flutter app (acceptable for FYP scope):
-
-```dart
-const locationHierarchy = {
-  'Melaka': {
-    'Alor Gajah': ['Zon Pusat', 'Zon Utara', 'Zon Selatan', 'Zon Barat'],
-    'Jasin': ['Zon Timur'],
-    'Melaka Tengah': ['Zon Pusat', 'Zon Timur', 'Zon Barat'],
-  },
-  // Add more states as needed for future expansion
-};
-```
-
-**Lampiran 6 zone-to-metadata mapping** (no longer hardcoded in PHP — derived from `users` table):
-
-- `users.state` → PPD Negeri header in report
-- `users.district` → PPD Daerah header in report
-- `users.zone` → KRT zone identification in report
-
-### 4.5 SQL Migration (from `district_zone` to `state`/`district`/`zone`)
-
-```sql
--- Step 1: Add new columns
-ALTER TABLE users
-  ADD COLUMN state VARCHAR(100) NOT NULL DEFAULT 'Melaka' AFTER district_zone,
-  ADD COLUMN district VARCHAR(100) NOT NULL DEFAULT 'Alor Gajah' AFTER state,
-  ADD COLUMN zone VARCHAR(100) NOT NULL DEFAULT 'Zon Pusat' AFTER district;
-
--- Step 2: Migrate existing data
-UPDATE users SET state = 'Melaka', district = 'Jasin', zone = 'Zon Timur'
-  WHERE district_zone = 'Zon Timur';
-
-UPDATE users SET state = 'Melaka', district = 'Alor Gajah', zone = district_zone
-  WHERE district_zone != 'Zon Timur';
-
--- Step 3: Drop old column
-ALTER TABLE users DROP COLUMN district_zone;
-
--- Step 4: Add indexes for filtering performance
-ALTER TABLE users ADD INDEX idx_state (state);
-ALTER TABLE users ADD INDEX idx_district (district);
-ALTER TABLE users ADD INDEX idx_zone (zone);
-
--- Step 5: Add zone to squads table
-ALTER TABLE squads ADD COLUMN zone VARCHAR(100) DEFAULT NULL AFTER name;
-
--- Step 6: Remove addendum table (no longer used)
-DROP TABLE IF EXISTS incident_addendums;
-```
+1. `srs_api/migrations/20260622_location_scope.sql`
+   - Creates `states`, `districts`, `zones`, and `notifications`.
+   - Adds `state_id`, `district_id`, `zone_id` to users, squads, incidents, and attendance.
+   - Backfills existing records and preserves `district_zone` only as legacy compatibility.
+   - Enforces one active squad membership per patroller through `squad_members.user_id` uniqueness.
+2. `srs_api/migrations/20260627_super_admin_location_report.sql`
+   - Adds super-admin location/report support.
+3. `srs_api/migrations/20260630_schedule_patrol_location.sql`
+   - Adds `state_id`, `district_id`, `zone_id` to schedules.
+   - Backfills schedules from their squad home location.
+   - Enables admin/KRT schedule filtering by actual patrol location and lets KRT assign squads to other zones in their own district.
 
 ### 4.6 GPS Column Type Fix
 
@@ -663,30 +655,31 @@ $conn->close();
 
 ### 5.3 Complete Endpoint Map
 
-| Endpoint                                 | Method           | Auth          | Purpose                                       | Request                                                                                                                                      | Response Data                                                           |
-| ---------------------------------------- | ---------------- | ------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `auth/login.php`                       | POST             | No            | Login                                         | `email`, `password`                                                                                                                      | `{token, id, full_name, role, state, district, zone, account_status}` |
-| `auth/register.php`                    | POST             | No            | Register                                      | `id(UUID)`, `full_name`, `ic_number`, `phone_number`, `email`, `password`, `state`, `district`, `zone`                     | `{message}`                                                           |
-| `auth/get_profile.php`                 | GET              | **Yes** | Get user profile                              | `?user_id=`                                                                                                                                | `{id, full_name, ic_number, state, district, zone, ...}`              |
-| `auth/get_patrollers.php`              | GET              | **Yes** | List all patrollers                           | —                                                                                                                                           | `[{id, full_name, role, state, district, zone, status}, ...]`         |
-| `incidents/upload_incident.php`        | POST (multipart) | **Yes** | Submit incident                               | `id`, `user_id`, `title`, `description`, `category`, `latitude`, `longitude`, `location_name`, `reported_to`, `images[]` | `{message}`                                                           |
-| `incidents/get_incidents.php`          | GET              | **Yes** | List incidents                                | `?user_id=` (optional)                                                                                                                     | `[{id, title, category, created_at, ...}, ...]`                       |
-| `incidents/delete_incident.php`        | POST             | **Yes** | Delete incident                               | `incident_id`                                                                                                                              | `{message}`                                                           |
-| `incidents/check_sos.php`              | GET              | **Yes** | Poll SOS alerts                               | `?exclude_user=`                                                                                                                           | `[{id, user_id, full_name, latitude, longitude, created_at}, ...]`    |
-| `incidents/get_lampiran_6_summary.php` | GET              | **Yes** | Monthly stats                                 | `?month_offset=&level=&user_id=`                                                                                                           | `{metadata: {negeri, daerah, nama_srs}, data: {...}}`                 |
-| `attendance/clock_in.php`              | POST             | **Yes** | QR clock-in                                   | `checkpoint_id`, `latitude`, `longitude`                                                                                               | `{attendance_id, message}`                                            |
-| `attendance/clock_out.php`             | POST             | **Yes** | Submit a post-return request                  | `checkpoint_id`, `latitude`, `longitude`, `returned_equipment`                                                                       | `{message}`                                                           |
-| `attendance/get_return_preview.php`    | GET              | **Yes** | Borrowed-equipment return checklist           | —                                                                                                                                           | `{attendance_id, equipment}`                                          |
-| `attendance/get_pending_returns.php`   | GET              | **KRT** | List return requests awaiting acknowledgement | —                                                                                                                                           | `[{id, full_name, equipment}]`                                        |
-| `attendance/acknowledge_return.php`    | POST             | **KRT** | Confirm an individual physical return         | `attendance_id`                                                                                                                            | `{message}`                                                           |
-| `attendance/log_equipment.php`         | POST             | **Yes** | Log equipment                                 | `attendance_id`, `equipment_items[]`                                                                                                     | `{message}`                                                           |
-| `equipment/get_inventory.php`          | GET              | **Yes** | Equipment list                                | —                                                                                                                                           | `[{id, item_name, total_quantity, available}, ...]`                   |
-| `admin/squads.php`                     | GET              | **Yes** | List squads                                   | —                                                                                                                                           | `[{id, name, zone, members: [...]}, ...]`                             |
-| `admin/squads.php`                     | POST             | **Yes** | Squad CRUD                                    | `action` (create_squad/add_member/remove_member/delete_squad) + params                                                                     | `{message}`                                                           |
-| `admin/schedules.php`                  | GET              | **Yes** | List schedules                                | —                                                                                                                                           | `[{id, squad_id, squad_name, shift_date, ...}, ...]`                  |
-| `admin/schedules.php`                  | POST             | **Yes** | Schedule CRUD                                 | `action` (create_schedule/delete_schedule) + params                                                                                        | `{message}`                                                           |
-| `admin/get_stats.php`                  | GET              | **Yes** | Dashboard KPIs                                | —                                                                                                                                           | `{total_patrollers, active_shifts, weekly_incidents}`                 |
-| `admin/get_active_shifts.php`          | GET              | **Yes** | Active shifts                                 | —                                                                                                                                           | `[{user_id, full_name, clock_in_time, ...}, ...]`                     |
+| Endpoint                                 | Method           | Auth      | Purpose                                       | Request                                                                 | Response Data                                                           |
+| ---------------------------------------- | ---------------- | --------- | --------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `auth/login.php`                         | POST             | No        | Login                                         | `email`, `password`                                                     | `{token, data: {id, full_name, role, state_id, district_id, zone_id, state_name, district_name, zone_name}}` |
+| `auth/register.php`                      | POST             | No        | Register                                      | `id`, `full_name`, `ic_number`, `phone_number`, `email`, `password`, `state_id`, `district_id`, `zone_id` | `{message}` |
+| `auth/get_locations.php`                 | GET              | Optional  | Cascading location options                     | `level=states|districts|zones`, optional `parent_id`                    | `[{id, name, code?}]`                                                   |
+| `auth/get_profile.php`                   | GET              | **Yes**   | Get user profile                              | -                                                                       | `{id, full_name, ic_number, state_id, district_id, zone_id, state_name, district_name, zone_name, ...}` |
+| `auth/get_patrollers.php`                | GET              | **Yes**   | List patrollers visible to actor               | -                                                                       | `[{id, full_name, role, state_id, district_id, zone_id, state_name, district_name, zone_name, squad_name, ...}]` |
+| `incidents/upload_incident.php`          | POST (multipart) | **Yes**   | Submit incident                               | `id`, `title`, `description`, `category`, `latitude`, `longitude`, `location_name`, `reported_to`, `images[]` | `{message}` |
+| `incidents/get_incidents.php`            | GET              | **Yes**   | List incidents                                | Optional filters                                                        | `[{id, title, category, created_at, ...}, ...]`                         |
+| `incidents/delete_incident.php`          | POST             | **Yes**   | Delete incident                               | `incident_id`                                                           | `{message}`                                                            |
+| `incidents/check_sos.php`                | GET              | **Yes**   | Poll SOS alerts                               | `exclude_user`                                                          | `[{id, user_id, full_name, latitude, longitude, created_at}, ...]`      |
+| `incidents/get_lampiran_6_summary.php`   | GET              | **Yes**   | Monthly stats                                 | `month_offset`, `level`, optional `state_id`, `district_id`, `zone_id`  | `{metadata: {state_id, district_id, zone_id, ...}, data: {...}}`        |
+| `attendance/clock_in.php`                | POST             | **Yes**   | QR clock-in                                   | `checkpoint_id`, `latitude`, `longitude`                                | `{attendance_id, message}`                                             |
+| `attendance/clock_out.php`               | POST             | **Yes**   | Submit a post-return request                  | `checkpoint_id`, `latitude`, `longitude`, `returned_equipment`          | `{message}`                                                            |
+| `attendance/get_return_preview.php`      | GET              | **Yes**   | Borrowed-equipment return checklist           | -                                                                       | `{attendance_id, equipment}`                                           |
+| `attendance/get_pending_returns.php`     | GET              | **KRT**   | List return requests awaiting acknowledgement | -                                                                       | `[{id, full_name, equipment}]`                                         |
+| `attendance/acknowledge_return.php`      | POST             | **KRT**   | Confirm an individual physical return         | `attendance_id`                                                         | `{message}`                                                            |
+| `attendance/log_equipment.php`           | POST             | **Yes**   | Log equipment                                 | `attendance_id`, `equipment_items[]`                                    | `{message}`                                                            |
+| `equipment/get_inventory.php`            | GET              | **Yes**   | Equipment list                                | -                                                                       | `[{id, item_name, total_quantity, available}, ...]`                    |
+| `admin/squads.php`                       | GET              | **Admin** | List squads                                   | Optional `state_id`, `district_id`, `zone_id`                           | `[{id, name, state_id, district_id, zone_id, state_name, district_name, zone_name, members: [...]}, ...]` |
+| `admin/squads.php`                       | POST             | **Admin** | Squad CRUD                                    | `action=create_squad|add_member|remove_member|delete_squad` + params   | `{message, squad_id?}`                                                 |
+| `admin/schedules.php`                    | GET              | **Admin** | List schedules by patrol location             | Optional `date`, `state_id`, `district_id`, `zone_id`                   | `[{id, squad_id, squad_name, state_id, district_id, zone_id, state_name, district_name, zone_name, squad_* location, shift_date, ...}]` |
+| `admin/schedules.php`                    | POST             | **Admin** | Schedule CRUD                                 | `action=create_schedule|delete_schedule`, create requires `squad_id`, `state_id`, `district_id`, `zone_id`, `shift_date`, `start_time`, `end_time` | `{message, schedule_id?}` |
+| `admin/get_stats.php`                    | GET              | **Yes**   | Dashboard KPIs                                | -                                                                       | `{total_patrollers, active_shifts, weekly_incidents}`                  |
+| `admin/get_active_shifts.php`            | GET              | **Yes**   | Active shifts                                 | -                                                                       | `[{user_id, full_name, clock_in_time, ...}, ...]`                      |
 
 ### 5.4 Security Rules
 
@@ -813,22 +806,34 @@ $conn->close();
 
 ### 6.6 Squad & Schedule Management
 
-**Squad Management** (`admin_squad_schedule_screen.dart` — Squad Tab):
+**Squad Management** (`admin_squad_schedule_screen.dart` - Squad Tab):
 
-- Create squad: dialog with name input.
+- Location filter panel:
+  - Super admin: State -> District -> Zone filters.
+  - Ketua KRT: fixed state/district context with selectable zone filter inside their district.
+- Create squad: bottom sheet with name input; super admin-created squads use the selected state/district/zone as squad home location.
 - Expandable `ExpansionTile` per squad showing member list.
+- Squad cards display squad home/origin location.
+- Member rows display each member's own state/district/zone, so mixed-zone squads are understandable.
 - Add member: dialog with patroller list picker from `auth/get_patrollers.php`.
-- Remove member: swipe-to-delete or button with confirmation.
+- Remove member: button with confirmation.
 - Delete squad: confirmation dialog with cascade warning.
 
-**Schedule Management** (Schedule Tab):
+**Schedule Management** (`admin_squad_schedule_screen.dart` - Scheduling Tab):
 
+- Location filter panel filters schedules by actual patrol location, not only squad home zone.
 - Create schedule: `showModalBottomSheet` with:
-  - Squad dropdown picker.
+  - Patrol zone dropdown.
+  - Squad dropdown listing eligible squads with their home/origin location.
   - Date picker (`showDatePicker`).
   - Start time picker (`showTimePicker`).
   - End time picker (`showTimePicker`).
-- Schedule list with delete action.
+- Admin can inspect schedules by State -> District -> Zone.
+- Ketua KRT can assign any squad in their district to patrol any zone in that same district, even when the squad home zone differs from the selected patrol zone.
+- Schedule cards display patrol location plus squad name, date, time, and member count.
+- Schedule list includes delete action.
+- Patroller schedule cards (`schedule_screen.dart`) display patrol location when returned by `schedules/get_user_schedule.php`.
+- Attendance clock-in snapshots the matching schedule patrol location when one exists; otherwise it falls back to the user's home location.
 
 **Planned enhancements**:
 
@@ -877,7 +882,7 @@ Create new screen for equipment tracking with QR scanner to check in and check o
 **Registration** (`register_screen.dart`):
 
 - Form with: full_name, IC number, phone, email, password.
-- 3 cascading dropdowns: State → District → Zone (hardcoded location hierarchy map).(admin can add new zone, district, state from admin panel in user management tab)
+- 3 cascading dropdowns: State -> District -> Zone loaded from `auth/get_locations.php` (admin can add/manage locations from the admin location panel).
 - `Form` with `GlobalKey<FormState>` for validation.
 - Success dialog → return to login.
 - Newly registered users default to `pending` status (need admin approval).
@@ -1229,27 +1234,28 @@ When a list has no data, show:
 | BUG-015      | `login_screen.dart`        | Forgot link   | Demo-safe support dialog implemented; full OTP/password reset flow is**not implemented**                  | Keep Ketua KRT assistance dialog for FYP demo; build OTP reset only if needed after presentation |
 | BUG-016      | `profile_screen.dart`      | Entire file   | Profile is**read-only** — no edit capability                                                             | Add profile editing (at minimum: phone, name)                                                    |
 | BUG-017      | `main.dart`                | Line 47       | `themeMode: ThemeMode.light` hardcoded — dark theme code is dead                                             | Remove dark theme code entirely (per project decision)                                           |
-| BUG-018      | `register_screen.dart`     | Zone dropdown | Zone list is hardcoded in Flutter — not fetched from API                                                       | OK for FYP scope; document as known limitation                                                   |
+| ~~BUG-018~~ | `register_screen.dart`     | Zone dropdown | ~~Zone list is hardcoded in Flutter — not fetched from API~~ [RESOLVED]                                      | Fetch locations via `auth/get_locations.php` cascade                                        |
 | ~~BUG-019~~ | `settings_provider.dart`   | —            | ~~Missing translation keys for: squad management screens, equipment dialog, some analytics labels~~ [RESOLVED] | Add missing `ms`/`en` translation pairs                                                      |
 
 ---
 
 ## 10. Planned Features
 
-### 10.1 User Management (Admin) — TO BUILD
+### 10.1 User Management (Admin) - IMPLEMENTED
 
-**Scope**: Admin (`ketua_krt`) manages user accounts.
+**Scope**: Admin (`ketua_krt`) and `super_admin` manage user accounts through `admin_member_screen.dart`.
 
-| Action                        | Description                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------------- |
-| **Approve/Reject**      | Review `pending` users and approve (set `active`) or reject (set `inactive`) |
-| **Activate/Deactivate** | Toggle existing users between `active` and `inactive` (disable login)          |
-| **Promote Role**        | Change user role (e.g.,`peronda` → `ketua_peronda`)                           |
+| Action                  | Current behavior                                                                 |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| **Filter/Search**       | Search by name/email/IC/phone; filter by status, role, and location scope        |
+| **Approve/Reject**      | Review `pending` users and set `active` or `inactive`                            |
+| **Activate/Deactivate** | Toggle existing users between `active` and `inactive`                            |
+| **Promote Role**        | Promote eligible `peronda` users to `ketua_peronda`; super admin can manage wider role scope |
+| **Update Location**     | Change user state/district/zone through normalized location dropdowns            |
 
-**Implementation**: Extend `admin_member_screen.dart` (currently a stub with "coming soon" snackbar). Add new API endpoints:
+**Backend**: `admin/update_user.php` handles `update_status`, `promote_role`, role/location updates, and related squad cleanup/notifications when a user's location no longer matches their squad.
 
-- `admin/update_user.php` — POST: `{action: approve|reject|activate|deactivate|promote, user_id, new_role?}`
-
+**Future improvement**: Bulk account actions for approving/deactivating multiple selected members at once.
 ### 10.2 Batch Selection — TO BUILD
 
 **Where it applies:**

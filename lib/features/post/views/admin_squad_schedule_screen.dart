@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../auth/models/location_option.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/services/auth_service.dart';
 
 class AdminSquadScheduleScreen extends StatefulWidget {
   const AdminSquadScheduleScreen({super.key});
@@ -77,6 +80,15 @@ class _SquadManagementTab extends StatefulWidget {
 class _SquadManagementTabState extends State<_SquadManagementTab> {
   List<dynamic> _squads = [];
   bool _isLoading = true;
+  final _searchController = TextEditingController();
+  final AuthService _authService = AuthService();
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+  String? _filterError;
 
   SettingsProvider get settings =>
       Provider.of<SettingsProvider>(context, listen: false);
@@ -84,13 +96,62 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
   @override
   void initState() {
     super.initState();
-    _fetchSquads();
+    _initializeFilters();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeFilters() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() {
+          _states = states;
+          _filterError = null;
+        });
+      } else if (auth.districtId != null) {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: auth.districtId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _zones = zones;
+          _filterError = null;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _filterError = settings.t('Tidak dapat memuatkan lokasi.'),
+      );
+    }
+    await _fetchSquads();
+  }
+
+  String _currentLocationQuery() {
+    final auth = context.read<AuthProvider>();
+    final query = <String, String>{};
+    if (auth.role != 'super_admin') {
+      if (auth.stateId != null) query['state_id'] = auth.stateId!;
+      if (auth.districtId != null) query['district_id'] = auth.districtId!;
+    }
+    final encoded = Uri(queryParameters: query).query;
+    return encoded.isEmpty ? '' : '?$encoded';
   }
 
   Future<void> _fetchSquads() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiClient.getData('admin/squads.php');
+      final response = await ApiClient.getData(
+        'admin/squads.php${_currentLocationQuery()}',
+      );
       if (response['status'] == 'success' || response['success'] == true) {
         setState(() => _squads = response['data'] ?? []);
       }
@@ -101,12 +162,288 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
     }
   }
 
-  Future<void> _createSquad(String name) async {
-    try {
-      final response = await ApiClient.postData('admin/squads.php', {
-        'action': 'create_squad',
-        'name': name,
+  List<dynamic> get _filteredSquads {
+    final query = _searchController.text.trim().toLowerCase();
+    return _squads.where((squad) {
+      final members = squad['members'] as List<dynamic>? ?? [];
+      final searchText = [
+        squad['name']?.toString() ?? '',
+        _locationTrail(squad, settings),
+        ...members.map((member) => member['full_name']?.toString() ?? ''),
+      ].join(' ').toLowerCase();
+      final matchesSearch = query.isEmpty || searchText.contains(query);
+      final matchesState =
+          _selectedState == null ||
+          squad['state_id']?.toString() == _selectedState!.id;
+      final matchesDistrict =
+          _selectedDistrict == null ||
+          squad['district_id']?.toString() == _selectedDistrict!.id;
+      final matchesZone =
+          _selectedZone == null ||
+          squad['zone_id']?.toString() == _selectedZone!.id;
+      return matchesSearch && matchesState && matchesDistrict && matchesZone;
+    }).toList();
+  }
+
+  List<String> _activeSquadFilterLabels(SettingsProvider settings) {
+    return [
+      if (_selectedState != null) _selectedState!.name,
+      if (_selectedDistrict != null) _selectedDistrict!.name,
+      if (_selectedZone != null) _selectedZone!.name,
+    ];
+  }
+
+  void _showSquadFilterSheet(SettingsProvider settings) {
+    final auth = context.read<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+    var selectedState = _selectedState;
+    var selectedDistrict = _selectedDistrict;
+    var selectedZone = _selectedZone;
+    var sheetDistricts = List<LocationOption>.from(_districts);
+    var sheetZones = List<LocationOption>.from(_zones);
+    var sheetError = _filterError;
+    var isLoading = false;
+    var sheetOpen = true;
+
+    Future<void> loadDistricts(
+      LocationOption? state,
+      StateSetter setSheetState,
+    ) async {
+      setSheetState(() {
+        selectedState = state;
+        selectedDistrict = null;
+        selectedZone = null;
+        sheetDistricts = const [];
+        sheetZones = const [];
+        sheetError = null;
+        isLoading = state != null;
       });
+      if (state == null) return;
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || !sheetOpen || selectedState?.id != state.id) return;
+        setSheetState(() {
+          sheetDistricts = districts;
+          isLoading = false;
+        });
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setSheetState(() {
+          sheetError = settings.t('Tidak dapat memuatkan daerah.');
+          isLoading = false;
+        });
+      }
+    }
+
+    Future<void> loadZones(
+      LocationOption? district,
+      StateSetter setSheetState,
+    ) async {
+      setSheetState(() {
+        selectedDistrict = district;
+        selectedZone = null;
+        sheetZones = const [];
+        sheetError = null;
+        isLoading = district != null;
+      });
+      if (district == null) return;
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted || !sheetOpen || selectedDistrict?.id != district.id) {
+          return;
+        }
+        setSheetState(() {
+          sheetZones = zones;
+          isLoading = false;
+        });
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setSheetState(() {
+          sheetError = settings.t('Tidak dapat memuatkan zon.');
+          isLoading = false;
+        });
+      }
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              MediaQuery.viewInsetsOf(context).bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          settings.t('Tapis Kumpulan'),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: settings.t('Tutup'),
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  if (isLoading) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ],
+                  if (sheetError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      sheetError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  if (isSuperAdmin) ...[
+                    _LocationDropdown(
+                      label: settings.t('Negeri'),
+                      value: selectedState,
+                      items: _states,
+                      allLabel: settings.t('Semua Negeri'),
+                      onChanged: (value) => loadDistricts(value, setSheetState),
+                    ),
+                    const SizedBox(height: 12),
+                    _LocationDropdown(
+                      label: settings.t('Daerah'),
+                      value: selectedDistrict,
+                      items: sheetDistricts,
+                      allLabel: settings.t('Semua Daerah'),
+                      enabled: selectedState != null,
+                      onChanged: (value) => loadZones(value, setSheetState),
+                    ),
+                  ] else
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).dividerColor.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${settings.t("Negeri")} • ${settings.t("Daerah")}: '
+                        '${auth.stateName ?? "-"} • ${auth.districtName ?? "-"}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  _LocationDropdown(
+                    label: settings.t('Zon'),
+                    value: selectedZone,
+                    items: sheetZones,
+                    allLabel: settings.t('Semua Zon'),
+                    enabled: isSuperAdmin ? selectedDistrict != null : true,
+                    onChanged: (value) =>
+                        setSheetState(() => selectedZone = value),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setSheetState(() {
+                              selectedState = null;
+                              selectedDistrict = null;
+                              selectedZone = null;
+                              sheetDistricts = const [];
+                              sheetZones = isSuperAdmin
+                                  ? const []
+                                  : List<LocationOption>.from(_zones);
+                              sheetError = null;
+                            });
+                          },
+                          child: Text(settings.t('Reset')),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedState = selectedState;
+                              _selectedDistrict = selectedDistrict;
+                              _selectedZone = selectedZone;
+                              _districts = sheetDistricts;
+                              _zones = sheetZones;
+                              _filterError = sheetError;
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Text(settings.t('Tapis')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ).whenComplete(() => sheetOpen = false);
+  }
+
+  Future<void> _createSquad({
+    required String name,
+    required String stateId,
+    required String districtId,
+    required String headUserId,
+    required List<String> memberIds,
+  }) async {
+    final auth = context.read<AuthProvider>();
+
+    final body = <String, String>{'action': 'create_squad', 'name': name};
+    body['state_id'] = auth.role == 'super_admin'
+        ? stateId
+        : auth.stateId ?? stateId;
+    body['district_id'] = auth.role == 'super_admin'
+        ? districtId
+        : auth.districtId ?? districtId;
+    body['head_user_id'] = headUserId;
+    body['member_ids'] = memberIds.join(',');
+
+    try {
+      final response = await ApiClient.postData('admin/squads.php', body);
       if (response['success'] == true || response['status'] == 'success') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -235,9 +572,127 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
     }
   }
 
-  void _showCreateSquadDialog() {
+  Future<void> _showCreateSquadDialog() async {
     final TextEditingController nameController = TextEditingController();
     final theme = Theme.of(context);
+    final auth = context.read<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+    LocationOption? selectedState = _selectedState;
+    LocationOption? selectedDistrict = _selectedDistrict;
+    var modalStates = List<LocationOption>.from(_states);
+    var modalDistricts = List<LocationOption>.from(_districts);
+    var allPatrollers = <dynamic>[];
+    var isLoading = false;
+    var sheetOpen = true;
+    String? selectedHeadId;
+    final selectedMemberIds = <String>{};
+    String? modalError;
+
+    bool isActive(dynamic patroller) {
+      final status = (patroller['account_status'] ?? patroller['status'] ?? '')
+          .toString()
+          .toLowerCase();
+      return status == 'active' || status == 'approved';
+    }
+
+    bool isUnassigned(dynamic patroller) {
+      final squadName = patroller['squad_name']?.toString().trim();
+      return squadName == null || squadName.isEmpty;
+    }
+
+    bool matchesDistrict(dynamic patroller) {
+      final districtId = isSuperAdmin
+          ? selectedDistrict?.id
+          : auth.districtId ?? selectedDistrict?.id;
+      if (districtId == null) return false;
+      return patroller['district_id']?.toString() == districtId;
+    }
+
+    List<dynamic> eligiblePatrollers(String role) {
+      return allPatrollers.where((patroller) {
+        return patroller['role']?.toString() == role &&
+            isActive(patroller) &&
+            isUnassigned(patroller) &&
+            matchesDistrict(patroller);
+      }).toList()..sort(
+        (a, b) => (a['full_name'] ?? '').toString().compareTo(
+          (b['full_name'] ?? '').toString(),
+        ),
+      );
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) =>
+          Center(child: CircularProgressIndicator(color: theme.primaryColor)),
+    );
+    try {
+      if (isSuperAdmin && modalStates.isEmpty) {
+        modalStates = await _authService.fetchLocations(level: 'states');
+      }
+      final response = await ApiClient.getData('auth/get_patrollers.php');
+      allPatrollers = response['status'] == 'success'
+          ? (response['data'] as List<dynamic>? ?? [])
+          : <dynamic>[];
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${settings.t("Ralat memuat senarai:")} $e')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    Future<void> selectState(
+      LocationOption? state,
+      StateSetter setModalState,
+    ) async {
+      setModalState(() {
+        selectedState = state;
+        selectedDistrict = null;
+        modalDistricts = const [];
+        selectedHeadId = null;
+        selectedMemberIds.clear();
+        modalError = null;
+        isLoading = state != null;
+      });
+      if (state == null) return;
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || !sheetOpen || selectedState?.id != state.id) return;
+        setModalState(() {
+          modalDistricts = districts;
+          isLoading = false;
+        });
+      } catch (e) {
+        if (!mounted || !sheetOpen) return;
+        setModalState(() {
+          modalError = '${settings.t("Tidak dapat memuatkan daerah.")} $e';
+          isLoading = false;
+        });
+      }
+    }
+
+    void selectDistrict(LocationOption? district, StateSetter setModalState) {
+      setModalState(() {
+        selectedDistrict = district;
+        selectedHeadId = null;
+        selectedMemberIds.clear();
+      });
+    }
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -246,91 +701,325 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                settings.t('Cipta Kumpulan Baru'),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: theme.primaryColor,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final headOptions = eligiblePatrollers('ketua_peronda');
+            final memberOptions = eligiblePatrollers('peronda');
+            final canPickMembers =
+                (isSuperAdmin
+                    ? selectedDistrict != null
+                    : auth.districtId != null) &&
+                selectedHeadId != null;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        settings.t('Cipta Kumpulan Baru'),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nameController,
+                        style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                        decoration: _squadDialogInputDecoration(
+                          theme,
+                          settings.t('Nama Kumpulan'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (isSuperAdmin) ...[
+                        _LocationDropdown(
+                          label: settings.t('Negeri'),
+                          value: selectedState,
+                          items: modalStates,
+                          allLabel: settings.t('Semua Negeri'),
+                          onChanged: (value) =>
+                              selectState(value, setModalState),
+                        ),
+                        const SizedBox(height: 12),
+                        _LocationDropdown(
+                          label: settings.t('Daerah'),
+                          value: selectedDistrict,
+                          items: modalDistricts,
+                          allLabel: settings.t('Semua Daerah'),
+                          enabled: selectedState != null,
+                          onChanged: (value) =>
+                              selectDistrict(value, setModalState),
+                        ),
+                      ] else ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                          child: Text(
+                            '${settings.t("Negeri")} • ${settings.t("Daerah")}: '
+                            '${auth.stateName ?? "-"} • ${auth.districtName ?? "-"}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isLoading) ...[
+                        const SizedBox(height: 12),
+                        LinearProgressIndicator(color: theme.primaryColor),
+                      ],
+                      if (modalError != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          modalError!,
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Text(
+                        settings.t('Ketua Peronda'),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(
+                          'squad-head-${selectedDistrict?.id}-${headOptions.length}',
+                        ),
+                        initialValue: selectedHeadId,
+                        isExpanded: true,
+                        dropdownColor: Colors.white,
+                        decoration: _squadDialogInputDecoration(
+                          theme,
+                          settings.t('Pilih Ketua Peronda'),
+                        ),
+                        items: headOptions
+                            .map(
+                              (patroller) => DropdownMenuItem<String>(
+                                value: patroller['id']?.toString(),
+                                child: Text(
+                                  patroller['full_name']?.toString() ?? '-',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged:
+                            (isSuperAdmin && selectedDistrict == null) ||
+                                headOptions.isEmpty
+                            ? null
+                            : (value) {
+                                setModalState(() {
+                                  selectedHeadId = value;
+                                  selectedMemberIds.remove(value);
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '${settings.t('Peronda')} (${selectedMemberIds.length}/20)',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        settings.t('Pilih 2 hingga 20 peronda.'),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.textTheme.bodySmall?.color?.withValues(
+                            alpha: 0.68,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (!canPickMembers || memberOptions.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            canPickMembers
+                                ? settings.t('Tiada peronda dijumpai')
+                                : settings.t(
+                                    'Pilih daerah dan ketua peronda dahulu.',
+                                  ),
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        )
+                      else
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 280),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: memberOptions.length,
+                            itemBuilder: (context, index) {
+                              final patroller = memberOptions[index];
+                              final id = patroller['id']?.toString() ?? '';
+                              final selected = selectedMemberIds.contains(id);
+                              return CheckboxListTile(
+                                value: selected,
+                                onChanged: (checked) {
+                                  if (checked == true &&
+                                      selectedMemberIds.length >= 20) {
+                                    showValidationMessage(
+                                      settings.t(
+                                        'Maksimum 20 peronda dibenarkan.',
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  setModalState(() {
+                                    if (checked == true) {
+                                      selectedMemberIds.add(id);
+                                    } else {
+                                      selectedMemberIds.remove(id);
+                                    }
+                                  });
+                                },
+                                title: Text(
+                                  patroller['full_name']?.toString() ?? '-',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  _locationTrail(patroller, settings),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                              );
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  final name = nameController.text.trim();
+                                  final stateId = isSuperAdmin
+                                      ? selectedState?.id
+                                      : auth.stateId;
+                                  final districtId = isSuperAdmin
+                                      ? selectedDistrict?.id
+                                      : auth.districtId;
+                                  if (name.isEmpty) {
+                                    showValidationMessage(
+                                      settings.t('Nama Kumpulan diperlukan.'),
+                                    );
+                                    return;
+                                  }
+                                  if (stateId == null || districtId == null) {
+                                    showValidationMessage(
+                                      settings.t(
+                                        'Pilih negeri dan daerah untuk kumpulan ini.',
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  if (selectedHeadId == null) {
+                                    showValidationMessage(
+                                      settings.t('Pilih Ketua Peronda'),
+                                    );
+                                    return;
+                                  }
+                                  if (selectedMemberIds.length < 2 ||
+                                      selectedMemberIds.length > 20) {
+                                    showValidationMessage(
+                                      settings.t('Pilih 2 hingga 20 peronda.'),
+                                    );
+                                    return;
+                                  }
+                                  Navigator.pop(context);
+                                  _createSquad(
+                                    name: name,
+                                    stateId: stateId,
+                                    districtId: districtId,
+                                    headUserId: selectedHeadId!,
+                                    memberIds: selectedMemberIds.toList(),
+                                  );
+                                },
+                          child: Text(
+                            settings.t('Simpan Kumpulan'),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                decoration: InputDecoration(
-                  labelText: settings.t('Nama Kumpulan'),
-                  labelStyle: TextStyle(
-                    color: theme.textTheme.bodyMedium?.color?.withValues(
-                      alpha: 0.6,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.primaryColor, width: 2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty) {
-                      Navigator.pop(context);
-                      _createSquad(nameController.text);
-                    }
-                  },
-                  child: Text(
-                    settings.t('Simpan Kumpulan'),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            );
+          },
         );
       },
+    ).whenComplete(() {
+      sheetOpen = false;
+    });
+  }
+
+  InputDecoration _squadDialogInputDecoration(ThemeData theme, String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(
+        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: theme.primaryColor, width: 2),
+      ),
     );
   }
 
@@ -424,7 +1113,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                   subtitle: Text(
                                     isAssigned
                                         ? '${settings.t("Telah ditugaskan ke:")} $squadName'
-                                        : '${settings.t("Zon")}: ${p['zone'] ?? p['district_zone'] ?? '-'}',
+                                        : _locationTrail(p, settings),
                                     style: TextStyle(
                                       color: isAssigned
                                           ? Colors.redAccent.shade700
@@ -502,6 +1191,9 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
     final theme = Theme.of(context);
+    final activeFilters = _activeSquadFilterLabels(settings);
+    final isFilterActive = activeFilters.isNotEmpty;
+    final filteredSquads = _filteredSquads;
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(color: theme.primaryColor),
@@ -513,7 +1205,120 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                    decoration: InputDecoration(
+                      hintText: settings.t('Cari kumpulan atau ahli...'),
+                      hintStyle: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color?.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                      prefixIcon: Icon(Icons.search, color: theme.primaryColor),
+                      filled: true,
+                      fillColor: theme.cardColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: theme.primaryColor,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      tooltip: settings.t('Tapis Kumpulan'),
+                      icon: Icon(
+                        Icons.filter_list,
+                        color: isFilterActive
+                            ? Colors.white
+                            : theme.primaryColor,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: isFilterActive
+                            ? theme.primaryColor
+                            : theme.cardColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isFilterActive
+                                ? Colors.transparent
+                                : Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(12),
+                      ),
+                      onPressed: () => _showSquadFilterSheet(settings),
+                    ),
+                    if (isFilterActive)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (activeFilters.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: activeFilters
+                      .map(
+                        (label) => Chip(
+                          label: Text(label, overflow: TextOverflow.ellipsis),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: FilledButton.icon(
               onPressed: _showCreateSquadDialog,
               icon: const Icon(Icons.add_circle_outline),
@@ -533,7 +1338,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
             ),
           ),
           Expanded(
-            child: _squads.isEmpty
+            child: filteredSquads.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -558,9 +1363,9 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _squads.length,
+                    itemCount: filteredSquads.length,
                     itemBuilder: (context, index) {
-                      final squad = _squads[index];
+                      final squad = filteredSquads[index];
                       final members = squad['members'] as List<dynamic>? ?? [];
 
                       return Card(
@@ -627,6 +1432,20 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                               ?.color
                                               ?.withValues(alpha: 0.6),
                                           fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _locationTrail(squad, settings),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: theme
+                                              .textTheme
+                                              .bodySmall
+                                              ?.color
+                                              ?.withValues(alpha: 0.68),
+                                          fontSize: 12,
                                         ),
                                       ),
                                     ],
@@ -726,7 +1545,15 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                             ),
                                           ),
                                           subtitle: Text(
-                                            m['ic_number'] ?? '',
+                                            [
+                                                  m['ic_number']?.toString() ??
+                                                      '',
+                                                  _locationTrail(m, settings),
+                                                ]
+                                                .where(
+                                                  (part) => part.isNotEmpty,
+                                                )
+                                                .join(' | '),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: theme
@@ -845,7 +1672,13 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   bool _isLoading = true;
   DateTime _selectedDate = DateTime.now();
   bool _showHistory = false;
-  String? _selectedZoneId;
+  final AuthService _authService = AuthService();
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
 
   SettingsProvider get settings =>
       Provider.of<SettingsProvider>(context, listen: false);
@@ -853,14 +1686,53 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   @override
   void initState() {
     super.initState();
-    _fetchSchedules();
+    _initializeFilters();
+  }
+
+  Future<void> _initializeFilters() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() => _states = states);
+      } else if (auth.districtId != null) {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: auth.districtId,
+        );
+        if (!mounted) return;
+        setState(() => _zones = zones);
+      }
+    } catch (e) {
+      debugPrint('Unable to load schedule assignment locations: $e');
+    }
+    await _fetchSchedules();
+  }
+
+  String _currentLocationQuery() {
+    final auth = context.read<AuthProvider>();
+    final query = <String, String>{};
+    if (auth.role == 'super_admin') {
+      if (_selectedState != null) query['state_id'] = _selectedState!.id;
+      if (_selectedDistrict != null) {
+        query['district_id'] = _selectedDistrict!.id;
+      }
+    } else {
+      if (auth.stateId != null) query['state_id'] = auth.stateId!;
+      if (auth.districtId != null) query['district_id'] = auth.districtId!;
+    }
+    if (_selectedZone != null) query['zone_id'] = _selectedZone!.id;
+    final encoded = Uri(queryParameters: query).query;
+    return encoded.isEmpty ? '' : '?$encoded';
   }
 
   Future<void> _fetchSchedules() async {
     setState(() => _isLoading = true);
     try {
-      final query = _selectedZoneId == null ? '' : '?zone_id=$_selectedZoneId';
-      final response = await ApiClient.getData('admin/schedules.php$query');
+      final response = await ApiClient.getData(
+        'admin/schedules.php${_currentLocationQuery()}',
+      );
       if (response['success'] == true || response['status'] == 'success') {
         setState(() => _schedules = response['data'] ?? []);
       }
@@ -873,6 +1745,9 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
 
   Future<void> _createSchedule(
     String squadId,
+    String stateId,
+    String districtId,
+    String zoneId,
     String date,
     String startTime,
     String endTime,
@@ -881,6 +1756,9 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
       final response = await ApiClient.postData('admin/schedules.php', {
         'action': 'create_schedule',
         'squad_id': squadId,
+        'state_id': stateId,
+        'district_id': districtId,
+        'zone_id': zoneId,
         'shift_date': date,
         'start_time': startTime,
         'end_time': endTime,
@@ -945,60 +1823,182 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
     }
   }
 
-  void _showCreateScheduleDialog() async {
+  void _showCreateScheduleDialog() {
     final theme = Theme.of(context);
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) =>
-          Center(child: CircularProgressIndicator(color: theme.primaryColor)),
-    );
+    final auth = context.read<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+    LocationOption? selectedPatrolState = _selectedState;
+    LocationOption? selectedPatrolDistrict = _selectedDistrict;
+    LocationOption? selectedPatrolZone = _selectedZone;
+    var modalDistricts = List<LocationOption>.from(_districts);
+    var modalZones = List<LocationOption>.from(_zones);
+    var availableSquads = <dynamic>[];
+    String? selectedSquadId;
+    var isLoadingLocations = false;
+    var isLoadingSquads = false;
+    String? modalError;
+    var didPrime = false;
+    var sheetOpen = true;
 
-    List<dynamic> squads = [];
-    try {
-      final response = await ApiClient.getData('admin/squads.php');
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading
+    if (!isSuperAdmin && selectedPatrolZone == null && _zones.isNotEmpty) {
+      selectedPatrolZone = _zones.firstWhere(
+        (zone) => zone.id == auth.zoneId,
+        orElse: () => _zones.first,
+      );
+    }
 
-      if (response['success'] == true || response['status'] == 'success') {
-        squads = response['data'] ?? [];
+    Future<void> loadSquads(StateSetter setModalState) async {
+      final stateId = isSuperAdmin ? selectedPatrolState?.id : auth.stateId;
+      final districtId = isSuperAdmin
+          ? selectedPatrolDistrict?.id
+          : auth.districtId;
+      if (stateId == null || districtId == null) {
+        setModalState(() {
+          availableSquads = [];
+          selectedSquadId = null;
+        });
+        return;
       }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${settings.t("Ralat memuatkan kumpulan:")} $e'),
-        ),
-      );
-      return;
+
+      setModalState(() {
+        isLoadingSquads = true;
+        modalError = null;
+        availableSquads = [];
+        selectedSquadId = null;
+      });
+      try {
+        final query = isSuperAdmin
+            ? '?${Uri(queryParameters: {'state_id': stateId, 'district_id': districtId}).query}'
+            : '';
+        final response = await ApiClient.getData('admin/squads.php$query');
+        if (!mounted || !sheetOpen) return;
+        final squads =
+            (response['success'] == true || response['status'] == 'success')
+            ? (response['data'] as List<dynamic>? ?? [])
+            : <dynamic>[];
+        setModalState(() {
+          availableSquads = squads;
+          selectedSquadId = squads.isEmpty
+              ? null
+              : squads.first['id']?.toString();
+        });
+      } catch (e) {
+        if (!mounted || !sheetOpen) return;
+        setModalState(
+          () => modalError = '${settings.t("Ralat memuatkan kumpulan:")} $e',
+        );
+      } finally {
+        if (mounted && sheetOpen) {
+          setModalState(() => isLoadingSquads = false);
+        }
+      }
     }
 
-    if (squads.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(settings.t('Sila cipta kumpulan terlebih dahulu!')),
-        ),
-      );
-      return;
+    Future<void> loadDistricts(
+      LocationOption? state,
+      StateSetter setModalState,
+    ) async {
+      setModalState(() {
+        selectedPatrolState = state;
+        selectedPatrolDistrict = null;
+        selectedPatrolZone = null;
+        modalDistricts = const [];
+        modalZones = const [];
+        availableSquads = [];
+        selectedSquadId = null;
+        modalError = null;
+        isLoadingLocations = state != null;
+      });
+      _selectedState = state;
+      _selectedDistrict = null;
+      _selectedZone = null;
+      _districts = const [];
+      _zones = const [];
+      if (state == null) return;
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || !sheetOpen || selectedPatrolState?.id != state.id) {
+          return;
+        }
+        setModalState(() {
+          modalDistricts = districts;
+          isLoadingLocations = false;
+        });
+        _districts = districts;
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setModalState(() {
+          modalError = settings.t('Tidak dapat memuatkan daerah.');
+          isLoadingLocations = false;
+        });
+      }
     }
 
-    final assignZones = _zoneOptionsFromSquads(squads);
-    String? selectedAssignZoneId =
-        _selectedZoneId ??
-        (assignZones.isNotEmpty ? assignZones.first.id : null);
-    List<dynamic> filteredSquads() => selectedAssignZoneId == null
-        ? squads
-        : squads
-              .where(
-                (squad) => squad['zone_id']?.toString() == selectedAssignZoneId,
-              )
-              .toList();
-    var availableSquads = filteredSquads();
-    String? selectedSquadId = availableSquads.isNotEmpty
-        ? availableSquads[0]['id']?.toString()
-        : squads[0]['id']?.toString();
+    Future<void> loadZones(
+      LocationOption? district,
+      StateSetter setModalState,
+    ) async {
+      setModalState(() {
+        selectedPatrolDistrict = district;
+        selectedPatrolZone = null;
+        modalZones = const [];
+        availableSquads = [];
+        selectedSquadId = null;
+        modalError = null;
+        isLoadingLocations = district != null;
+      });
+      _selectedDistrict = district;
+      _selectedZone = null;
+      _zones = const [];
+      if (district == null) return;
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted ||
+            !sheetOpen ||
+            selectedPatrolDistrict?.id != district.id) {
+          return;
+        }
+        setModalState(() {
+          modalZones = zones;
+          isLoadingLocations = false;
+        });
+        _zones = zones;
+        await loadSquads(setModalState);
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setModalState(() {
+          modalError = settings.t('Tidak dapat memuatkan zon.');
+          isLoadingLocations = false;
+        });
+      }
+    }
+
+    void selectZone(LocationOption? zone, StateSetter setModalState) {
+      setModalState(() => selectedPatrolZone = zone);
+      _selectedZone = zone;
+    }
+
+    void primeSheet(StateSetter setModalState) {
+      if (didPrime) return;
+      didPrime = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !sheetOpen) return;
+        loadSquads(setModalState);
+      });
+    }
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+
     DateTime selectedDate =
         _dateOnly(_selectedDate).isBefore(_dateOnly(DateTime.now()))
         ? DateTime.now()
@@ -1018,6 +2018,7 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            primeSheet(setModalState);
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1025,258 +2026,334 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
                 right: 24,
                 top: 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    settings.t('assign_shift'),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.t('assign_shift'),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.primaryColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
+                    _LocationFilterPanel(
+                      isSuperAdmin: isSuperAdmin,
+                      isLoading: isLoadingLocations,
+                      error: modalError,
+                      selectedState: selectedPatrolState,
+                      selectedDistrict: selectedPatrolDistrict,
+                      selectedZone: selectedPatrolZone,
+                      states: _states,
+                      districts: modalDistricts,
+                      zones: modalZones,
+                      fixedStateName: auth.stateName,
+                      fixedDistrictName: auth.districtName,
+                      onStateChanged: (value) =>
+                          loadDistricts(value, setModalState),
+                      onDistrictChanged: (value) =>
+                          loadZones(value, setModalState),
+                      onZoneChanged: (value) =>
+                          selectZone(value, setModalState),
+                    ),
+                    const SizedBox(height: 16),
 
-                  if (assignZones.isNotEmpty) ...[
+                    if (isLoadingSquads) ...[
+                      LinearProgressIndicator(color: theme.primaryColor),
+                      const SizedBox(height: 12),
+                    ],
+
                     DropdownButtonFormField<String>(
-                      initialValue: selectedAssignZoneId,
+                      key: ValueKey(
+                        'assign-shift-squad-${selectedPatrolState?.id}-${selectedPatrolDistrict?.id}-${availableSquads.length}',
+                      ),
+                      initialValue: selectedSquadId,
+                      isExpanded: true,
                       dropdownColor: theme.cardColor,
                       style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                       decoration: _dialogInputDecoration(
                         theme,
-                        settings.t('filter_by_zone'),
+                        settings.t('choose_squad'),
                       ),
-                      items: assignZones.map<DropdownMenuItem<String>>((zone) {
+                      selectedItemBuilder: (context) => availableSquads
+                          .map(
+                            (s) => Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                s['name']?.toString() ??
+                                    settings.t('Kumpulan Tanpa Nama'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      items: availableSquads.map<DropdownMenuItem<String>>((s) {
+                        final name =
+                            s['name']?.toString() ??
+                            settings.t('Kumpulan Tanpa Nama');
+                        final location = _locationTrail(s, settings);
                         return DropdownMenuItem<String>(
-                          value: zone.id,
-                          child: Text(zone.name),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setModalState(() {
-                          selectedAssignZoneId = val;
-                          availableSquads = filteredSquads();
-                          selectedSquadId = availableSquads.isNotEmpty
-                              ? availableSquads[0]['id']?.toString()
-                              : null;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('squad-$selectedAssignZoneId'),
-                    initialValue: selectedSquadId,
-                    dropdownColor: theme.cardColor,
-                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                    decoration: _dialogInputDecoration(
-                      theme,
-                      settings.t('choose_squad'),
-                    ),
-                    items: availableSquads.map<DropdownMenuItem<String>>((s) {
-                      return DropdownMenuItem<String>(
-                        value: s['id'].toString(),
-                        child: Text(s['name']),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setModalState(() => selectedSquadId = val);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.calendar_today,
-                      color: theme.primaryColor,
-                    ),
-                    title: Text(
-                      settings.t('choose_date'),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
-                    subtitle: Text(
-                      "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    trailing: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.primaryColor,
-                        side: BorderSide(color: theme.primaryColor),
-                      ),
-                      onPressed: () async {
-                        final today = _dateOnly(DateTime.now());
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _dateOnly(selectedDate).isBefore(today)
-                              ? today
-                              : selectedDate,
-                          firstDate: today,
-                          lastDate: DateTime.now().add(
-                            const Duration(days: 365),
-                          ),
-                        );
-                        if (picked != null) {
-                          setModalState(() => selectedDate = picked);
-                        }
-                      },
-                      child: Text(settings.t('Pilih')),
-                    ),
-                  ),
-                  const Divider(),
-
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.access_time, color: theme.primaryColor),
-                    title: Text(
-                      settings.t('choose_start_time'),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
-                    subtitle: Text(
-                      startTime.format(context),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    trailing: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.primaryColor,
-                        side: BorderSide(color: theme.primaryColor),
-                      ),
-                      onPressed: () async {
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: startTime,
-                        );
-                        if (picked != null) {
-                          setModalState(() => startTime = picked);
-                        }
-                      },
-                      child: Text(settings.t('Pilih')),
-                    ),
-                  ),
-                  const Divider(),
-
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
-                      Icons.access_time,
-                      color: Colors.redAccent,
-                    ),
-                    title: Text(
-                      settings.t('choose_end_time'),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
-                    subtitle: Text(
-                      endTime.format(context),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    trailing: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.primaryColor,
-                        side: BorderSide(color: theme.primaryColor),
-                      ),
-                      onPressed: () async {
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: endTime,
-                        );
-                        if (picked != null) {
-                          setModalState(() => endTime = picked);
-                        }
-                      },
-                      child: Text(settings.t('Pilih')),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () {
-                        if (selectedSquadId != null) {
-                          final dateStr =
-                              "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
-                          final startStr =
-                              "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00";
-                          final endStr =
-                              "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00";
-
-                          if (_hasLocalScheduleOverlap(
-                            selectedSquadId!,
-                            dateStr,
-                            startStr,
-                            endStr,
-                          )) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  settings.t('schedule_overlap_error'),
+                          value: s['id'].toString(),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                location,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.62,
+                                  ),
                                 ),
                               ),
-                            );
-                            return;
-                          }
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: availableSquads.isEmpty || isLoadingSquads
+                          ? null
+                          : (val) {
+                              setModalState(() => selectedSquadId = val);
+                            },
+                    ),
+                    const SizedBox(height: 16),
 
-                          Navigator.pop(context);
-                          _createSchedule(
-                            selectedSquadId!,
-                            dateStr,
-                            startStr,
-                            endStr,
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.calendar_today,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        settings.t('choose_date'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                      subtitle: Text(
+                        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      trailing: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                        ),
+                        onPressed: () async {
+                          final today = _dateOnly(DateTime.now());
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _dateOnly(selectedDate).isBefore(today)
+                                ? today
+                                : selectedDate,
+                            firstDate: today,
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
                           );
-                        }
-                      },
-                      child: Text(
-                        settings.t('assign_shift'),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                          if (picked != null) {
+                            setModalState(() => selectedDate = picked);
+                          }
+                        },
+                        child: Text(settings.t('Pilih')),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                    const Divider(),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.access_time,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        settings.t('choose_start_time'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                      subtitle: Text(
+                        startTime.format(context),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      trailing: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                        ),
+                        onPressed: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: startTime,
+                          );
+                          if (picked != null) {
+                            setModalState(() => startTime = picked);
+                          }
+                        },
+                        child: Text(settings.t('Pilih')),
+                      ),
+                    ),
+                    const Divider(),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.access_time,
+                        color: Colors.redAccent,
+                      ),
+                      title: Text(
+                        settings.t('choose_end_time'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                      subtitle: Text(
+                        endTime.format(context),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      trailing: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                        ),
+                        onPressed: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: endTime,
+                          );
+                          if (picked != null) {
+                            setModalState(() => endTime = picked);
+                          }
+                        },
+                        child: Text(settings.t('Pilih')),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: isLoadingSquads
+                            ? null
+                            : () {
+                                final selectedPatrolStateId = isSuperAdmin
+                                    ? selectedPatrolState?.id
+                                    : auth.stateId;
+                                final selectedPatrolDistrictId = isSuperAdmin
+                                    ? selectedPatrolDistrict?.id
+                                    : auth.districtId;
+                                if (selectedPatrolStateId == null ||
+                                    selectedPatrolDistrictId == null ||
+                                    selectedPatrolZone == null) {
+                                  showValidationMessage(
+                                    isSuperAdmin
+                                        ? settings.t(
+                                            'Pilih negeri, daerah dan zon rondaan dahulu.',
+                                          )
+                                        : settings.t(
+                                            'Pilih zon rondaan dahulu.',
+                                          ),
+                                  );
+                                  return;
+                                }
+                                if (selectedSquadId == null) {
+                                  showValidationMessage(
+                                    settings.t(
+                                      'Sila cipta kumpulan terlebih dahulu!',
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final dateStr =
+                                    "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+                                final startStr =
+                                    "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00";
+                                final endStr =
+                                    "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00";
+
+                                if (_hasLocalScheduleOverlap(
+                                  selectedSquadId!,
+                                  dateStr,
+                                  startStr,
+                                  endStr,
+                                )) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        settings.t('schedule_overlap_error'),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                Navigator.pop(context);
+                                _createSchedule(
+                                  selectedSquadId!,
+                                  selectedPatrolStateId,
+                                  selectedPatrolDistrictId,
+                                  selectedPatrolZone!.id,
+                                  dateStr,
+                                  startStr,
+                                  endStr,
+                                );
+                              },
+                        child: Text(
+                          settings.t('assign_shift'),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             );
           },
         );
       },
-    );
+    ).whenComplete(() => sheetOpen = false);
   }
 
   InputDecoration _dialogInputDecoration(ThemeData theme, String label) {
@@ -1376,7 +2453,6 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
     final visibleSchedules = _showHistory
         ? _historySchedules()
         : _upcomingSchedules();
-    final zones = _zoneOptions();
 
     return Container(
       color: theme.scaffoldBackgroundColor,
@@ -1408,39 +2484,6 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
               scheduleDates: _scheduleDateKeys(),
               onDateChanged: (date) => setState(() => _selectedDate = date),
             ),
-            const SizedBox(height: 16),
-            if (zones.isNotEmpty)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(settings.t('all_zones')),
-                        selected: _selectedZoneId == null,
-                        onSelected: (_) {
-                          setState(() => _selectedZoneId = null);
-                          _fetchSchedules();
-                        },
-                      ),
-                    ),
-                    ...zones.map(
-                      (zone) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(zone.name),
-                          selected: zone.id == _selectedZoneId,
-                          onSelected: (_) {
-                            setState(() => _selectedZoneId = zone.id);
-                            _fetchSchedules();
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             const SizedBox(height: 16),
             _SectionHeader(
               title:
@@ -1550,30 +2593,6 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
         .toSet();
   }
 
-  List<_ZoneOption> _zoneOptions() {
-    final zones = <String, _ZoneOption>{};
-    for (final schedule in _schedules) {
-      final id = schedule['zone_id']?.toString();
-      final name = schedule['zone_name']?.toString();
-      if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
-        zones[id] = _ZoneOption(id, name);
-      }
-    }
-    return zones.values.toList()..sort((a, b) => a.name.compareTo(b.name));
-  }
-
-  List<_ZoneOption> _zoneOptionsFromSquads(List<dynamic> squads) {
-    final zones = <String, _ZoneOption>{};
-    for (final squad in squads) {
-      final id = squad['zone_id']?.toString();
-      final name = squad['zone_name']?.toString();
-      if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
-        zones[id] = _ZoneOption(id, name);
-      }
-    }
-    return zones.values.toList()..sort((a, b) => a.name.compareTo(b.name));
-  }
-
   DateTime _scheduleDateTime(dynamic schedule) {
     final date = DateTime.tryParse(schedule['shift_date']?.toString() ?? '');
     final time = schedule['start_time']?.toString() ?? '00:00:00';
@@ -1596,11 +2615,222 @@ class _ScheduleManagementTabState extends State<_ScheduleManagementTab> {
   }
 }
 
-class _ZoneOption {
-  const _ZoneOption(this.id, this.name);
+class _LocationFilterPanel extends StatelessWidget {
+  const _LocationFilterPanel({
+    required this.isSuperAdmin,
+    required this.isLoading,
+    required this.error,
+    required this.selectedState,
+    required this.selectedDistrict,
+    required this.selectedZone,
+    required this.states,
+    required this.districts,
+    required this.zones,
+    required this.fixedStateName,
+    required this.fixedDistrictName,
+    required this.onStateChanged,
+    required this.onDistrictChanged,
+    required this.onZoneChanged,
+  });
 
-  final String id;
-  final String name;
+  final bool isSuperAdmin;
+  final bool isLoading;
+  final String? error;
+  final LocationOption? selectedState;
+  final LocationOption? selectedDistrict;
+  final LocationOption? selectedZone;
+  final List<LocationOption> states;
+  final List<LocationOption> districts;
+  final List<LocationOption> zones;
+  final String? fixedStateName;
+  final String? fixedDistrictName;
+  final ValueChanged<LocationOption?> onStateChanged;
+  final ValueChanged<LocationOption?> onDistrictChanged;
+  final ValueChanged<LocationOption?> onZoneChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isLoading) ...[
+            LinearProgressIndicator(color: theme.primaryColor),
+            const SizedBox(height: 10),
+          ],
+          if (error != null) ...[
+            Text(
+              error!,
+              style: TextStyle(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (!isSuperAdmin) ...[
+            Text(
+              '${settings.t("Negeri")}: ${fixedStateName ?? "-"}  |  ${settings.t("Daerah")}: ${fixedDistrictName ?? "-"}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _LocationDropdown(
+              label: settings.t('Zon'),
+              value: selectedZone,
+              items: zones,
+              allLabel: settings.t('Semua Zon'),
+              onChanged: onZoneChanged,
+            ),
+          ] else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final children = [
+                  _LocationDropdown(
+                    label: settings.t('Negeri'),
+                    value: selectedState,
+                    items: states,
+                    allLabel: settings.t('Semua Negeri'),
+                    onChanged: onStateChanged,
+                  ),
+                  _LocationDropdown(
+                    label: settings.t('Daerah'),
+                    value: selectedDistrict,
+                    items: districts,
+                    allLabel: settings.t('Semua Daerah'),
+                    enabled: selectedState != null,
+                    onChanged: onDistrictChanged,
+                  ),
+                  _LocationDropdown(
+                    label: settings.t('Zon'),
+                    value: selectedZone,
+                    items: zones,
+                    allLabel: settings.t('Semua Zon'),
+                    enabled: selectedDistrict != null,
+                    onChanged: onZoneChanged,
+                  ),
+                ];
+
+                if (constraints.maxWidth < 680) {
+                  return Column(
+                    children: [
+                      for (final child in children) ...[
+                        child,
+                        if (child != children.last) const SizedBox(height: 10),
+                      ],
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    for (var i = 0; i < children.length; i++) ...[
+                      Expanded(child: children[i]),
+                      if (i != children.length - 1) const SizedBox(width: 10),
+                    ],
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationDropdown extends StatelessWidget {
+  const _LocationDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.allLabel,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final String label;
+  final LocationOption? value;
+  final List<LocationOption> items;
+  final String allLabel;
+  final ValueChanged<LocationOption?> onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DropdownButtonFormField<LocationOption?>(
+      key: ValueKey('$label-${value?.id ?? "all"}-${items.length}'),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: theme.scaffoldBackgroundColor.withValues(alpha: 0.5),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      items: [
+        DropdownMenuItem<LocationOption?>(
+          value: null,
+          child: Text(allLabel, overflow: TextOverflow.ellipsis),
+        ),
+        ...items.map(
+          (item) => DropdownMenuItem<LocationOption?>(
+            value: item,
+            child: Text(item.name, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: enabled ? onChanged : null,
+    );
+  }
+}
+
+String _locationTrail(dynamic item, SettingsProvider settings) {
+  if (item is! Map) return '-';
+  final state = _firstText(item, const [
+    'member_state_name',
+    'state_name',
+    'state',
+  ]);
+  final district = _firstText(item, const [
+    'member_district_name',
+    'district_name',
+    'district',
+  ]);
+  final zone = _firstText(item, const [
+    'member_zone_name',
+    'zone_name',
+    'zone',
+    'district_zone',
+  ]);
+  final parts = [
+    state,
+    district,
+    zone,
+  ].where((part) => part != null && part.isNotEmpty).cast<String>().toList();
+  if (parts.isEmpty) return settings.t('Lokasi tidak direkodkan');
+  return parts.join(' • ');
+}
+
+String? _firstText(Map item, List<String> keys) {
+  for (final key in keys) {
+    final value = item[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
 }
 
 class _ScheduleWindow {
@@ -1949,63 +3179,34 @@ class _ScheduleCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.secondary.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(Icons.event_note, color: theme.colorScheme.primary),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.event_note,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
                     schedule['squad_name']?.toString() ??
                         settings.t('Kumpulan Tanpa Nama'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      _Meta(
-                        icon: Icons.place_outlined,
-                        text: schedule['zone_name']?.toString() ?? '-',
-                      ),
-                      _Meta(
-                        icon: Icons.calendar_today_outlined,
-                        text: shiftDate,
-                      ),
-                      _Meta(
-                        icon: Icons.schedule_outlined,
-                        text: '$startTime - $endTime',
-                      ),
-                      _Meta(
-                        icon: Icons.groups_outlined,
-                        text:
-                            '${schedule['member_count'] ?? 0} ${settings.t('ahli')}',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              children: [
-                Chip(
-                  label: Text(status),
-                  visualDensity: VisualDensity.compact,
-                  side: BorderSide.none,
                 ),
                 IconButton(
                   icon: Icon(
@@ -2015,6 +3216,36 @@ class _ScheduleCard extends StatelessWidget {
                   onPressed: onDelete,
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                _Meta(
+                  icon: Icons.place_outlined,
+                  text: _locationTrail(schedule, settings),
+                ),
+                _Meta(icon: Icons.calendar_today_outlined, text: shiftDate),
+                _Meta(
+                  icon: Icons.schedule_outlined,
+                  text: '$startTime - $endTime',
+                ),
+                _Meta(
+                  icon: Icons.groups_outlined,
+                  text:
+                      '${schedule['member_count'] ?? 0} ${settings.t('ahli')}',
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Chip(
+                label: Text(status),
+                visualDensity: VisualDensity.compact,
+                side: BorderSide.none,
+              ),
             ),
           ],
         ),
@@ -2035,22 +3266,31 @@ class _Meta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 14,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width - 96,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
           ),
-        ),
-      ],
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

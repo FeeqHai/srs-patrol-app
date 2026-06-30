@@ -48,6 +48,7 @@ class UserModel {
   final String? squadName;
   final String role;
   final String? accountStatus;
+  final bool mustChangePassword;
 
   UserModel({
     required this.id,
@@ -67,6 +68,7 @@ class UserModel {
     this.squadName,
     required this.role,
     this.accountStatus,
+    this.mustChangePassword = false,
   });
 
   /// Typed view of [accountStatus]. Falls back to `pending` when the value
@@ -96,6 +98,7 @@ class UserModel {
       // `account_status` is the canonical key; legacy `get_patrollers.php`
       // responses once used `status`, so tolerate both on read.
       accountStatus: (json['account_status'] ?? json['status']) as String?,
+      mustChangePassword: _parseBool(json['must_change_password']),
     );
   }
 
@@ -119,10 +122,24 @@ class UserModel {
       'squad_name': squadName,
       'role': role,
       'account_status': accountStatus,
+      'must_change_password': mustChangePassword,
     };
   }
 
   String? get effectiveProfileImageUrl => profileImageUrl ?? profileImagePath;
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized == '1' ||
+          normalized == 'true' ||
+          normalized == 'yes' ||
+          normalized == 'y';
+    }
+    return false;
+  }
 
   UserModel copyWith({
     String? id,
@@ -142,6 +159,7 @@ class UserModel {
     String? squadName,
     String? role,
     String? accountStatus,
+    bool? mustChangePassword,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -161,6 +179,7 @@ class UserModel {
       squadName: squadName ?? this.squadName,
       role: role ?? this.role,
       accountStatus: accountStatus ?? this.accountStatus,
+      mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     );
   }
 }

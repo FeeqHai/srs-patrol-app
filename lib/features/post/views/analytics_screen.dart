@@ -450,7 +450,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${auth.stateName ?? "-"} / ${auth.zoneName ?? settings.t("Semua Zon")}',
+                            '${auth.stateName ?? "-"} • ${auth.zoneName ?? settings.t("Semua Zon")}',
                             style: TextStyle(
                               color: subtitleColor,
                               fontSize: 12,

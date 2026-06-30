@@ -548,6 +548,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     final String dateStr = schedule['shift_date'] ?? '';
     final String startTime = schedule['start_time'] ?? '';
     final String endTime = schedule['end_time'] ?? '';
+    final String location = _scheduleLocation(schedule);
 
     // Check if the shift is today
     bool isToday = false;
@@ -661,6 +662,33 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                 ),
                               ],
                             ),
+                            if (location.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.place_outlined,
+                                    size: 14,
+                                    color: theme.textTheme.bodyMedium?.color
+                                        ?.withValues(alpha: 0.6),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      location,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: theme.textTheme.bodyMedium?.color
+                                            ?.withValues(alpha: 0.7),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -680,6 +708,15 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         ),
       ),
     );
+  }
+
+  String _scheduleLocation(Map<String, dynamic> schedule) {
+    final parts = [
+      schedule['state_name']?.toString().trim(),
+      schedule['district_name']?.toString().trim(),
+      schedule['zone_name']?.toString().trim(),
+    ].where((part) => part != null && part.isNotEmpty).cast<String>().toList();
+    return parts.join(' • ');
   }
 
   Widget _buildEmptyState(SettingsProvider settings, ThemeData theme) {

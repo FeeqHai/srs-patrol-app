@@ -225,7 +225,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                         const SizedBox(height: 4),
                         Text(
                           settings.t(
-                            'Malaysia / Semua Negeri / Semua Daerah / Semua Zon',
+                            'Malaysia • Semua Negeri • Semua Daerah • Semua Zon',
                           ),
                           style: const TextStyle(
                             fontSize: 17,
@@ -649,7 +649,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                   selected: true,
                 ),
                 _ScopeOptionTile(
-                  title: settings.t('Negeri / Daerah / Zon'),
+                  title: settings.t('Negeri • Daerah • Zon'),
                   subtitle: settings.t('Penapis skop belum disambungkan.'),
                   icon: Icons.lock_outline,
                   selected: false,
