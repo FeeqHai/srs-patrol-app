@@ -272,10 +272,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 800;
+          final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
           if (isLargeScreen) {
             return Row(
               children: [
@@ -283,6 +284,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                 Expanded(
                   child: Center(
                     child: SingleChildScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        24,
+                        24,
+                        24 + bottomInset,
+                      ),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 550),
                         child: _buildFormContent(isLargeScreen: true),
@@ -375,7 +384,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       bottom: false,
       child: SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.only(bottom: keyboardInset + 24),
+        padding: EdgeInsets.only(bottom: 24 + keyboardInset),
         child: Column(
           children: [
             _buildMobileHeader(),
@@ -416,8 +425,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(
-        top: 60.0,
-        bottom: 40.0,
+        top: 36.0,
+        bottom: 32.0,
         left: 16.0,
         right: 16.0,
       ),
@@ -446,6 +455,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                 children: [
                   Text(
                     settings.t('PENDAFTARAN'),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -456,6 +468,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   const SizedBox(height: 4),
                   Text(
                     settings.t('Daftar Peronda Baru'),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
                       color: _goldenYellow,
@@ -481,8 +496,14 @@ class _RegisterScreenState extends State<RegisterScreen>
     final settings = context.watch<SettingsProvider>();
     final textColor = theme.textTheme.bodyLarge?.color ?? _charcoal;
 
+    final horizontalPadding = isLargeScreen ? 48.0 : 20.0;
+    final verticalPadding = isLargeScreen ? 48.0 : 28.0;
+
     return Padding(
-      padding: EdgeInsets.all(isLargeScreen ? 64.0 : 32.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -504,13 +525,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                 children: [
                   Icon(Icons.person_add, color: _royalBlue, size: 28),
                   const SizedBox(width: 12),
-                  Text(
-                    settings.t('Pendaftaran Peronda'),
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: textColor,
-                      letterSpacing: -0.5,
+                  Expanded(
+                    child: Text(
+                      settings.t('Pendaftaran Peronda'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: textColor,
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ),
                 ],
@@ -725,15 +750,20 @@ class _RegisterScreenState extends State<RegisterScreen>
                         )
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.person_add_alt_1, size: 20),
                             const SizedBox(width: 12),
-                            Text(
-                              settings.t('HANTAR PERMOHONAN'),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
+                            Flexible(
+                              child: Text(
+                                settings.t('HANTAR PERMOHONAN'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
                               ),
                             ),
                           ],
@@ -772,6 +802,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }) {
     return DropdownButtonFormField<LocationOption>(
       initialValue: value,
+      isExpanded: true,
       icon: Icon(
         Icons.arrow_drop_down,
         color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -787,7 +818,23 @@ class _RegisterScreenState extends State<RegisterScreen>
           .map(
             (item) => DropdownMenuItem<LocationOption>(
               value: item,
-              child: Text(item.name, overflow: TextOverflow.ellipsis),
+              child: Text(
+                item.name,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          )
+          .toList(),
+      selectedItemBuilder: (context) => items
+          .map(
+            (item) => Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                item.name,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
           )
           .toList(),
@@ -855,6 +902,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: _royalBlue, width: 2),
       ),
+      errorMaxLines: 3,
+      helperMaxLines: 2,
     );
   }
 }

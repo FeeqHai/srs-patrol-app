@@ -265,11 +265,16 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: selected,
+                isExpanded: true,
                 items: roles
                     .map(
                       (role) => DropdownMenuItem(
                         value: role,
-                        child: Text(_roleLabel(role, settings)),
+                        child: Text(
+                          _roleLabel(role, settings),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(),

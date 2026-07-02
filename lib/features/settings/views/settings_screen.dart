@@ -231,40 +231,70 @@ class _LanguageRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 64),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            const _IconBox(icon: Icons.language_outlined),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                settings.t('language'),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useCompactLabels = constraints.maxWidth < 430;
+
+        return ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                const _IconBox(icon: Icons.language_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    settings.t('language'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: 'ms', label: Text(settings.t('Malay'))),
-                ButtonSegment(
-                  value: 'en',
-                  label: Text(settings.t('English Language')),
+                const SizedBox(width: 8),
+                SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    padding: WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(
+                        horizontal: useCompactLabels ? 14 : 16,
+                      ),
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  segments: [
+                    ButtonSegment(
+                      value: 'ms',
+                      label: Text(
+                        useCompactLabels ? 'BM' : settings.t('Malay'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    ButtonSegment(
+                      value: 'en',
+                      label: Text(
+                        useCompactLabels
+                            ? 'EN'
+                            : settings.t('English Language'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                  selected: {settings.locale.languageCode},
+                  onSelectionChanged: (value) {
+                    settings.setLanguage(value.first);
+                  },
                 ),
               ],
-              selected: {settings.locale.languageCode},
-              onSelectionChanged: (value) {
-                settings.setLanguage(value.first);
-              },
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -568,6 +568,7 @@ class _IncidentScreenState extends State<IncidentScreen>
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: tempCategory,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: theme.dividerColor.withValues(alpha: 0.05),
@@ -579,7 +580,11 @@ class _IncidentScreenState extends State<IncidentScreen>
                     items: _filterOptions.map((String val) {
                       return DropdownMenuItem<String>(
                         value: val,
-                        child: Text(val),
+                        child: Text(
+                          val,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -597,6 +602,7 @@ class _IncidentScreenState extends State<IncidentScreen>
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: tempZone,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: theme.dividerColor.withValues(alpha: 0.05),
@@ -608,7 +614,11 @@ class _IncidentScreenState extends State<IncidentScreen>
                       items: zonesList.map((String val) {
                         return DropdownMenuItem<String>(
                           value: val,
-                          child: Text(val),
+                          child: Text(
+                            val,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) {

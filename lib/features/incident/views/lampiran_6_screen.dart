@@ -242,10 +242,18 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
               children: [
                 DropdownButtonFormField<int>(
                   initialValue: selectedYear,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Tahun'),
                   items: List.generate(now.year - 2020 + 1, (index) {
                     final year = now.year - index;
-                    return DropdownMenuItem(value: year, child: Text('$year'));
+                    return DropdownMenuItem(
+                      value: year,
+                      child: Text(
+                        '$year',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
                   }),
                   onChanged: (year) {
                     if (year == null) return;

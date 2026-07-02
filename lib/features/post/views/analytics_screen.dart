@@ -10,6 +10,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../attendance/views/attendance_book_screen.dart';
 import '../../incident/services/incident_service.dart';
 import '../../../core/network/api_client.dart';
 import '../../incident/views/lampiran_6_screen.dart';
@@ -498,36 +499,71 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // JPNIN Lampiran 6 Report Generation Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const Lampiran6Screen(),
+            // Report Generation Actions
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Lampiran6Screen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.analytics_outlined,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    settings.t('JANA LAPORAN LAMPIRAN 6'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
-                  );
-                },
-                icon: const Icon(Icons.analytics_outlined, color: Colors.white),
-                label: Text(
-                  settings.t('JANA LAPORAN LAMPIRAN 6'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AttendanceBookScreen(),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.fact_check_outlined,
+                    color: theme.primaryColor,
                   ),
-                  elevation: 2,
+                  label: Text(
+                    settings.t('JANA BUKU KEDATANGAN SRS'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.primaryColor,
+                    side: BorderSide(color: theme.primaryColor),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 24),
 

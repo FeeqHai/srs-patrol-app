@@ -228,13 +228,13 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
     return showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return _ResponsiveEquipmentDialog(
           icon: const Icon(
             Icons.add_box_outlined,
             color: Colors.lightBlueAccent,
             size: 40,
           ),
-          title: Text(settings.t('Tambah Peralatan')),
+          title: settings.t('Tambah Peralatan'),
           content: Form(
             key: formKey,
             child: Column(
@@ -242,9 +242,8 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: settings.t('Nama Peralatan'),
-                    border: const OutlineInputBorder(),
+                  decoration: _dialogInputDecoration(
+                    settings.t('Nama Peralatan'),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -257,10 +256,7 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                 TextFormField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: settings.t('Kuantiti'),
-                    border: const OutlineInputBorder(),
-                  ),
+                  decoration: _dialogInputDecoration(settings.t('Kuantiti')),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return settings.t('Kuantiti tidak boleh kosong');
@@ -353,13 +349,13 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
     return showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return _ResponsiveEquipmentDialog(
           icon: const Icon(
             Icons.edit_note_outlined,
             color: Colors.orangeAccent,
             size: 40,
           ),
-          title: Text(settings.t('Kemaskini Peralatan')),
+          title: settings.t('Kemaskini Peralatan'),
           content: Form(
             key: formKey,
             child: Column(
@@ -367,9 +363,8 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: settings.t('Nama Peralatan'),
-                    border: const OutlineInputBorder(),
+                  decoration: _dialogInputDecoration(
+                    settings.t('Nama Peralatan'),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -382,10 +377,7 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                 TextFormField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: settings.t('Kuantiti'),
-                    border: const OutlineInputBorder(),
-                  ),
+                  decoration: _dialogInputDecoration(settings.t('Kuantiti')),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return settings.t('Kuantiti tidak boleh kosong');
@@ -474,14 +466,27 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           icon: const Icon(
             Icons.warning_amber_rounded,
             color: Colors.redAccent,
             size: 40,
           ),
-          title: Text(settings.t('Padam Peralatan')),
-          content: Text(
-            '${settings.t('Adakah anda pasti mahu memadam peralatan')} "${item['item_name']}"? \n\n${settings.t('Ini juga akan memadam semua log yang berkaitan.')}',
+          title: Text(
+            settings.t('Padam Peralatan'),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Text(
+              '${settings.t('Adakah anda pasti mahu memadam peralatan')} "${item['item_name']}"? \n\n${settings.t('Ini juga akan memadam semua log yang berkaitan.')}',
+              overflow: TextOverflow.visible,
+            ),
           ),
           actions: [
             TextButton(
@@ -671,66 +676,61 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
             int.tryParse(item['available_quantity'].toString()) ?? 0;
         final borrowed = total - available;
 
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
-          ),
-          color: theme.cardColor,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 360;
+            final leading = CircleAvatar(
+              backgroundColor: (available > 0 ? Colors.green : Colors.red)
+                  .withValues(alpha: 0.1),
+              radius: 24,
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: available > 0
+                    ? Colors.green.shade700
+                    : Colors.red.shade700,
+              ),
+            );
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: (available > 0 ? Colors.green : Colors.red)
-                      .withValues(alpha: 0.1),
-                  radius: 24,
-                  child: Icon(
-                    Icons.inventory_2_outlined,
-                    color: available > 0
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
+                Text(
+                  name,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          _buildInventoryBadge(
-                            settings.t('Tinggal'),
-                            '$available/$total',
-                            available > 0 ? Colors.green : Colors.red,
-                          ),
-                          _buildInventoryBadge(
-                            settings.t('Dipinjam'),
-                            borrowed.toString(),
-                            borrowed > 0 ? Colors.orange : Colors.grey,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _buildInventoryBadge(
+                      settings.t('Tinggal'),
+                      '$available/$total',
+                      available > 0 ? Colors.green : Colors.red,
+                    ),
+                    _buildInventoryBadge(
+                      settings.t('Dipinjam'),
+                      borrowed.toString(),
+                      borrowed > 0 ? Colors.orange : Colors.grey,
+                    ),
+                  ],
                 ),
+              ],
+            );
+            final actions = Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
                 IconButton(
                   icon: const Icon(
                     Icons.edit_outlined,
                     color: Colors.blueAccent,
                   ),
+                  tooltip: settings.t('Kemaskini Peralatan'),
                   onPressed: () => _showEditEquipmentDialog(item, settings),
                 ),
                 IconButton(
@@ -738,11 +738,54 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                     Icons.delete_outline,
                     color: Colors.redAccent,
                   ),
+                  tooltip: settings.t('Padam Peralatan'),
                   onPressed: () => _showDeleteEquipmentConfirm(item, settings),
                 ),
               ],
-            ),
-          ),
+            );
+
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: theme.dividerColor.withValues(alpha: 0.1),
+                ),
+              ),
+              color: theme.cardColor,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: isNarrow
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              leading,
+                              const SizedBox(width: 12),
+                              Expanded(child: details),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: actions,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          leading,
+                          const SizedBox(width: 16),
+                          Expanded(child: details),
+                          actions,
+                        ],
+                      ),
+              ),
+            );
+          },
         );
       },
     );
@@ -863,16 +906,20 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         patrollerName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     _buildStatusBadge(isReturned, settings),
                   ],
                 ),
@@ -1103,9 +1150,11 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
             color: theme.disabledColor,
           ),
           const SizedBox(width: 8),
-          Text(
-            settings.t('Tiada peralatan direkodkan.'),
-            style: TextStyle(fontSize: 13, color: theme.disabledColor),
+          Expanded(
+            child: Text(
+              settings.t('Tiada peralatan direkodkan.'),
+              style: TextStyle(fontSize: 13, color: theme.disabledColor),
+            ),
           ),
         ],
       );
@@ -1132,6 +1181,8 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                 children: [
                   Text(
                     '${settings.t("Peralatan")}: ${displayItems.join(", ")}${isALot ? "..." : ""}',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -1147,12 +1198,16 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '${settings.t("Lihat Semua")} (${itemList.length})',
-                              style: TextStyle(
-                                color: theme.primaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                            Flexible(
+                              child: Text(
+                                '${settings.t("Lihat Semua")} (${itemList.length})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -1182,77 +1237,91 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   ) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24.0, 12.0, 24.0, 24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Icon(Icons.inventory_2, color: theme.primaryColor, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      settings.t('Senarai Peralatan Dipinjam'),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20.0, 12.0, 20.0, 24.0 + bottomInset),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: itemList.length,
-                  itemBuilder: (context, idx) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            color: Colors.green.shade600,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            itemList[idx],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
                 ),
-              ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(settings.t('Tutup')),
-              ),
-            ],
+                Row(
+                  children: [
+                    Icon(
+                      Icons.inventory_2,
+                      color: theme.primaryColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        settings.t('Senarai Peralatan Dipinjam'),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: itemList.length,
+                    itemBuilder: (context, idx) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.green.shade600,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                itemList[idx],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(settings.t('Tutup')),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -1278,12 +1347,58 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
           color: textColor,
         ),
       ),
+    );
+  }
+
+  InputDecoration _dialogInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      errorMaxLines: 3,
+      helperMaxLines: 2,
+    );
+  }
+}
+
+class _ResponsiveEquipmentDialog extends StatelessWidget {
+  const _ResponsiveEquipmentDialog({
+    required this.icon,
+    required this.title,
+    required this.content,
+    required this.actions,
+  });
+
+  final Widget icon;
+  final String title;
+  final Widget content;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      icon: icon,
+      title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+      content: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: content,
+        ),
+      ),
+      actions: actions,
     );
   }
 }

@@ -11,6 +11,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../attendance/providers/attendance_provider.dart';
+import '../../attendance/views/attendance_book_screen.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../incident/views/incident_detail_screen.dart';
@@ -1229,35 +1230,68 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 if (isAdminOrKetua) ...[
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const Lampiran6Screen(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const Lampiran6Screen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.analytics),
+                        label: Text(
+                          settings.t('JANA LAPORAN LAMPIRAN 6'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.analytics),
-                      label: Text(
-                        settings.t('JANA LAPORAN LAMPIRAN 6'),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const AttendanceBookScreen(),
+                            ),
+                          );
+                        },
+                        icon: Icon(
+                          Icons.fact_check_outlined,
+                          color: theme.primaryColor,
                         ),
-                        elevation: 4,
+                        label: Text(
+                          settings.t('JANA BUKU KEDATANGAN SRS'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ],

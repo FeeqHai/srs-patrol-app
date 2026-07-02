@@ -25,15 +25,6 @@ class _AdminShellState extends State<AdminShell> {
   int _currentIndex = 0;
   bool _hideAppBar = false;
 
-  final List<String> _pageTitles = [
-    'Pantau Analitik',
-    'Jana Kod QR',
-    'Log & Inventori Peralatan',
-    'Laporan Insiden',
-    'Jadual & Skuad',
-    'Pengurusan Ahli',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -41,16 +32,22 @@ class _AdminShellState extends State<AdminShell> {
 
     final List<String> pageTitles = [
       if (isSuperAdmin) 'Super Admin',
+      'Pantau Analitik',
       if (isSuperAdmin) 'Pengurusan Lokasi',
-      ..._pageTitles,
+      'Jana Kod QR',
+      'Log & Inventori Peralatan',
+      'Jadual & Skuad',
+      'Laporan Insiden',
+      'Pengurusan Ahli',
     ];
 
     final List<Widget> screens = [
       if (isSuperAdmin) const SuperAdminScreen(),
-      if (isSuperAdmin) const AdminLocationScreen(),
       const AnalyticsScreen(),
+      if (isSuperAdmin) const AdminLocationScreen(),
       const QrGeneratorScreen(),
       const AdminEquipmentScreen(),
+      const AdminSquadScheduleScreen(),
       AdminIncidentScreen(
         onSubViewChanged: (hide) {
           setState(() {
@@ -58,7 +55,6 @@ class _AdminShellState extends State<AdminShell> {
           });
         },
       ),
-      const AdminSquadScheduleScreen(),
       const AdminMemberScreen(),
     ];
 
@@ -78,12 +74,12 @@ class _AdminShellState extends State<AdminShell> {
             icon: Icons.security_outlined,
             label: settings.t('Super Admin'),
           ),
+        NavigationItem(icon: Icons.dashboard, label: settings.t('Pantau')),
         if (isSuperAdmin)
           NavigationItem(
             icon: Icons.location_city_outlined,
             label: settings.t('Lokasi'),
           ),
-        NavigationItem(icon: Icons.dashboard, label: settings.t('Pantau')),
         NavigationItem(
           icon: Icons.qr_code_scanner,
           label: settings.t('Jana QR'),
@@ -92,8 +88,8 @@ class _AdminShellState extends State<AdminShell> {
           icon: Icons.inventory_2_outlined,
           label: settings.t('Peralatan'),
         ),
-        NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan')),
         NavigationItem(icon: Icons.calendar_month, label: settings.t('Skuad')),
+        NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan')),
         NavigationItem(icon: Icons.people, label: settings.t('Ahli')),
       ],
       title: settings.t(pageTitles[_currentIndex]),

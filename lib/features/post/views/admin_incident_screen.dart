@@ -171,6 +171,7 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: tempZone,
+                    isExpanded: true,
                     dropdownColor: theme.cardColor,
                     style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                     decoration: InputDecoration(
@@ -190,6 +191,8 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                         value: zone,
                         child: Text(
                           zone == 'Semua Zon' ? settings.t(zone) : zone,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       );
                     }).toList(),
@@ -210,6 +213,7 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: tempSortPriority,
+                    isExpanded: true,
                     dropdownColor: theme.cardColor,
                     style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                     decoration: InputDecoration(
@@ -227,15 +231,27 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                     items: [
                       DropdownMenuItem(
                         value: 'Default',
-                        child: Text(settings.t('Abjad (Default)')),
+                        child: Text(
+                          settings.t('Abjad (Default)'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: 'Paling Banyak Nota',
-                        child: Text(settings.t('Paling Banyak Nota')),
+                        child: Text(
+                          settings.t('Paling Banyak Nota'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: 'Tiada Nota',
-                        child: Text(settings.t('Tiada Nota')),
+                        child: Text(
+                          settings.t('Tiada Nota'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     onChanged: (val) {

@@ -224,9 +224,11 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
       padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
       child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ),
           if (isOptional)
             const Text(
@@ -246,359 +248,482 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: Text(settings.t('Nota Harian')), elevation: 0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 4,
-                shadowColor: Colors.black.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSectionTitle(settings.t('Kategori Insiden')),
-                      Autocomplete<String>(
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text.isEmpty) {
-                            return _jpninIncidentTypes;
-                          }
-                          return _jpninIncidentTypes.where(
-                            (String option) => option.toLowerCase().contains(
-                              textEditingValue.text.toLowerCase(),
-                            ),
-                          );
-                        },
-                        onSelected: (String selection) =>
-                            setState(() => _selectedCategory = selection),
-                        fieldViewBuilder:
-                            (
-                              context,
-                              controller,
-                              focusNode,
-                              onEditingComplete,
-                            ) {
-                              return TextFormField(
-                                controller: controller,
-                                focusNode: focusNode,
-                                onEditingComplete: onEditingComplete,
-                                decoration: InputDecoration(
-                                  hintText: settings.t(
-                                    'Cari kategori (cth: Samun)...',
-                                  ),
-                                  suffixIcon: const Icon(Icons.search),
-                                  filled: true,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+            final horizontalPadding = isMobile ? 12.0 : 24.0;
+            final cardPadding = isMobile ? 16.0 : 20.0;
+            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+            final menuWidth = (constraints.maxWidth - (horizontalPadding * 2))
+                .clamp(260.0, 420.0);
+
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                16,
+                horizontalPadding,
+                24 + bottomInset,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Card(
+                          elevation: 4,
+                          shadowColor: Colors.black.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(cardPadding),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildSectionTitle(
+                                  settings.t('Kategori Insiden'),
                                 ),
-                                validator: (value) =>
-                                    value == null || value.isEmpty
-                                    ? settings.t('Sila pilih kategori')
-                                    : null,
-                              );
-                            },
-                        optionsViewBuilder: (context, onSelected, options) {
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4.0,
-                              borderRadius: BorderRadius.circular(12),
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxHeight: 250,
-                                  maxWidth: 300,
-                                ),
-                                child: ListView.builder(
-                                  padding: EdgeInsets.zero,
-                                  shrinkWrap: true,
-                                  itemCount: options.length,
-                                  itemBuilder:
-                                      (BuildContext context, int index) {
-                                        final String option = options.elementAt(
-                                          index,
+                                Autocomplete<String>(
+                                  optionsBuilder:
+                                      (TextEditingValue textEditingValue) {
+                                        if (textEditingValue.text.isEmpty) {
+                                          return _jpninIncidentTypes;
+                                        }
+                                        return _jpninIncidentTypes.where(
+                                          (String option) =>
+                                              option.toLowerCase().contains(
+                                                textEditingValue.text
+                                                    .toLowerCase(),
+                                              ),
                                         );
-                                        return InkWell(
-                                          onTap: () => onSelected(option),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: Text(option),
+                                      },
+                                  onSelected: (String selection) => setState(
+                                    () => _selectedCategory = selection,
+                                  ),
+                                  fieldViewBuilder:
+                                      (
+                                        context,
+                                        controller,
+                                        focusNode,
+                                        onEditingComplete,
+                                      ) {
+                                        return TextFormField(
+                                          controller: controller,
+                                          focusNode: focusNode,
+                                          onEditingComplete: onEditingComplete,
+                                          decoration: InputDecoration(
+                                            hintText: settings.t(
+                                              'Cari kategori (cth: Samun)...',
+                                            ),
+                                            suffixIcon: const Icon(
+                                              Icons.search,
+                                            ),
+                                            filled: true,
+                                            errorMaxLines: 3,
+                                            helperMaxLines: 2,
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                          ),
+                                          validator: (value) =>
+                                              value == null || value.isEmpty
+                                              ? settings.t(
+                                                  'Sila pilih kategori',
+                                                )
+                                              : null,
+                                        );
+                                      },
+                                  optionsViewBuilder:
+                                      (context, onSelected, options) {
+                                        return Align(
+                                          alignment: Alignment.topLeft,
+                                          child: Material(
+                                            elevation: 4.0,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            child: ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                maxHeight: 250,
+                                                maxWidth: menuWidth,
+                                              ),
+                                              child: ListView.builder(
+                                                padding: EdgeInsets.zero,
+                                                shrinkWrap: true,
+                                                itemCount: options.length,
+                                                itemBuilder:
+                                                    (
+                                                      BuildContext context,
+                                                      int index,
+                                                    ) {
+                                                      final String option =
+                                                          options.elementAt(
+                                                            index,
+                                                          );
+                                                      return InkWell(
+                                                        onTap: () =>
+                                                            onSelected(option),
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                16.0,
+                                                              ),
+                                                          child: Text(
+                                                            option,
+                                                            maxLines: 2,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                              ),
+                                            ),
                                           ),
                                         );
                                       },
                                 ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
 
-                      _buildSectionTitle(
-                        settings.t('Agensi Dirujuk (Lampiran 6)'),
-                      ),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedReportedTo,
-                        decoration: InputDecoration(
-                          hintText: settings.t('Pilih agensi'),
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        items:
-                            [
-                                  'Tiada',
-                                  'Polis',
-                                  'Jabatan Agama / JAKIM',
-                                  'PBT',
-                                  'JKM',
-                                  'Lain-lain',
-                                ]
-                                .map(
-                                  (String value) => DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (newValue) =>
-                            setState(() => _selectedReportedTo = newValue),
-                        validator: (value) => value == null || value.isEmpty
-                            ? settings.t('Sila pilih agensi dirujuk')
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Card(
-                elevation: 4,
-                shadowColor: Colors.black.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSectionTitle(settings.t('Tajuk Laporan')),
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: InputDecoration(
-                          hintText: settings.t('Cth: Pagar rosak'),
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        validator: (value) => value == null || value.isEmpty
-                            ? settings.t('Sila masukkan tajuk')
-                            : null,
-                      ),
-
-                      _buildSectionTitle(settings.t('Lokasi Rondaan')),
-                      TextFormField(
-                        controller: _locationController,
-                        decoration: InputDecoration(
-                          hintText: settings.t('Cth: Lorong 39, Scientex'),
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          suffixIcon: _isLocating
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.location_on,
-                                  color: Colors.redAccent,
+                                _buildSectionTitle(
+                                  settings.t('Agensi Dirujuk (Lampiran 6)'),
                                 ),
-                        ),
-                        validator: (value) => value == null || value.isEmpty
-                            ? settings.t('Sila masukkan lokasi')
-                            : null,
-                      ),
-
-                      _buildSectionTitle(
-                        settings.t('Peristiwa Berlaku Semasa Rondaan'),
-                      ),
-                      TextFormField(
-                        controller: _descController,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                          hintText: settings.t('Terangkan butiran...'),
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        validator: (value) => value == null || value.isEmpty
-                            ? settings.t('Sila terangkan butiran')
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Card(
-                elevation: 4,
-                shadowColor: Colors.black.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSectionTitle(
-                        settings.t('Gambar Bukti'),
-                        isOptional: true,
-                      ),
-                      Container(
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: theme.scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            ..._images.map(
-                              (file) => Stack(
-                                children: [
-                                  Container(
-                                    width: 100,
-                                    margin: const EdgeInsets.only(right: 12),
-                                    decoration: BoxDecoration(
+                                DropdownButtonFormField<String>(
+                                  initialValue: _selectedReportedTo,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    hintText: settings.t('Pilih agensi'),
+                                    filled: true,
+                                    errorMaxLines: 3,
+                                    helperMaxLines: 2,
+                                    border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      image: DecorationImage(
-                                        image: FileImage(file),
-                                        fit: BoxFit.cover,
-                                      ),
+                                      borderSide: BorderSide.none,
                                     ),
                                   ),
-                                  Positioned(
-                                    right: 16,
-                                    top: 4,
-                                    child: GestureDetector(
-                                      onTap: () =>
-                                          setState(() => _images.remove(file)),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.black54,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          color: Colors.white,
-                                          size: 16,
-                                        ),
-                                      ),
-                                    ),
+                                  items:
+                                      [
+                                            'Tiada',
+                                            'Polis',
+                                            'Jabatan Agama / JAKIM',
+                                            'PBT',
+                                            'JKM',
+                                            'Lain-lain',
+                                          ]
+                                          .map(
+                                            (String value) =>
+                                                DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(
+                                                    value,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                          )
+                                          .toList(),
+                                  selectedItemBuilder: (context) =>
+                                      [
+                                            'Tiada',
+                                            'Polis',
+                                            'Jabatan Agama / JAKIM',
+                                            'PBT',
+                                            'JKM',
+                                            'Lain-lain',
+                                          ]
+                                          .map(
+                                            (value) => Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                value,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (newValue) => setState(
+                                    () => _selectedReportedTo = newValue,
                                   ),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _takePhoto,
-                              child: Container(
-                                width: 100,
-                                decoration: BoxDecoration(
-                                  color: theme.dividerColor.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: theme.dividerColor.withValues(
-                                      alpha: 0.3,
-                                    ),
-                                  ),
+                                  validator: (value) =>
+                                      value == null || value.isEmpty
+                                      ? settings.t('Sila pilih agensi dirujuk')
+                                      : null,
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.add_a_photo,
-                                      size: 32,
-                                      color: Colors.grey,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      settings.t('Tambah'),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
+                        const SizedBox(height: 16),
 
-              SizedBox(
-                height: 55,
-                child: ElevatedButton.icon(
-                  onPressed: _submitReport,
-                  icon: const Icon(Icons.save),
-                  label: Text(
-                    settings.t('HANTAR NOTA HARIAN'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
+                        Card(
+                          elevation: 4,
+                          shadowColor: Colors.black.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(cardPadding),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildSectionTitle(settings.t('Tajuk Laporan')),
+                                TextFormField(
+                                  controller: _titleController,
+                                  decoration: InputDecoration(
+                                    hintText: settings.t('Cth: Pagar rosak'),
+                                    filled: true,
+                                    errorMaxLines: 3,
+                                    helperMaxLines: 2,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  validator: (value) =>
+                                      value == null || value.isEmpty
+                                      ? settings.t('Sila masukkan tajuk')
+                                      : null,
+                                ),
+
+                                _buildSectionTitle(
+                                  settings.t('Lokasi Rondaan'),
+                                ),
+                                TextFormField(
+                                  controller: _locationController,
+                                  decoration: InputDecoration(
+                                    hintText: settings.t(
+                                      'Cth: Lorong 39, Scientex',
+                                    ),
+                                    filled: true,
+                                    errorMaxLines: 3,
+                                    helperMaxLines: 2,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    suffixIcon: _isLocating
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(12.0),
+                                            child: SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.location_on,
+                                            color: Colors.redAccent,
+                                          ),
+                                  ),
+                                  validator: (value) =>
+                                      value == null || value.isEmpty
+                                      ? settings.t('Sila masukkan lokasi')
+                                      : null,
+                                ),
+
+                                _buildSectionTitle(
+                                  settings.t(
+                                    'Peristiwa Berlaku Semasa Rondaan',
+                                  ),
+                                ),
+                                TextFormField(
+                                  controller: _descController,
+                                  maxLines: 4,
+                                  decoration: InputDecoration(
+                                    hintText: settings.t(
+                                      'Terangkan butiran...',
+                                    ),
+                                    filled: true,
+                                    errorMaxLines: 3,
+                                    helperMaxLines: 2,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  validator: (value) =>
+                                      value == null || value.isEmpty
+                                      ? settings.t('Sila terangkan butiran')
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        Card(
+                          elevation: 4,
+                          shadowColor: Colors.black.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(cardPadding),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildSectionTitle(
+                                  settings.t('Gambar Bukti'),
+                                  isOptional: true,
+                                ),
+                                Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    color: theme.scaffoldBackgroundColor,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: theme.dividerColor.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.all(12),
+                                    children: [
+                                      ..._images.map(
+                                        (file) => Stack(
+                                          children: [
+                                            Container(
+                                              width: 100,
+                                              margin: const EdgeInsets.only(
+                                                right: 12,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                image: DecorationImage(
+                                                  image: FileImage(file),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              right: 16,
+                                              top: 4,
+                                              child: GestureDetector(
+                                                onTap: () => setState(
+                                                  () => _images.remove(file),
+                                                ),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: Colors.black54,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                  child: const Icon(
+                                                    Icons.close,
+                                                    color: Colors.white,
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: _takePhoto,
+                                        child: Container(
+                                          width: 100,
+                                          decoration: BoxDecoration(
+                                            color: theme.dividerColor
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: theme.dividerColor
+                                                  .withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.add_a_photo,
+                                                size: 32,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                                child: Text(
+                                                  settings.t('Tambah'),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+
+                        SizedBox(
+                          height: 55,
+                          child: ElevatedButton.icon(
+                            onPressed: _submitReport,
+                            icon: const Icon(Icons.save),
+                            label: Text(
+                              settings.t('HANTAR NOTA HARIAN'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2DA44E),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                      ],
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2DA44E),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 5,
                   ),
                 ),
               ),
-              const SizedBox(height: 30),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

@@ -631,7 +631,9 @@ class SettingsProvider extends ChangeNotifier {
       'Shif Aktif': 'Active Shifts',
       'Peronda Terdaftar': 'Registered Patrollers',
       'JANA LAPORAN LAMPIRAN 6': 'Generate monthly report',
+      'JANA BUKU KEDATANGAN SRS': 'Generate attendance book',
       'Borang Lampiran D3(C)': 'Monthly Report',
+      'Buku Rekod Kedatangan SRS': 'SRS Attendance Record Book',
       'Rondaan Aktif Semasa': 'Current Active Patrols',
       'Tiada rondaan aktif dijalankan ketika ini.':
           'No active patrols running at this time.',
@@ -1266,7 +1268,9 @@ class SettingsProvider extends ChangeNotifier {
       'Shif Aktif': 'Shif Aktif',
       'Peronda Terdaftar': 'Peronda Terdaftar',
       'JANA LAPORAN LAMPIRAN 6': 'Jana Laporan Bulanan',
+      'JANA BUKU KEDATANGAN SRS': 'Jana Buku Kedatangan SRS',
       'Borang Lampiran D3(C)': 'Laporan Bulanan',
+      'Buku Rekod Kedatangan SRS': 'Buku Rekod Kedatangan SRS',
       'Rondaan Aktif Semasa': 'Rondaan Aktif Semasa',
       'Tiada rondaan aktif dijalankan ketika ini.':
           'Tiada rondaan aktif dijalankan ketika ini.',
