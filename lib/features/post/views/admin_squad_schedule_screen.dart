@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 import '../../auth/models/location_option.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/services/auth_service.dart';
@@ -37,6 +38,17 @@ class _AdminSquadScheduleScreenState extends State<AdminSquadScheduleScreen>
     final theme = Theme.of(context);
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: CommandHeader(
+            title: settings.t('Jadual & Skuad'),
+            subtitle: settings.t(
+              'Susun kumpulan rondaan dan jadual tugasan untuk operasi harian.',
+            ),
+            icon: Icons.groups_3_outlined,
+            compact: true,
+          ),
+        ),
         TabBar(
           controller: _tabController,
           labelColor: theme.colorScheme.primary,
@@ -427,6 +439,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
     required String name,
     required String stateId,
     required String districtId,
+    required String zoneId,
     required String headUserId,
     required List<String> memberIds,
   }) async {
@@ -439,6 +452,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
     body['district_id'] = auth.role == 'super_admin'
         ? districtId
         : auth.districtId ?? districtId;
+    body['zone_id'] = zoneId;
     body['head_user_id'] = headUserId;
     body['member_ids'] = memberIds.join(',');
 
@@ -579,8 +593,10 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
     final isSuperAdmin = auth.role == 'super_admin';
     LocationOption? selectedState = _selectedState;
     LocationOption? selectedDistrict = _selectedDistrict;
+    LocationOption? selectedZone = _selectedZone;
     var modalStates = List<LocationOption>.from(_states);
     var modalDistricts = List<LocationOption>.from(_districts);
+    var modalZones = List<LocationOption>.from(_zones);
     var allPatrollers = <dynamic>[];
     var isLoading = false;
     var sheetOpen = true;
@@ -608,12 +624,19 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
       return patroller['district_id']?.toString() == districtId;
     }
 
+    bool matchesZone(dynamic patroller) {
+      final zoneId = selectedZone?.id;
+      if (zoneId == null) return false;
+      return patroller['zone_id']?.toString() == zoneId;
+    }
+
     List<dynamic> eligiblePatrollers(String role) {
       return allPatrollers.where((patroller) {
         return patroller['role']?.toString() == role &&
             isActive(patroller) &&
             isUnassigned(patroller) &&
-            matchesDistrict(patroller);
+            matchesDistrict(patroller) &&
+            matchesZone(patroller);
       }).toList()..sort(
         (a, b) => (a['full_name'] ?? '').toString().compareTo(
           (b['full_name'] ?? '').toString(),
@@ -653,7 +676,9 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
       setModalState(() {
         selectedState = state;
         selectedDistrict = null;
+        selectedZone = null;
         modalDistricts = const [];
+        modalZones = const [];
         selectedHeadId = null;
         selectedMemberIds.clear();
         modalError = null;
@@ -679,12 +704,37 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
       }
     }
 
-    void selectDistrict(LocationOption? district, StateSetter setModalState) {
+    Future<void> selectDistrict(
+      LocationOption? district,
+      StateSetter setModalState,
+    ) async {
       setModalState(() {
         selectedDistrict = district;
+        selectedZone = null;
+        modalZones = const [];
         selectedHeadId = null;
         selectedMemberIds.clear();
+        modalError = null;
+        isLoading = district != null;
       });
+      if (district == null) return;
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted || !sheetOpen || selectedDistrict?.id != district.id) return;
+        setModalState(() {
+          modalZones = zones;
+          isLoading = false;
+        });
+      } catch (e) {
+        if (!mounted || !sheetOpen) return;
+        setModalState(() {
+          modalError = '${settings.t("Tidak dapat memuatkan zon.")} $e';
+          isLoading = false;
+        });
+      }
     }
 
     void showValidationMessage(String message) {
@@ -709,6 +759,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                 (isSuperAdmin
                     ? selectedDistrict != null
                     : auth.districtId != null) &&
+                selectedZone != null &&
                 selectedHeadId != null;
 
             return Padding(
@@ -766,6 +817,37 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                           onChanged: (value) =>
                               selectDistrict(value, setModalState),
                         ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<LocationOption?>(
+                          initialValue: selectedZone,
+                          isExpanded: true,
+                          dropdownColor: Colors.white,
+                          decoration: _squadDialogInputDecoration(
+                            theme,
+                            settings.t('Pilih Zon'),
+                          ),
+                          items: [
+                            DropdownMenuItem<LocationOption?>(
+                              value: null,
+                              child: Text(settings.t('Pilih Zon')),
+                            ),
+                            ...modalZones.map(
+                              (zone) => DropdownMenuItem<LocationOption?>(
+                                value: zone,
+                                child: Text(zone.name),
+                              ),
+                            ),
+                          ],
+                          onChanged: selectedDistrict == null || modalZones.isEmpty
+                              ? null
+                              : (value) {
+                                  setModalState(() {
+                                    selectedZone = value;
+                                    selectedHeadId = null;
+                                    selectedMemberIds.clear();
+                                  });
+                                },
+                        ),
                       ] else ...[
                         Container(
                           width: double.infinity,
@@ -782,6 +864,37 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<LocationOption?>(
+                          initialValue: selectedZone,
+                          isExpanded: true,
+                          dropdownColor: Colors.white,
+                          decoration: _squadDialogInputDecoration(
+                            theme,
+                            settings.t('Pilih Zon'),
+                          ),
+                          items: [
+                            DropdownMenuItem<LocationOption?>(
+                              value: null,
+                              child: Text(settings.t('Pilih Zon')),
+                            ),
+                            ...modalZones.map(
+                              (zone) => DropdownMenuItem<LocationOption?>(
+                                value: zone,
+                                child: Text(zone.name),
+                              ),
+                            ),
+                          ],
+                          onChanged: modalZones.isEmpty
+                              ? null
+                              : (value) {
+                                  setModalState(() {
+                                    selectedZone = value;
+                                    selectedHeadId = null;
+                                    selectedMemberIds.clear();
+                                  });
+                                },
                         ),
                       ],
                       if (isLoading) ...[
@@ -805,7 +918,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         key: ValueKey(
-                          'squad-head-${selectedDistrict?.id}-${headOptions.length}',
+                          'squad-head-${selectedDistrict?.id}-${selectedZone?.id}-${headOptions.length}',
                         ),
                         initialValue: selectedHeadId,
                         isExpanded: true,
@@ -827,7 +940,8 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                             .toList(),
                         onChanged:
                             (isSuperAdmin && selectedDistrict == null) ||
-                                headOptions.isEmpty
+                                    selectedZone == null ||
+                                    headOptions.isEmpty
                             ? null
                             : (value) {
                                 setModalState(() {
@@ -864,9 +978,9 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                           child: Text(
                             canPickMembers
                                 ? settings.t('Tiada peronda dijumpai')
-                                : settings.t(
-                                    'Pilih daerah dan ketua peronda dahulu.',
-                                  ),
+                                : (selectedZone == null
+                                    ? settings.t('Sila pilih zon dan ketua peronda dahulu.')
+                                    : settings.t('Pilih ketua peronda dahulu.')),
                             style: TextStyle(color: theme.disabledColor),
                           ),
                         )
@@ -957,6 +1071,12 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                     );
                                     return;
                                   }
+                                  if (selectedZone == null) {
+                                    showValidationMessage(
+                                      settings.t('Pilih zon untuk kumpulan ini.'),
+                                    );
+                                    return;
+                                  }
                                   if (selectedHeadId == null) {
                                     showValidationMessage(
                                       settings.t('Pilih Ketua Peronda'),
@@ -975,6 +1095,7 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                                     name: name,
                                     stateId: stateId,
                                     districtId: districtId,
+                                    zoneId: selectedZone!.id,
                                     headUserId: selectedHeadId!,
                                     memberIds: selectedMemberIds.toList(),
                                   );
@@ -1339,17 +1460,17 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
           ),
           Expanded(
             child: filteredSquads.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.group_off,
-                          size: 64,
-                          color: theme.disabledColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
+                ? ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    children: [
+                      Icon(
+                        Icons.group_off,
+                        size: 64,
+                        color: theme.disabledColor,
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: Text(
                           settings.t('Tiada Kumpulan Direkodkan'),
                           style: TextStyle(
                             color: theme.textTheme.bodyMedium?.color
@@ -1358,8 +1479,8 @@ class _SquadManagementTabState extends State<_SquadManagementTab> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),

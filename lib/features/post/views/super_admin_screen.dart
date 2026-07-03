@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../attendance/views/attendance_book_screen.dart';
+import '../../incident/views/lampiran_6_screen.dart';
+
 
 class SuperAdminScreen extends StatefulWidget {
-  const SuperAdminScreen({super.key});
+  final VoidCallback? onOpenMembers;
+  final VoidCallback? onOpenLocations;
+
+  const SuperAdminScreen({
+    super.key,
+    this.onOpenMembers,
+    this.onOpenLocations,
+  });
 
   @override
   State<SuperAdminScreen> createState() => _SuperAdminScreenState();
@@ -18,7 +29,6 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
 
   bool _isLoading = true;
   String? _error;
-  DateTime? _lastUpdated;
   Map<String, dynamic> _stats = {};
   List<dynamic> _krtAdmins = [];
   List<dynamic> _districtCoverage = [];
@@ -48,7 +58,6 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
           _stats = data['stats'] as Map<String, dynamic>? ?? {};
           _krtAdmins = data['krt_admins'] as List<dynamic>? ?? [];
           _districtCoverage = data['district_coverage'] as List<dynamic>? ?? [];
-          _lastUpdated = DateTime.now();
           _isLoading = false;
         });
       } else {
@@ -67,11 +76,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     }
   }
 
-  int _asInt(String key) {
-    final value = _stats[key];
-    if (value is int) return value;
-    return int.tryParse(value?.toString() ?? '') ?? 0;
-  }
+
 
   List<Map<String, dynamic>> get _cleanDistrictCoverage => _districtCoverage
       .whereType<Map<String, dynamic>>()
@@ -111,7 +116,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     }
 
     if (_error != null && _stats.isEmpty) {
-      return _buildErrorState(settings, theme);
+      return _buildErrorState(settings);
     }
 
     return RefreshIndicator(
@@ -127,16 +132,17 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildScopeSummary(settings, theme),
-                      const SizedBox(height: 14),
-                      _buildActionRequired(settings, theme),
-                      const SizedBox(height: 18),
-                      _buildSectionHeader(
-                        settings.t('Ringkasan Pantas'),
-                        theme,
+                      CommandHeader(
+                        title: settings.t('Super Admin Command Center'),
+                        subtitle: settings.t(
+                          'Pantau skop nasional, tindakan tertunda, liputan lokasi dan akaun KRT.',
+                        ),
+                        icon: Icons.admin_panel_settings_outlined,
+                        compact: true,
                       ),
-                      const SizedBox(height: 10),
-                      _buildQuickOverview(settings, theme),
+
+                      const SizedBox(height: 14),
+                      _buildReportPanel(settings, theme),
                       const SizedBox(height: 18),
                       _buildKrtAdminPreview(settings, theme),
                       const SizedBox(height: 14),
@@ -157,243 +163,144 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     );
   }
 
-  Widget _buildErrorState(SettingsProvider settings, ThemeData theme) {
+  Widget _buildErrorState(SettingsProvider settings) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.admin_panel_settings_outlined,
-              size: 56,
-              color: Colors.red.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _fetchOverview,
-              icon: const Icon(Icons.refresh),
-              label: Text(settings.t('Cuba Lagi')),
-            ),
-          ],
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: CommandEmptyStateCard(
+          icon: Icons.admin_panel_settings_outlined,
+          title: settings.t('Data Super Admin tidak dapat dimuatkan'),
+          message: _error!,
+          actionLabel: settings.t('Cuba Lagi'),
+          onAction: _fetchOverview,
         ),
       ),
     );
   }
 
-  Widget _buildScopeSummary(SettingsProvider settings, ThemeData theme) {
-    final lastUpdated = _lastUpdated == null
-        ? settings.t('Belum dikemas kini')
-        : DateFormat('dd MMM yyyy, hh:mm a').format(_lastUpdated!);
 
-    return _SurfacePanel(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _showScopeSheet(settings),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+  Widget _buildReportPanel(SettingsProvider settings, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.primaryColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _IconTile(
-                    icon: Icons.public_outlined,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          settings.t('Skop Semasa'),
-                          style: TextStyle(
-                            color: theme.textTheme.bodyMedium?.color
-                                ?.withValues(alpha: 0.66),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          settings.t(
-                            'Malaysia • Semua Negeri • Semua Daerah • Semua Zon',
-                          ),
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '${settings.t('Dikemas kini')}: $lastUpdated',
-                          style: TextStyle(
-                            color: theme.textTheme.bodyMedium?.color
-                                ?.withValues(alpha: 0.64),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.24),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.summarize_outlined,
+                  color: theme.primaryColor,
+                  size: 20,
+                ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showScopeSheet(settings),
-                      icon: const Icon(Icons.tune_outlined),
-                      label: Text(settings.t('Tukar Skop')),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.t('Laporan Operasi'),
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 52,
-                    height: 48,
-                    child: IconButton.filled(
-                      onPressed: _isLoading ? null : _fetchOverview,
-                      tooltip: settings.t('Muat Semula'),
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.refresh),
+                    const SizedBox(height: 2),
+                    Text(
+                      settings.t(
+                        'Jana dokumen demo tanpa meninggalkan dashboard.',
+                      ),
+                      style: TextStyle(
+                        color: theme.textTheme.bodyMedium?.color?.withValues(
+                          alpha: 0.62,
+                        ),
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionRequired(SettingsProvider settings, ThemeData theme) {
-    final actions = [
-      _DashboardAction(
-        label: settings.t('Akaun Menunggu'),
-        value: _asInt('pending_accounts'),
-        icon: Icons.person_add_alt_1_outlined,
-        color: Colors.orange,
-        description: settings.t('Akaun baharu memerlukan semakan.'),
-      ),
-      _DashboardAction(
-        label: settings.t('Pemulangan Menunggu'),
-        value: _asInt('pending_returns'),
-        icon: Icons.assignment_return_outlined,
-        color: Colors.deepOrange,
-        description: settings.t('Pemulangan rondaan menunggu pengesahan.'),
-      ),
-      _DashboardAction(
-        label: settings.t('Insiden Hari Ini'),
-        value: _asInt('today_incidents'),
-        icon: Icons.warning_amber_outlined,
-        color: Colors.red,
-        description: settings.t('Catatan hari ini untuk perhatian.'),
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(settings.t('Perlu Tindakan'), theme),
-        const SizedBox(height: 10),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 760) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: actions
-                      .map(
-                        (action) => Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: SizedBox(
-                            width: 204,
-                            child: _ActionRequiredCard(
-                              action: action,
-                              onTap: () => _showActionSheet(action, settings),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              );
-            }
-
-            const columns = 3;
-            return _ResponsiveTileWrap(
-              columns: columns,
-              spacing: 10,
-              children: actions
-                  .map(
-                    (action) => _ActionRequiredCard(
-                      action: action,
-                      onTap: () => _showActionSheet(action, settings),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Lampiran6Screen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics_outlined, size: 18),
+                  label: Text(
+                    settings.t('Lampiran 6'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  )
-                  .toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickOverview(SettingsProvider settings, ThemeData theme) {
-    final metrics = [
-      _Metric(
-        settings.t('Jumlah Pengguna'),
-        _asInt('total_users'),
-        Icons.people_alt_outlined,
-        Colors.indigo,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AttendanceBookScreen(),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.fact_check_outlined,
+                    color: theme.primaryColor,
+                    size: 18,
+                  ),
+                  label: Text(
+                    settings.t('Kedatangan'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.primaryColor,
+                    side: BorderSide(color: theme.primaryColor),
+                    minimumSize: const Size(0, 42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-      _Metric(
-        settings.t('Shif Aktif'),
-        _asInt('active_shifts'),
-        Icons.directions_walk_outlined,
-        Colors.green,
-      ),
-      _Metric(
-        settings.t('Ketua KRT'),
-        _asInt('total_krt_admins'),
-        Icons.admin_panel_settings_outlined,
-        Colors.blue,
-      ),
-      _Metric(
-        settings.t('Negeri Diliputi'),
-        _asInt('total_states'),
-        Icons.map_outlined,
-        Colors.teal,
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 760 ? 4 : 2;
-        return _ResponsiveTileWrap(
-          columns: columns,
-          spacing: 10,
-          children: metrics.map(_QuickMetricCard.new).toList(),
-        );
-      },
     );
   }
 
@@ -413,17 +320,18 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
               title: settings.t('Ketua KRT'),
               icon: Icons.admin_panel_settings_outlined,
               actionLabel: settings.t('Lihat Semua'),
-              onAction: _krtAdmins.isEmpty
-                  ? null
-                  : () => _showKrtAdminsSheet(settings),
+              onAction: widget.onOpenMembers,
             ),
             const SizedBox(height: 8),
             if (preview.isEmpty)
               _buildEmptyText(settings.t('Tiada Ketua KRT direkodkan.'), theme)
             else
               ...preview.map(
-                (admin) =>
-                    _KrtAdminPreviewRow(admin: admin, settings: settings),
+                (admin) => _KrtAdminPreviewRow(
+                  admin: admin,
+                  settings: settings,
+                  onTap: widget.onOpenMembers,
+                ),
               ),
           ],
         ),
@@ -448,9 +356,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
               title: settings.t('Liputan Daerah'),
               icon: Icons.map_outlined,
               actionLabel: settings.t('Lihat Semua'),
-              onAction: _cleanDistrictCoverage.isEmpty
-                  ? null
-                  : () => _showDistrictCoverageSheet(settings),
+              onAction: widget.onOpenLocations,
             ),
             const SizedBox(height: 8),
             if (previewStates.isEmpty)
@@ -464,6 +370,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                   stateName: entry.key,
                   rows: entry.value.take(2).toList(),
                   settings: settings,
+                  onTap: widget.onOpenLocations,
                 ),
               ),
           ],
@@ -536,16 +443,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, ThemeData theme) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: theme.textTheme.bodyLarge?.color,
-        fontSize: 16,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
+
 
   Widget _buildEmptyText(String text, ThemeData theme) {
     return Padding(
@@ -561,149 +459,11 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     );
   }
 
-  void _showActionSheet(_DashboardAction action, SettingsProvider settings) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _IconTile(icon: action.icon, color: action.color),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        action.label,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      action.value.toString(),
-                      style: TextStyle(
-                        color: action.color.shade700,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(action.description),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(settings.t('Tutup')),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
-  void _showScopeSheet(SettingsProvider settings) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  settings.t('Tukar Skop'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _ScopeOptionTile(
-                  title: settings.t('Malaysia'),
-                  subtitle: settings.t('Semua negeri, daerah dan zon'),
-                  icon: Icons.check_circle,
-                  selected: true,
-                ),
-                _ScopeOptionTile(
-                  title: settings.t('Negeri • Daerah • Zon'),
-                  subtitle: settings.t('Penapis skop belum disambungkan.'),
-                  icon: Icons.lock_outline,
-                  selected: false,
-                  enabled: false,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
-  void _showKrtAdminsSheet(SettingsProvider settings) {
-    _showSearchableSheet(
-      title: settings.t('Ketua KRT'),
-      icon: Icons.admin_panel_settings_outlined,
-      searchHint: settings.t('Cari Ketua KRT...'),
-      source: _krtAdmins.whereType<Map<String, dynamic>>().toList(),
-      filter: (item, query) {
-        final haystack = [
-          item['full_name'],
-          item['email'],
-          item['state_name'],
-          item['district_name'],
-          item['zone_name'],
-        ].join(' ').toLowerCase();
-        return haystack.contains(query.toLowerCase());
-      },
-      rowBuilder: (context, item) =>
-          _KrtAdminPreviewRow(admin: item, settings: settings),
-      emptyText: settings.t('Tiada Ketua KRT direkodkan.'),
-    );
-  }
 
-  void _showDistrictCoverageSheet(SettingsProvider settings) {
-    _showSearchableSheet(
-      title: settings.t('Liputan Daerah'),
-      icon: Icons.map_outlined,
-      searchHint: settings.t('Cari daerah...'),
-      source: _cleanDistrictCoverage,
-      filter: (item, query) {
-        final haystack = [
-          item['state_name'],
-          item['district_name'],
-        ].join(' ').toLowerCase();
-        return haystack.contains(query.toLowerCase());
-      },
-      grouped: true,
-      rowBuilder: (context, item) =>
-          _DistrictCoverageRow(coverage: item, settings: settings),
-      emptyText: settings.t('Tiada liputan daerah direkodkan.'),
-    );
-  }
+
+
 
   void _showLegacyCleanupSheet(SettingsProvider settings) {
     _showSearchableSheet(
@@ -889,179 +649,7 @@ class _IconTile extends StatelessWidget {
   }
 }
 
-class _ResponsiveTileWrap extends StatelessWidget {
-  const _ResponsiveTileWrap({
-    required this.children,
-    required this.columns,
-    required this.spacing,
-  });
 
-  final List<Widget> children;
-  final int columns;
-  final double spacing;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width =
-            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: children
-              .map((child) => SizedBox(width: width, child: child))
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
-class _DashboardAction {
-  final String label;
-  final int value;
-  final IconData icon;
-  final MaterialColor color;
-  final String description;
-
-  const _DashboardAction({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.description,
-  });
-}
-
-class _ActionRequiredCard extends StatelessWidget {
-  const _ActionRequiredCard({required this.action, required this.onTap});
-
-  final _DashboardAction action;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.cardColor,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 84),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: action.color.withValues(alpha: 0.22)),
-            color: action.color.withValues(alpha: 0.06),
-          ),
-          child: Row(
-            children: [
-              _IconTile(icon: action.icon, color: action.color),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      action.value.toString(),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      action.label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.72,
-                        ),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.textTheme.bodyMedium?.color?.withValues(
-                  alpha: 0.46,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Metric {
-  final String label;
-  final int value;
-  final IconData icon;
-  final MaterialColor color;
-
-  const _Metric(this.label, this.value, this.icon, this.color);
-}
-
-class _QuickMetricCard extends StatelessWidget {
-  const _QuickMetricCard(this.metric);
-
-  final _Metric metric;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return _SurfacePanel(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: SizedBox(
-          height: 86,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(metric.icon, size: 20, color: metric.color.shade700),
-                  const Spacer(),
-                  Text(
-                    metric.value.toString(),
-                    style: TextStyle(
-                      color: theme.textTheme.bodyLarge?.color,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                metric.label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withValues(
-                    alpha: 0.7,
-                  ),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _SectionTopRow extends StatelessWidget {
   const _SectionTopRow({
@@ -1096,10 +684,15 @@ class _SectionTopRow extends StatelessWidget {
 }
 
 class _KrtAdminPreviewRow extends StatelessWidget {
-  const _KrtAdminPreviewRow({required this.admin, required this.settings});
+  const _KrtAdminPreviewRow({
+    required this.admin,
+    required this.settings,
+    this.onTap,
+  });
 
   final Map<String, dynamic> admin;
   final SettingsProvider settings;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1108,6 +701,7 @@ class _KrtAdminPreviewRow extends StatelessWidget {
         .join(' • ');
 
     return ListTile(
+      onTap: onTap,
       minVerticalPadding: 8,
       contentPadding: EdgeInsets.zero,
       leading: UserAvatar(
@@ -1145,11 +739,13 @@ class _StateCoveragePreview extends StatelessWidget {
     required this.stateName,
     required this.rows,
     required this.settings,
+    this.onTap,
   });
 
   final String stateName;
   final List<Map<String, dynamic>> rows;
   final SettingsProvider settings;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1164,7 +760,11 @@ class _StateCoveragePreview extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           ...rows.map(
-            (row) => _DistrictCoverageRow(coverage: row, settings: settings),
+            (row) => _DistrictCoverageRow(
+              coverage: row,
+              settings: settings,
+              onTap: onTap,
+            ),
           ),
         ],
       ),
@@ -1173,10 +773,15 @@ class _StateCoveragePreview extends StatelessWidget {
 }
 
 class _DistrictCoverageRow extends StatelessWidget {
-  const _DistrictCoverageRow({required this.coverage, required this.settings});
+  const _DistrictCoverageRow({
+    required this.coverage,
+    required this.settings,
+    this.onTap,
+  });
 
   final Map<String, dynamic> coverage;
   final SettingsProvider settings;
+  final VoidCallback? onTap;
 
   int _asInt(String key) {
     final value = coverage[key];
@@ -1191,6 +796,7 @@ class _DistrictCoverageRow extends StatelessWidget {
     final members = _asInt('patrol_members');
 
     return ListTile(
+      onTap: onTap,
       dense: true,
       minVerticalPadding: 6,
       contentPadding: EdgeInsets.zero,
@@ -1292,32 +898,4 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _ScopeOptionTile extends StatelessWidget {
-  const _ScopeOptionTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.selected,
-    this.enabled = true,
-  });
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).disabledColor;
-    return ListTile(
-      enabled: enabled,
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: color),
-      title: Text(title),
-      subtitle: Text(subtitle),
-    );
-  }
-}

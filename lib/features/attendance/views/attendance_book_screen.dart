@@ -8,6 +8,9 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/utils/pdf_saver.dart';
+import '../../auth/models/location_option.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/services/auth_service.dart';
 
 class AttendanceBookScreen extends StatefulWidget {
   const AttendanceBookScreen({super.key});
@@ -32,20 +35,181 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
     'Disember',
   ];
 
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime _selectedDate = _todayOnly();
   bool _isLoading = true;
   bool _showPdfView = true;
   String? _error;
   List<Map<String, dynamic>> _records = [];
 
+  final AuthService _authService = AuthService();
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
+
+  bool _isLoadingFilters = false;
+  String? _filterError;
+
   @override
   void initState() {
     super.initState();
-    _fetchRecords();
+    _initializeFilters();
   }
 
-  String get _monthLabel =>
-      '${_monthNames[_selectedMonth.month - 1]} ${_selectedMonth.year}';
+  Future<void> _initializeFilters() async {
+    final auth = context.read<AuthProvider>();
+    setState(() => _isLoadingFilters = true);
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() {
+          _states = states;
+          _isLoadingFilters = false;
+          _filterError = null;
+        });
+      } else {
+        if (auth.districtId != null) {
+          final zones = await _authService.fetchLocations(
+            level: 'zones',
+            parentId: auth.districtId,
+          );
+          if (!mounted) return;
+          setState(() {
+            _zones = zones;
+            _isLoadingFilters = false;
+            _filterError = null;
+          });
+        } else {
+          setState(() => _isLoadingFilters = false);
+        }
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingFilters = false;
+        _filterError = 'Tidak dapat memuatkan senarai lokasi.';
+      });
+    }
+    await _fetchRecords();
+  }
+
+  Future<void> _selectState(LocationOption? state) async {
+    setState(() {
+      _selectedState = state;
+      _selectedDistrict = null;
+      _selectedZone = null;
+      _districts = const [];
+      _zones = const [];
+      _filterError = null;
+    });
+    if (state != null) {
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || _selectedState?.id != state.id) return;
+        setState(() => _districts = districts);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _filterError = 'Tidak dapat memuatkan daerah.');
+      }
+    }
+  }
+
+  Future<void> _selectDistrict(LocationOption? district) async {
+    setState(() {
+      _selectedDistrict = district;
+      _selectedZone = null;
+      _zones = const [];
+      _filterError = null;
+    });
+    if (district != null) {
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted || _selectedDistrict?.id != district.id) return;
+        setState(() => _zones = zones);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _filterError = 'Tidak dapat memuatkan zon.');
+      }
+    }
+  }
+
+  Future<void> _selectZone(LocationOption? zone) async {
+    setState(() => _selectedZone = zone);
+  }
+
+  List<Map<String, dynamic>> _filteredRecords() {
+    final auth = context.read<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+
+    return _records.where((row) {
+      if (!isSuperAdmin) {
+        if (auth.stateId != null &&
+            _firstValue(row, ['state_id']) != auth.stateId) {
+          return false;
+        }
+        if (auth.districtId != null &&
+            _firstValue(row, ['district_id']) != auth.districtId) {
+          return false;
+        }
+      } else {
+        if (_selectedState != null &&
+            _firstValue(row, ['state_id']) != _selectedState!.id) {
+          return false;
+        }
+        if (_selectedDistrict != null &&
+            _firstValue(row, ['district_id']) != _selectedDistrict!.id) {
+          return false;
+        }
+      }
+
+      if (_selectedZone != null &&
+          _firstValue(row, ['zone_id']) != _selectedZone!.id) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  String get _locationFilterLabel {
+    final auth = context.read<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+    final parts = <String>[];
+
+    if (isSuperAdmin) {
+      if (_selectedState != null) parts.add(_selectedState!.name);
+      if (_selectedDistrict != null) parts.add(_selectedDistrict!.name);
+    } else {
+      if (auth.stateName != null) parts.add(auth.stateName!);
+      if (auth.districtName != null) parts.add(auth.districtName!);
+    }
+
+    if (_selectedZone != null) parts.add(_selectedZone!.name);
+
+    return parts.isEmpty ? 'Malaysia' : parts.join(' | ');
+  }
+
+  static DateTime _todayOnly() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  String get _dateLabel {
+    final settings = context.read<SettingsProvider>();
+    if (settings.isEnglish) {
+      return DateFormat('d MMMM yyyy').format(_selectedDate);
+    }
+    return '${_selectedDate.day} ${_monthNames[_selectedDate.month - 1]} ${_selectedDate.year}';
+  }
 
   Future<void> _fetchRecords() async {
     setState(() {
@@ -58,7 +222,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
       final enrichedData = await _enrichWithMemberData(data);
       if (!mounted) return;
       setState(() {
-        _records = _filterSelectedMonth(_dedupeRecords(enrichedData));
+        _records = _filterSelectedDate(_dedupeRecords(enrichedData));
         _isLoading = false;
       });
     } catch (error) {
@@ -163,6 +327,12 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
             'phone_number',
             'phone',
           ]);
+          enriched['state_id'] ??= member['state_id'];
+          enriched['district_id'] ??= member['district_id'];
+          enriched['zone_id'] ??= member['zone_id'];
+          enriched['state_name'] ??= member['state_name'];
+          enriched['district_name'] ??= member['district_name'];
+          enriched['zone_name'] ??= member['zone_name'];
         }
         return enriched;
       }).toList();
@@ -190,115 +360,37 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
     return deduped;
   }
 
-  List<Map<String, dynamic>> _filterSelectedMonth(
+  List<Map<String, dynamic>> _filterSelectedDate(
     List<Map<String, dynamic>> rows,
   ) {
     return rows.where((row) {
       final date = _clockInDate(row);
       return date != null &&
-          date.year == _selectedMonth.year &&
-          date.month == _selectedMonth.month;
+          date.year == _selectedDate.year &&
+          date.month == _selectedDate.month &&
+          date.day == _selectedDate.day;
     }).toList();
   }
 
-  Future<void> _selectMonth() async {
+  Future<void> _selectDate() async {
     final now = DateTime.now();
-    var selectedYear = _selectedMonth.year;
-    var selectedMonth = _selectedMonth.month;
-
-    final picked = await showDialog<DateTime>(
+    final picked = await showDatePicker(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Pilih Bulan dan Tahun'),
-          content: SizedBox(
-            width: 340,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<int>(
-                  initialValue: selectedYear,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Tahun'),
-                  items: List.generate(now.year - 2020 + 1, (index) {
-                    final year = now.year - index;
-                    return DropdownMenuItem(
-                      value: year,
-                      child: Text('$year', overflow: TextOverflow.ellipsis),
-                    );
-                  }),
-                  onChanged: (year) {
-                    if (year == null) return;
-                    setDialogState(() {
-                      selectedYear = year;
-                      if (selectedYear == now.year &&
-                          selectedMonth > now.month) {
-                        selectedMonth = now.month;
-                      }
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 1.8,
-                  children: List.generate(12, (index) {
-                    final month = index + 1;
-                    final isFuture =
-                        selectedYear == now.year && month > now.month;
-                    final isSelected = month == selectedMonth;
-                    return FilledButton(
-                      onPressed: isFuture
-                          ? null
-                          : () => Navigator.pop(
-                              dialogContext,
-                              DateTime(selectedYear, month),
-                            ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: isSelected
-                            ? Theme.of(context).primaryColor
-                            : Theme.of(
-                                context,
-                              ).dividerColor.withValues(alpha: 0.08),
-                        foregroundColor: isSelected
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyLarge?.color,
-                        disabledBackgroundColor: Theme.of(
-                          context,
-                        ).dividerColor.withValues(alpha: 0.04),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                      ),
-                      child: Text(
-                        _monthNames[index].substring(0, 3),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Batal'),
-            ),
-          ],
-        ),
-      ),
+      initialDate: _selectedDate.isAfter(now) ? _todayOnly() : _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: _todayOnly(),
     );
 
     if (picked == null) return;
-    setState(() => _selectedMonth = DateTime(picked.year, picked.month));
+    setState(
+      () => _selectedDate = DateTime(picked.year, picked.month, picked.day),
+    );
     await _fetchRecords();
   }
 
   Future<pw.Document> _buildAttendanceBookPdf() async {
     final pdf = pw.Document();
-    final displayRows = List<Map<String, dynamic>>.from(_records);
+    final displayRows = List<Map<String, dynamic>>.from(_filteredRecords());
     while (displayRows.length < 6) {
       displayRows.add(const {});
     }
@@ -312,6 +404,13 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
             child: pw.Text(
               'BUKU REKOD KEDATANGAN SRS',
               style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Center(
+            child: pw.Text(
+              _locationFilterLabel,
+              style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
             ),
           ),
           pw.SizedBox(height: 14),
@@ -367,7 +466,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
   pw.TableRow _pdfDataRow(Map<String, dynamic> row) {
     return pw.TableRow(
       children: [
-        _pdfDataCell(_formatDate(_clockInDate(row))),
+        _pdfDataCell(_formatDate(_clockInDate(row) ?? _selectedDate)),
         _pdfDataCell(_formatTime(_clockInDate(row))),
         _pdfDataCell(
           _firstValue(row, ['patroller_name', 'full_name', 'name']) ?? '',
@@ -472,13 +571,21 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
   }
 
   Widget _buildRecordTable(ThemeData theme) {
-    final rows = _records;
+    final settings = context.read<SettingsProvider>();
+    final rows = _filteredRecords();
     if (rows.isEmpty) {
       return Center(
-        child: Text(
-          'Tiada rekod kedatangan untuk $_monthLabel.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: theme.disabledColor),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _records.isEmpty
+                ? '${settings.t("Tiada rekod kedatangan untuk")} $_dateLabel.'
+                : settings.t(
+                    'Tiada rekod kedatangan padan dengan penapis lokasi dipilih.',
+                  ),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.disabledColor),
+          ),
         ),
       );
     }
@@ -492,12 +599,12 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
             headingRowColor: WidgetStatePropertyAll(
               theme.primaryColor.withValues(alpha: 0.08),
             ),
-            columns: const [
-              DataColumn(label: Text('Tarikh')),
-              DataColumn(label: Text('Masa Bertugas')),
-              DataColumn(label: Text('Nama')),
-              DataColumn(label: Text('No. KP')),
-              DataColumn(label: Text('Masa Tamat')),
+            columns: [
+              DataColumn(label: Text(settings.t('Tarikh'))),
+              DataColumn(label: Text(settings.t('Masa Bertugas'))),
+              DataColumn(label: Text(settings.t('Nama'))),
+              DataColumn(label: Text(settings.t('No. KP'))),
+              DataColumn(label: Text(settings.t('Masa Tamat'))),
             ],
             rows: rows.map((row) {
               return DataRow(
@@ -535,12 +642,144 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
     );
   }
 
+  Widget _buildLocationFilters(SettingsProvider settings, ThemeData theme) {
+    final auth = context.watch<AuthProvider>();
+    final isSuperAdmin = auth.role == 'super_admin';
+
+    Widget dropdown({
+      required String label,
+      required LocationOption? value,
+      required List<LocationOption> items,
+      required String allLabel,
+      required ValueChanged<LocationOption?> onChanged,
+      bool enabled = true,
+    }) {
+      return DropdownButtonFormField<LocationOption?>(
+        initialValue: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+        ),
+        items: [
+          DropdownMenuItem<LocationOption?>(
+            value: null,
+            child: Text(allLabel, overflow: TextOverflow.ellipsis),
+          ),
+          ...items.map(
+            (item) => DropdownMenuItem<LocationOption?>(
+              value: item,
+              child: Text(item.name, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: enabled ? onChanged : null,
+      );
+    }
+
+    if (!isSuperAdmin) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        color: theme.cardColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${settings.t("Negeri")}: ${auth.stateName ?? "-"}  |  ${settings.t("Daerah")}: ${auth.districtName ?? "-"}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            dropdown(
+              label: settings.t('Zon'),
+              value: _selectedZone,
+              items: _zones,
+              allLabel: settings.t('Semua Zon'),
+              onChanged: _selectZone,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      color: theme.cardColor,
+      child: Column(
+        children: [
+          if (_isLoadingFilters)
+            LinearProgressIndicator(color: theme.primaryColor),
+          if (_filterError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _filterError!,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 680;
+              final children = [
+                dropdown(
+                  label: settings.t('Negeri'),
+                  value: _selectedState,
+                  items: _states,
+                  allLabel: settings.t('Semua Negeri'),
+                  onChanged: _selectState,
+                ),
+                dropdown(
+                  label: settings.t('Daerah'),
+                  value: _selectedDistrict,
+                  items: _districts,
+                  allLabel: settings.t('Semua Daerah'),
+                  enabled: _selectedState != null,
+                  onChanged: _selectDistrict,
+                ),
+                dropdown(
+                  label: settings.t('Zon'),
+                  value: _selectedZone,
+                  items: _zones,
+                  allLabel: settings.t('Semua Zon'),
+                  enabled: _selectedDistrict != null,
+                  onChanged: _selectZone,
+                ),
+              ];
+
+              if (!isWide) {
+                return Column(
+                  children: [
+                    for (final child in children) ...[
+                      child,
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  for (var i = 0; i < children.length; i++) ...[
+                    Expanded(child: children[i]),
+                    if (i != children.length - 1) const SizedBox(width: 12),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = Theme.of(context);
     final fileName =
-        'buku_rekod_kedatangan_srs_${DateFormat('yyyy_MM').format(_selectedMonth)}.pdf';
+        'buku_rekod_kedatangan_srs_${DateFormat('yyyy_MM_dd').format(_selectedDate)}.pdf';
 
     return Scaffold(
       appBar: AppBar(
@@ -570,7 +809,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: theme.cardColor,
             child: InkWell(
-              onTap: _selectMonth,
+              onTap: _selectDate,
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -589,7 +828,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${settings.t("Bulan Laporan")}: $_monthLabel',
+                        '${settings.t("Tarikh Laporan")}: $_dateLabel',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
@@ -600,12 +839,13 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
               ),
             ),
           ),
+          _buildLocationFilters(settings, theme),
           if (_records.isEmpty && !_isLoading && _error == null)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Text(
-                'PDF masih boleh dijana sebagai borang kosong untuk $_monthLabel.',
+                '${settings.t("PDF masih boleh dijana sebagai borang kosong untuk")} $_dateLabel.',
                 style: TextStyle(
                   color: theme.textTheme.bodySmall?.color?.withValues(
                     alpha: 0.7,
@@ -661,6 +901,9 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
                         ),
                       ),
                       child: PdfPreview(
+                        key: ValueKey(
+                          '${_selectedDate.toIso8601String()}_${_selectedState?.id}_${_selectedDistrict?.id}_${_selectedZone?.id}',
+                        ),
                         build: (format) async {
                           final doc = await _buildAttendanceBookPdf();
                           return doc.save();

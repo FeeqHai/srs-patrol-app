@@ -168,7 +168,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
             ),
           );
           setState(() {
-            _currentIndex = 1;
+            _currentIndex = 2;
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -204,6 +204,22 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
             _currentIndex = 4;
           });
         },
+        onNavigateToSchedule: () {
+          setState(() {
+            _currentIndex = 1;
+          });
+        },
+        onNavigateToIncident: () {
+          setState(() {
+            _currentIndex = 2;
+          });
+        },
+        onNavigateToReports: () {
+          setState(() {
+            _currentIndex = 3;
+          });
+        },
+        onSosPressed: _triggerSOS,
       ),
       const ScheduleScreen(),
       const IncidentScreen(),

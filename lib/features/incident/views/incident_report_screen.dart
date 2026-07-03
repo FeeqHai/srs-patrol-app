@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 import '../providers/incident_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -274,6 +275,15 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        CommandHeader(
+                          title: settings.t('Nota Harian Rondaan'),
+                          subtitle: settings.t(
+                            'Rekod pemerhatian, lokasi, agensi rujukan, dan bukti gambar secara tersusun.',
+                          ),
+                          icon: Icons.edit_note_rounded,
+                          compact: true,
+                        ),
+                        const SizedBox(height: 16),
                         Card(
                           elevation: 4,
                           shadowColor: Colors.black.withValues(alpha: 0.1),

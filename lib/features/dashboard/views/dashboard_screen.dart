@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../attendance/providers/attendance_provider.dart';
 import '../../attendance/views/attendance_book_screen.dart';
@@ -19,8 +20,19 @@ import '../../incident/views/lampiran_6_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onNavigateToScan;
+  final VoidCallback? onNavigateToSchedule;
+  final VoidCallback? onNavigateToIncident;
+  final VoidCallback? onNavigateToReports;
+  final VoidCallback? onSosPressed;
 
-  const DashboardScreen({super.key, required this.onNavigateToScan});
+  const DashboardScreen({
+    super.key,
+    required this.onNavigateToScan,
+    this.onNavigateToSchedule,
+    this.onNavigateToIncident,
+    this.onNavigateToReports,
+    this.onSosPressed,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -325,104 +337,321 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.people_outline, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _squad!['squad_name'] ?? settings.t('Kumpulan Rondaan Anda'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 22,
+            vertical: 28,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 440,
+              maxHeight: size.height * 0.76,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      CommandIconBox(
+                        icon: Icons.groups_2_outlined,
+                        color: colorScheme.primary,
+                        size: 44,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _squad!['squad_name'] ??
+                                  settings.t('Kumpulan Rondaan Anda'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${members.length} ${settings.t('Ahli (Peranan)')}',
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.62),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: settings.t('Tutup'),
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Flexible(
+                    child: members.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 28),
+                            child: Text(
+                              settings.t('Tiada ahli dalam kumpulan ini.'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: members.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final member = members[index];
+                              final name = member['full_name'] ?? '';
+                              final phone = member['phone_number'] ?? '';
+                              final isLeader =
+                                  (member['squad_role'] ?? '')
+                                      .toString()
+                                      .toUpperCase() ==
+                                  'LEADER';
+
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: theme.dividerColor.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    UserAvatar(
+                                      imageUrl:
+                                          member['profile_image_url']
+                                              as String?,
+                                      initials: UserAvatar.initialsFromName(
+                                        name,
+                                        fallback: isLeader ? 'KP' : 'P',
+                                      ),
+                                      radius: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          if (phone.toString().isNotEmpty) ...[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              phone,
+                                              style: TextStyle(
+                                                color: theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color
+                                                    ?.withValues(alpha: 0.68),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isLeader
+                                            ? colorScheme.secondary.withValues(
+                                                alpha: 0.14,
+                                              )
+                                            : theme.dividerColor.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isLeader
+                                              ? colorScheme.secondary
+                                              : theme.dividerColor.withValues(
+                                                  alpha: 0.18,
+                                                ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isLeader
+                                            ? settings.t('Ketua')
+                                            : settings.t('Ahli (Peranan)'),
+                                        style: TextStyle(
+                                          color: isLeader
+                                              ? colorScheme.secondary
+                                              : theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color
+                                                    ?.withValues(alpha: 0.76),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: Text(settings.t('Tutup')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSquadSummaryCard(
+    SettingsProvider settings,
+    bool isPatrolLeader,
+  ) {
+    final theme = Theme.of(context);
+    final roleText = isPatrolLeader
+        ? settings.t('Ketua Peronda')
+        : settings.t('Peronda');
+    final locationText = _zoneName.isNotEmpty ? ' • $_zoneName' : '';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _squad != null
+            ? () => _showSquadMembersDialog(context, settings)
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: theme.brightness == Brightness.dark
+                  ? [const Color(0xFF1E3A8A), const Color(0xFF1D4ED8)]
+                  : [
+                      theme.primaryColor,
+                      theme.primaryColor.withValues(alpha: 0.86),
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: theme.primaryColor.withValues(alpha: 0.18),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: members.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: Text(
-                      settings.t('Tiada ahli dalam kumpulan ini.'),
-                      textAlign: TextAlign.center,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.groups_2_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.t('Kumpulan Rondaan Anda'),
                       style: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.6,
-                        ),
+                        color: Colors.white.withValues(alpha: 0.76),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: members.length,
-                    separatorBuilder: (context, index) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final member = members[index];
-                      final name = member['full_name'] ?? '';
-                      final phone = member['phone_number'] ?? '';
-                      final isLeader =
-                          (member['squad_role'] ?? '')
-                              .toString()
-                              .toUpperCase() ==
-                          'LEADER';
-
-                      return ListTile(
-                        leading: UserAvatar(
-                          imageUrl: member['profile_image_url'] as String?,
-                          initials: UserAvatar.initialsFromName(
-                            name,
-                            fallback: isLeader ? 'KP' : 'P',
-                          ),
-                          radius: 20,
-                        ),
-                        title: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(phone),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isLeader
-                                ? colorScheme.secondary.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isLeader
-                                  ? colorScheme.secondary
-                                  : theme.dividerColor.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Text(
-                            isLeader
-                                ? settings.t('Ketua')
-                                : settings.t('Ahli (Peranan)'),
-                            style: TextStyle(
-                              color: isLeader
-                                  ? colorScheme.secondary
-                                  : theme.textTheme.bodyMedium?.color,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _squadName.isNotEmpty
+                          ? _squadName
+                          : settings.t('Tiada Kumpulan'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$roleText$locationText',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.colorScheme.secondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_squad != null) ...[
+                const SizedBox(width: 12),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white70,
+                  size: 26,
+                ),
+              ],
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(settings.t('Tutup')),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -438,6 +667,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         authProvider.role == 'ketua_peronda';
     final isPatrollerOrSquadLeader =
         authProvider.role == 'peronda' || authProvider.role == 'ketua_peronda';
+    final isPatrolLeader = authProvider.role == 'ketua_peronda';
 
     final hour = DateTime.now().hour;
     String greetingKey = 'Selamat Pagi';
@@ -452,11 +682,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final statusColor = _pendingAcknowledgement
         ? Colors.orange
         : (_shiftActive ? Colors.green : Colors.blueGrey);
-    final statusIcon = _pendingAcknowledgement
-        ? Icons.hourglass_top
-        : (_shiftActive
-              ? Icons.timer_outlined
-              : Icons.directions_walk_outlined);
     final statusLabel = _pendingAcknowledgement
         ? settings.t('Menunggu KRT')
         : (_shiftActive ? settings.t('Aktif') : settings.t('Sedia'));
@@ -499,528 +724,35 @@ class _DashboardScreenState extends State<DashboardScreen>
               children: [
                 if (_activeSosList.isNotEmpty) _buildSosBanner(),
 
-                // Personalized Greeting Header Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${settings.t(greetingKey)},',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.textTheme.bodyMedium?.color
-                                  ?.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _fullName,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: theme.textTheme.titleLarge?.color,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Consumer<AuthProvider>(
-                      builder: (context, auth, _) => UserAvatar(
-                        imageUrl: auth.profileImageUrl,
-                        initials: UserAvatar.initialsFromName(
-                          auth.fullName ?? _fullName,
-                          fallback: 'P',
-                        ),
-                        radius: 26,
-                      ),
-                    ),
-                  ],
+                _buildCommandHeader(
+                  settings: settings,
+                  greetingKey: greetingKey,
+                  isPatrolLeader: isPatrolLeader,
+                ),
+                if (isPatrollerOrSquadLeader) ...[
+                  const SizedBox(height: 14),
+                  _buildSquadSummaryCard(settings, isPatrolLeader),
+                ],
+                const SizedBox(height: 18),
+                _buildCurrentStatusCard(
+                  settings: settings,
+                  theme: theme,
+                  cardColor: cardColor,
+                  cardForeground: cardForeground,
+                  cardTitle: cardTitle,
+                  cardSubtitle: cardSubtitle,
+                  cardActionLabel: cardActionLabel,
+                ),
+                const SizedBox(height: 18),
+                _buildRoleQuickActions(settings, isPatrolLeader),
+                const SizedBox(height: 18),
+                _buildPatrolInsightGrid(
+                  settings: settings,
+                  statusLabel: statusLabel,
+                  statusColor: statusColor,
+                  isPatrolLeader: isPatrolLeader,
                 ),
                 const SizedBox(height: 24),
-
-                if (isPatrollerOrSquadLeader) ...[
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _squad != null
-                          ? () => _showSquadMembersDialog(context, settings)
-                          : null,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: theme.brightness == Brightness.dark
-                                ? [
-                                    const Color(0xFF1E3A8A),
-                                    const Color(0xFF1D4ED8),
-                                  ]
-                                : [
-                                    theme.primaryColor,
-                                    theme.primaryColor.withValues(alpha: 0.85),
-                                  ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.primaryColor.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                _squad != null
-                                    ? Icons.shield
-                                    : Icons.shield_outlined,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    settings.t('Kumpulan Rondaan Anda'),
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.7,
-                                      ),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    _squadName.isNotEmpty
-                                        ? _squadName
-                                        : settings.t('Tiada Kumpulan'),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                  if (_squad != null &&
-                                      authProvider.role != null) ...[
-                                    const SizedBox(height: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.secondary
-                                            .withValues(alpha: 0.3),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: theme.colorScheme.secondary
-                                              .withValues(alpha: 0.5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        authProvider.role == 'ketua_peronda'
-                                            ? settings.t('Ketua Peronda')
-                                            : settings.t('Peronda'),
-                                        style: TextStyle(
-                                          color: theme.colorScheme.secondary,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.8,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      settings.t(
-                                        'Klik untuk melihat senarai ahli',
-                                      ),
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.7,
-                                        ),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            if (_squad != null) ...[
-                              const SizedBox(width: 12),
-                              const Icon(
-                                Icons.chevron_right,
-                                color: Colors.white70,
-                                size: 24,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // KPI / Stats Section (3 Columns on Mobile, no Glassmorphism)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.1),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor.withValues(
-                                  alpha: 0.08,
-                                ),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.map_outlined,
-                                color: theme.primaryColor,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              settings.t('Zon Rondaan'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.textTheme.bodyMedium?.color
-                                    ?.withValues(alpha: 0.6),
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _zoneName.isNotEmpty
-                                  ? _zoneName
-                                  : settings.t('Tiada'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: theme.textTheme.bodyLarge?.color,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.1),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.warning_amber_rounded,
-                                color: Colors.orange,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              settings.t('Jumlah Nota'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.textTheme.bodyMedium?.color
-                                    ?.withValues(alpha: 0.6),
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$_noteCount',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: theme.textTheme.bodyLarge?.color,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.1),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                statusIcon,
-                                color: statusColor,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              settings.t('Status'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.textTheme.bodyMedium?.color
-                                    ?.withValues(alpha: 0.6),
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              statusLabel,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // Shift Action Card (M3 styled glowing CTA container)
-                Text(
-                  settings.t('Status Semasa'),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.textTheme.titleMedium?.color,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _pendingAcknowledgement
-                          ? Colors.orange.withValues(alpha: 0.4)
-                          : (_shiftActive
-                                ? Colors.green.withValues(alpha: 0.3)
-                                : theme.primaryColor),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            (_pendingAcknowledgement
-                                    ? Colors.orange
-                                    : (_shiftActive
-                                          ? Colors.green
-                                          : theme.primaryColor))
-                                .withValues(alpha: 0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        _pendingAcknowledgement
-                            ? Icons.hourglass_top
-                            : (_shiftActive
-                                  ? Icons.shield
-                                  : Icons.local_police),
-                        color: cardForeground,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        cardTitle,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: cardForeground,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        cardSubtitle,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: _shiftActive ? 32 : 14,
-                          fontWeight: _shiftActive
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: _shiftActive
-                              ? theme.textTheme.bodyLarge?.color
-                              : (_pendingAcknowledgement
-                                    ? theme.textTheme.bodyMedium?.color
-                                          ?.withValues(alpha: 0.75)
-                                    : Colors.white.withValues(alpha: 0.8)),
-                        ),
-                      ),
-                      if ((_shiftActive || _pendingAcknowledgement) &&
-                          _activeEquipment.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.inventory_2_outlined,
-                              size: 16,
-                              color: Colors.green.shade600,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                '${settings.t("Peralatan")}: ${_activeEquipment.join(", ")}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.textTheme.bodyMedium?.color
-                                      ?.withValues(alpha: 0.8),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _pendingAcknowledgement
-                              ? _refreshDashboard
-                              : widget.onNavigateToScan,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _shiftActive
-                                ? Colors.redAccent
-                                : theme.colorScheme.secondary,
-                            foregroundColor: _shiftActive
-                                ? Colors.white
-                                : Colors.black87,
-                            elevation: 2,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            cardActionLabel,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1228,7 +960,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ],
                   ),
                 ),
-                if (isAdminOrKetua) ...[
+                if (isAdminOrKetua && !isPatrolLeader) ...[
                   const SizedBox(height: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1377,6 +1109,529 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  Widget _buildCommandHeader({
+    required SettingsProvider settings,
+    required String greetingKey,
+    required bool isPatrolLeader,
+  }) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [theme.primaryColor, const Color(0xFF1E5AB6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primaryColor.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.t(greetingKey),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _fullName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) => UserAvatar(
+                  imageUrl: auth.profileImageUrl,
+                  initials: UserAvatar.initialsFromName(
+                    auth.fullName ?? _fullName,
+                    fallback: isPatrolLeader ? 'KP' : 'P',
+                  ),
+                  radius: 27,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentStatusCard({
+    required SettingsProvider settings,
+    required ThemeData theme,
+    required Color cardColor,
+    required Color cardForeground,
+    required String cardTitle,
+    required String cardSubtitle,
+    required String cardActionLabel,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          settings.t('Status Semasa'),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: theme.textTheme.titleMedium?.color,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _pendingAcknowledgement
+                  ? Colors.orange.withValues(alpha: 0.4)
+                  : (_shiftActive
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : theme.primaryColor),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    (_pendingAcknowledgement
+                            ? Colors.orange
+                            : (_shiftActive
+                                  ? Colors.green
+                                  : theme.primaryColor))
+                        .withValues(alpha: 0.15),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                _pendingAcknowledgement
+                    ? Icons.hourglass_top
+                    : (_shiftActive ? Icons.shield : Icons.local_police),
+                color: cardForeground,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                cardTitle,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: cardForeground,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                cardSubtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: _shiftActive ? 32 : 14,
+                  fontWeight: _shiftActive
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: _shiftActive
+                      ? theme.textTheme.bodyLarge?.color
+                      : (_pendingAcknowledgement
+                            ? theme.textTheme.bodyMedium?.color?.withValues(
+                                alpha: 0.75,
+                              )
+                            : Colors.white.withValues(alpha: 0.8)),
+                ),
+              ),
+              if ((_shiftActive || _pendingAcknowledgement) &&
+                  _activeEquipment.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 16,
+                      color: Colors.green.shade600,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${settings.t("Peralatan")}: ${_activeEquipment.join(", ")}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.8,
+                          ),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _pendingAcknowledgement
+                      ? _refreshDashboard
+                      : widget.onNavigateToScan,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _shiftActive
+                        ? Colors.redAccent
+                        : theme.colorScheme.secondary,
+                    foregroundColor: _shiftActive
+                        ? Colors.white
+                        : Colors.black87,
+                    elevation: 2,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    cardActionLabel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleQuickActions(
+    SettingsProvider settings,
+    bool isPatrolLeader,
+  ) {
+    final actions = isPatrolLeader
+        ? [
+            _DashboardActionData(
+              label: settings.t('Pengesahan Rondaan'),
+              icon: Icons.fact_check_outlined,
+              onTap: widget.onNavigateToScan,
+            ),
+            _DashboardActionData(
+              label: settings.t('Laporan Peronda'),
+              icon: Icons.folder_shared_outlined,
+              onTap: widget.onNavigateToReports ?? widget.onNavigateToIncident,
+            ),
+            _DashboardActionData(
+              label: settings.t('Jadual Rondaan'),
+              icon: Icons.calendar_month_outlined,
+              onTap: widget.onNavigateToSchedule,
+            ),
+            _DashboardActionData(
+              label: settings.t('JANA LAPORAN LAMPIRAN 6'),
+              icon: Icons.analytics_outlined,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const Lampiran6Screen(),
+                  ),
+                );
+              },
+            ),
+            _DashboardActionData(
+              label: settings.t('AMARAN SOS'),
+              icon: Icons.emergency_outlined,
+              color: Colors.redAccent,
+              onTap: widget.onSosPressed,
+            ),
+          ]
+        : [
+            _DashboardActionData(
+              label: settings.t('Imbas QR Kehadiran'),
+              icon: Icons.qr_code_scanner_rounded,
+              onTap: widget.onNavigateToScan,
+            ),
+            _DashboardActionData(
+              label: settings.t('Lapor Insiden'),
+              icon: Icons.report_gmailerrorred_outlined,
+              onTap: widget.onNavigateToIncident,
+            ),
+            _DashboardActionData(
+              label: settings.t('Jadual Rondaan'),
+              icon: Icons.calendar_month_outlined,
+              onTap: widget.onNavigateToSchedule,
+            ),
+            _DashboardActionData(
+              label: 'SOS',
+              icon: Icons.emergency_rounded,
+              color: Colors.redAccent,
+              onTap: widget.onSosPressed,
+            ),
+          ];
+
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.flash_on_rounded,
+                  color: theme.primaryColor,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  settings.t('Quick Access'),
+                  style: TextStyle(
+                    color: theme.textTheme.bodyLarge?.color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 760
+                  ? (isPatrolLeader ? 5 : 4)
+                  : 2;
+              const spacing = 8.0;
+              final tileWidth =
+                  (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: actions
+                    .map(
+                      (action) => SizedBox(
+                        width: tileWidth,
+                        child: CommandQuickActionTile(
+                          label: action.label,
+                          icon: action.icon,
+                          onTap: action.onTap,
+                          color: action.color,
+                          destructive: action.color == Colors.redAccent,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatrolInsightGrid({
+    required SettingsProvider settings,
+    required String statusLabel,
+    required Color statusColor,
+    required bool isPatrolLeader,
+  }) {
+    final memberCount = (_squad?['members'] as List<dynamic>?)?.length ?? 0;
+    final metrics = isPatrolLeader
+        ? [
+            _PatrolMetricData(
+              title: settings.t('Ahli Rondaan'),
+              value: '$memberCount',
+              caption: settings.t('Dalam skuad anda'),
+              icon: Icons.groups_2_outlined,
+              color: Theme.of(context).primaryColor,
+            ),
+            _PatrolMetricData(
+              title: settings.t('Hari Ini'),
+              value: _squadName.isNotEmpty ? _squadName : '-',
+              caption: statusLabel,
+              icon: Icons.event_available_outlined,
+              color: statusColor,
+            ),
+            _PatrolMetricData(
+              title: settings.t('Laporan'),
+              value: '$_noteCount',
+              caption: settings.t('Nota perlu perhatian'),
+              icon: Icons.assignment_late_outlined,
+              color: Colors.orange.shade800,
+            ),
+            _PatrolMetricData(
+              title: settings.t('Pemulangan'),
+              value: _activeEquipment.isEmpty
+                  ? settings.t('Sedia')
+                  : '${_activeEquipment.length}',
+              caption: settings.t('Peralatan aktif'),
+              icon: Icons.inventory_2_outlined,
+              color: Colors.green.shade700,
+            ),
+          ]
+        : [
+            _PatrolMetricData(
+              title: settings.t('Status Semasa'),
+              value: _shiftActive ? _elapsedTime : settings.t('Tiada'),
+              caption: statusLabel,
+              icon: Icons.timer_outlined,
+              color: statusColor,
+            ),
+            _PatrolMetricData(
+              title: settings.t('Status'),
+              value: statusLabel,
+              caption: settings.t('QR rondaan'),
+              icon: Icons.qr_code_scanner_outlined,
+              color: statusColor,
+            ),
+            _PatrolMetricData(
+              title: settings.t('Pemulangan'),
+              value: _activeEquipment.isEmpty
+                  ? settings.t('Sedia')
+                  : '${_activeEquipment.length}',
+              caption: settings.t('Item dipinjam'),
+              icon: Icons.inventory_2_outlined,
+              color: Colors.green.shade700,
+            ),
+            _PatrolMetricData(
+              title: settings.t('Laporan Saya'),
+              value: '$_noteCount',
+              caption: settings.t('Nota terkini'),
+              icon: Icons.article_outlined,
+              color: Colors.orange.shade800,
+            ),
+          ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 760 ? 4 : 2;
+        const spacing = 10.0;
+        final width =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: metrics
+              .map(
+                (metric) =>
+                    SizedBox(width: width, child: _buildPatrolMetric(metric)),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildPatrolMetric(_PatrolMetricData metric) {
+    final theme = Theme.of(context);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 112),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.032),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: metric.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(metric.icon, color: metric.color, size: 19),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            metric.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.titleMedium?.color,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            metric.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.bodyLarge?.color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            metric.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.58),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRectangularSegmentedToggle({
     required String selectedValue,
     required Map<String, String> options,
@@ -1475,4 +1730,34 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
     );
   }
+}
+
+class _DashboardActionData {
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Color? color;
+
+  const _DashboardActionData({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.color,
+  });
+}
+
+class _PatrolMetricData {
+  final String title;
+  final String value;
+  final String caption;
+  final IconData icon;
+  final Color color;
+
+  const _PatrolMetricData({
+    required this.title,
+    required this.value,
+    required this.caption,
+    required this.icon,
+    required this.color,
+  });
 }

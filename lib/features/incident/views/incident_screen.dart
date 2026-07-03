@@ -9,11 +9,14 @@ import '../../../core/providers/settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'incident_report_screen.dart';
 import 'incident_detail_screen.dart';
+import '../../auth/models/location_option.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/services/auth_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/malaysia_time.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import '../../../core/utils/pdf_saver.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 
 class IncidentScreen extends StatefulWidget {
   final String? patrollerIdFilter;
@@ -41,8 +44,16 @@ class _IncidentScreenState extends State<IncidentScreen>
 
   // Filter states
   String _selectedFilter = 'Semua';
-  String _selectedZone = 'Semua';
+  final AuthService _authService = AuthService();
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
   DateTimeRange? _selectedDateRange;
+  bool _isLoadingFilters = false;
+  String? _filterError;
 
   final List<String> _filterOptions = [
     'Semua',
@@ -67,6 +78,7 @@ class _IncidentScreenState extends State<IncidentScreen>
       }
     });
 
+    _initializeFilters();
     _fetchIncidents();
 
     _scrollController.addListener(() {
@@ -75,6 +87,38 @@ class _IncidentScreenState extends State<IncidentScreen>
         _fetchIncidents();
       }
     });
+  }
+
+  Future<void> _initializeFilters() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.role == 'peronda') return;
+
+    setState(() => _isLoadingFilters = true);
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() {
+          _states = states;
+          _filterError = null;
+        });
+      } else if (auth.districtId != null) {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: auth.districtId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _zones = zones;
+          _filterError = null;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _filterError = 'Tidak dapat memuatkan senarai lokasi.');
+    } finally {
+      if (mounted) setState(() => _isLoadingFilters = false);
+    }
   }
 
   @override
@@ -109,8 +153,26 @@ class _IncidentScreenState extends State<IncidentScreen>
       if (_selectedFilter != 'Semua') {
         url += '&category=${Uri.encodeComponent(_selectedFilter)}';
       }
-      if (authProvider.role != 'peronda' && _selectedZone != 'Semua') {
-        url += '&zone=${Uri.encodeComponent(_selectedZone)}';
+      if (authProvider.role != 'peronda') {
+        if (authProvider.role == 'super_admin') {
+          if (_selectedState != null) {
+            url += '&state_id=${Uri.encodeComponent(_selectedState!.id)}';
+          }
+          if (_selectedDistrict != null) {
+            url += '&district_id=${Uri.encodeComponent(_selectedDistrict!.id)}';
+          }
+        } else {
+          if (authProvider.stateId != null) {
+            url += '&state_id=${Uri.encodeComponent(authProvider.stateId!)}';
+          }
+          if (authProvider.districtId != null) {
+            url +=
+                '&district_id=${Uri.encodeComponent(authProvider.districtId!)}';
+          }
+        }
+        if (_selectedZone != null) {
+          url += '&zone_id=${Uri.encodeComponent(_selectedZone!.id)}';
+        }
       }
 
       // Handle tab-based dates
@@ -518,15 +580,79 @@ class _IncidentScreenState extends State<IncidentScreen>
     final theme = Theme.of(context);
     final bool showZoneFilter = authProvider.role != 'peronda';
     String tempCategory = _selectedFilter;
-    String tempZone = _selectedZone;
-    final List<String> zonesList = [
-      'Semua',
-      'Zon Pusat',
-      'Zon Utara',
-      'Zon Selatan',
-      'Zon Barat',
-      'Zon Timur',
-    ];
+    final bool isSuperAdmin = authProvider.role == 'super_admin';
+    var tempState = _selectedState;
+    var tempDistrict = _selectedDistrict;
+    var tempZone = _selectedZone;
+    var sheetDistricts = List<LocationOption>.from(_districts);
+    var sheetZones = List<LocationOption>.from(_zones);
+    var sheetError = _filterError;
+    var isLoadingLocations = false;
+    var sheetOpen = true;
+
+    Future<void> loadDistricts(
+      LocationOption? state,
+      StateSetter setSheetState,
+    ) async {
+      setSheetState(() {
+        tempState = state;
+        tempDistrict = null;
+        tempZone = null;
+        sheetDistricts = const [];
+        sheetZones = const [];
+        sheetError = null;
+        isLoadingLocations = state != null;
+      });
+      if (state == null) return;
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || !sheetOpen || tempState?.id != state.id) return;
+        setSheetState(() {
+          sheetDistricts = districts;
+          isLoadingLocations = false;
+        });
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setSheetState(() {
+          sheetError = settings.t('Tidak dapat memuatkan daerah.');
+          isLoadingLocations = false;
+        });
+      }
+    }
+
+    Future<void> loadZones(
+      LocationOption? district,
+      StateSetter setSheetState,
+    ) async {
+      setSheetState(() {
+        tempDistrict = district;
+        tempZone = null;
+        sheetZones = const [];
+        sheetError = null;
+        isLoadingLocations = district != null;
+      });
+      if (district == null) return;
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted || !sheetOpen || tempDistrict?.id != district.id) return;
+        setSheetState(() {
+          sheetZones = zones;
+          isLoadingLocations = false;
+        });
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setSheetState(() {
+          sheetError = settings.t('Tidak dapat memuatkan zon.');
+          isLoadingLocations = false;
+        });
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -595,37 +721,54 @@ class _IncidentScreenState extends State<IncidentScreen>
                   ),
                   if (showZoneFilter) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      settings.t("Zon Rondaan"),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: tempZone,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
+                    if (isLoadingLocations || _isLoadingFilters) ...[
+                      LinearProgressIndicator(color: theme.primaryColor),
+                      const SizedBox(height: 12),
+                    ],
+                    if (sheetError != null) ...[
+                      Text(
+                        sheetError!,
+                        style: TextStyle(
+                          color: theme.colorScheme.error,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      items: zonesList.map((String val) {
-                        return DropdownMenuItem<String>(
-                          value: val,
-                          child: Text(
-                            val,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setSheetState(() => tempZone = val);
-                        }
-                      },
+                      const SizedBox(height: 12),
+                    ],
+                    if (isSuperAdmin) ...[
+                      _IncidentLocationDropdown(
+                        label: settings.t('Negeri'),
+                        value: tempState,
+                        items: _states,
+                        allLabel: settings.t('Semua Negeri'),
+                        onChanged: (value) =>
+                            loadDistricts(value, setSheetState),
+                      ),
+                      const SizedBox(height: 12),
+                      _IncidentLocationDropdown(
+                        label: settings.t('Daerah'),
+                        value: tempDistrict,
+                        items: sheetDistricts,
+                        allLabel: settings.t('Semua Daerah'),
+                        enabled: tempState != null,
+                        onChanged: (value) => loadZones(value, setSheetState),
+                      ),
+                      const SizedBox(height: 12),
+                    ] else ...[
+                      Text(
+                        '${settings.t("Negeri")}: ${authProvider.stateName ?? "-"}  |  ${settings.t("Daerah")}: ${authProvider.districtName ?? "-"}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    _IncidentLocationDropdown(
+                      label: settings.t('Zon Rondaan'),
+                      value: tempZone,
+                      items: sheetZones,
+                      allLabel: settings.t('Semua Zon'),
+                      enabled: isSuperAdmin ? tempDistrict != null : true,
+                      onChanged: (value) =>
+                          setSheetState(() => tempZone = value),
                     ),
                   ],
                   const SizedBox(height: 16),
@@ -708,8 +851,13 @@ class _IncidentScreenState extends State<IncidentScreen>
                           onPressed: () {
                             setState(() {
                               _selectedFilter = 'Semua';
-                              _selectedZone = 'Semua';
+                              _selectedState = null;
+                              _selectedDistrict = null;
+                              _selectedZone = null;
+                              _districts = const [];
+                              if (isSuperAdmin) _zones = const [];
                               _selectedDateRange = null;
+                              _filterError = null;
                             });
                             Navigator.pop(context);
                             _refresh();
@@ -723,9 +871,16 @@ class _IncidentScreenState extends State<IncidentScreen>
                           onPressed: () {
                             setState(() {
                               _selectedFilter = tempCategory;
-                              _selectedZone = showZoneFilter
-                                  ? tempZone
-                                  : 'Semua';
+                              _selectedState = showZoneFilter
+                                  ? tempState
+                                  : null;
+                              _selectedDistrict = showZoneFilter
+                                  ? tempDistrict
+                                  : null;
+                              _selectedZone = showZoneFilter ? tempZone : null;
+                              _districts = sheetDistricts;
+                              _zones = sheetZones;
+                              _filterError = sheetError;
                             });
                             Navigator.pop(context);
                             _refresh();
@@ -741,7 +896,7 @@ class _IncidentScreenState extends State<IncidentScreen>
           },
         );
       },
-    );
+    ).whenComplete(() => sheetOpen = false);
   }
 
   @override
@@ -762,27 +917,22 @@ class _IncidentScreenState extends State<IncidentScreen>
       }
       return true;
     }).toList();
-
     return Scaffold(
       appBar: widget.patrollerIdFilter != null
           ? AppBar(
               title: Row(
                 children: [
-                  const Icon(Icons.assignment_outlined, size: 24),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Text(
-                    settings.t('Rekod Insiden'),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    settings.t('Nota Harian Rondaan'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: widget.onClose ?? () => Navigator.of(context).pop(),
-                tooltip: 'Tutup',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: settings.t('Kembali'),
               ),
               backgroundColor: theme.primaryColor,
               foregroundColor: Colors.white,
@@ -790,6 +940,21 @@ class _IncidentScreenState extends State<IncidentScreen>
           : null,
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: Column(
+              children: [
+                CommandHeader(
+                  title: settings.t('Log Insiden & Nota Harian'),
+                  subtitle: settings.t(
+                    'Semak laporan rondaan, hantar nota kepada KRT, dan susun rekod operasi.',
+                  ),
+                  icon: Icons.warning_amber_rounded,
+                  compact: true,
+                ),
+              ],
+            ),
+          ),
           // Dynamic Header toolbar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1044,8 +1209,8 @@ class _IncidentScreenState extends State<IncidentScreen>
                   );
                 }
               },
-        child: SizedBox(
-          height: 130,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 130),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -1406,6 +1571,56 @@ class _IncidentScreenState extends State<IncidentScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _IncidentLocationDropdown extends StatelessWidget {
+  const _IncidentLocationDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.allLabel,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final String label;
+  final LocationOption? value;
+  final List<LocationOption> items;
+  final String allLabel;
+  final ValueChanged<LocationOption?> onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DropdownButtonFormField<LocationOption?>(
+      key: ValueKey('$label-${value?.id ?? "all"}-${items.length}'),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: theme.dividerColor.withValues(alpha: 0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      items: [
+        DropdownMenuItem<LocationOption?>(
+          value: null,
+          child: Text(allLabel, overflow: TextOverflow.ellipsis),
+        ),
+        ...items.map(
+          (item) => DropdownMenuItem<LocationOption?>(
+            value: item,
+            child: Text(item.name, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: enabled ? onChanged : null,
     );
   }
 }

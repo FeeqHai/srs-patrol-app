@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -150,7 +151,15 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Squad Info Banner Card ---
+            CommandHeader(
+              title: settings.t('Jadual Rondaan'),
+              subtitle: settings.t(
+                'Lihat giliran semasa, lokasi tugasan, dan sejarah rondaan kumpulan.',
+              ),
+              icon: Icons.calendar_month_outlined,
+              compact: true,
+            ),
+            const SizedBox(height: 18),
             _buildSquadBanner(
               settings,
               theme,
@@ -161,20 +170,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             ),
             const SizedBox(height: 24),
 
-            // --- Upcoming Shifts Header ---
-            Row(
-              children: [
-                Icon(Icons.event_note, color: colorScheme.primary, size: 22),
-                const SizedBox(width: 8),
-                Text(
-                  settings.t('Jadual Rondaan Akan Datang'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+            CommandSectionHeader(
+              title: settings.t('Jadual Rondaan Akan Datang'),
+              subtitle: settings.t('Susunan tugasan paling hampir di atas.'),
+              icon: Icons.event_note_outlined,
             ),
             const SizedBox(height: 12),
 
@@ -218,23 +217,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   ),
             if (historySchedules.isNotEmpty) ...[
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Icon(
-                    Icons.history_outlined,
-                    color: colorScheme.primary,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    settings.t('schedule_history'),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
+              CommandSectionHeader(
+                title: settings.t('schedule_history'),
+                subtitle: settings.t('Rekod tugasan rondaan terdahulu.'),
+                icon: Icons.history_outlined,
               ),
               const SizedBox(height: 12),
               ListView.builder(
@@ -308,102 +294,210 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.people_outline, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _squad!['squad_name'] ?? settings.t('Kumpulan Rondaan Anda'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 22,
+            vertical: 28,
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: members.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: Text(
-                      settings.t('Tiada ahli dalam kumpulan ini.'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 440,
+              maxHeight: size.height * 0.76,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      CommandIconBox(
+                        icon: Icons.groups_2_outlined,
+                        color: colorScheme.primary,
+                        size: 44,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _squad!['squad_name'] ??
+                                  settings.t('Kumpulan Rondaan Anda'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${members.length} ${settings.t('Ahli (Peranan)')}',
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.62),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: members.length,
-                    separatorBuilder: (context, index) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final member = members[index];
-                      final name = member['full_name'] ?? '';
-                      final phone = member['phone_number'] ?? '';
-                      final isLeader =
-                          (member['squad_role'] ?? '')
-                              .toString()
-                              .toUpperCase() ==
-                          'LEADER';
-
-                      return ListTile(
-                        leading: UserAvatar(
-                          imageUrl: member['profile_image_url'] as String?,
-                          initials: UserAvatar.initialsFromName(
-                            name,
-                            fallback: isLeader ? 'KP' : 'P',
-                          ),
-                          radius: 20,
-                        ),
-                        title: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(phone),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isLeader
-                                ? colorScheme.secondary.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isLeader
-                                  ? colorScheme.secondary
-                                  : theme.dividerColor.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Text(
-                            isLeader
-                                ? settings.t('Ketua')
-                                : settings.t('Ahli (Peranan)'),
-                            style: TextStyle(
-                              color: isLeader
-                                  ? colorScheme.secondary
-                                  : theme.textTheme.bodyMedium?.color,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                      IconButton(
+                        tooltip: settings.t('Tutup'),
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
                   ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(settings.t('Tutup')),
+                  const SizedBox(height: 14),
+                  Flexible(
+                    child: members.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 28),
+                            child: Text(
+                              settings.t('Tiada ahli dalam kumpulan ini.'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: members.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final member = members[index];
+                              final name = member['full_name'] ?? '';
+                              final phone = member['phone_number'] ?? '';
+                              final isLeader =
+                                  (member['squad_role'] ?? '')
+                                      .toString()
+                                      .toUpperCase() ==
+                                  'LEADER';
+
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: theme.dividerColor.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    UserAvatar(
+                                      imageUrl:
+                                          member['profile_image_url']
+                                              as String?,
+                                      initials: UserAvatar.initialsFromName(
+                                        name,
+                                        fallback: isLeader ? 'KP' : 'P',
+                                      ),
+                                      radius: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          if (phone.toString().isNotEmpty) ...[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              phone,
+                                              style: TextStyle(
+                                                color: theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color
+                                                    ?.withValues(alpha: 0.68),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isLeader
+                                            ? colorScheme.secondary.withValues(
+                                                alpha: 0.14,
+                                              )
+                                            : theme.dividerColor.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isLeader
+                                              ? colorScheme.secondary
+                                              : theme.dividerColor.withValues(
+                                                  alpha: 0.18,
+                                                ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isLeader
+                                            ? settings.t('Ketua')
+                                            : settings.t('Ahli (Peranan)'),
+                                        style: TextStyle(
+                                          color: isLeader
+                                              ? colorScheme.secondary
+                                              : theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color
+                                                    ?.withValues(alpha: 0.76),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: Text(settings.t('Tutup')),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         );
       },
     );
@@ -425,7 +519,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         onTap: hasSquad
             ? () => _showSquadMembersDialog(context, settings)
             : null,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -436,31 +530,32 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
+                color: colorScheme.primary.withValues(alpha: 0.18),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  hasSquad ? Icons.shield : Icons.shield_outlined,
+                  hasSquad ? Icons.groups_2_outlined : Icons.group_off_outlined,
                   color: Colors.white,
-                  size: 36,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,56 +563,34 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     Text(
                       settings.t('Kumpulan Rondaan Anda'),
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.8,
+                        color: Colors.white.withValues(alpha: 0.76),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       squadName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                     if (hasSquad && userRole.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.secondary.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: colorScheme.secondary.withValues(alpha: 0.5),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          userRole == 'ketua_peronda'
-                              ? settings.t('Ketua Peronda')
-                              : settings.t('Peronda'),
-                          style: TextStyle(
-                            color: colorScheme.secondary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
                       Text(
-                        settings.t('Klik untuk melihat senarai ahli'),
+                        userRole == 'ketua_peronda'
+                            ? settings.t('Ketua Peronda')
+                            : settings.t('Peronda'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: colorScheme.secondary,
                           fontSize: 11,
-                          fontWeight: FontWeight.w400,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],

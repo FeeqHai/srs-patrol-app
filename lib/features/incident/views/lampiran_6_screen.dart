@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -223,6 +224,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
   }
 
   Future<void> _selectMonth(BuildContext context) async {
+    final settings = context.read<SettingsProvider>();
     final now = DateTime.now();
     var selectedYear = _selectedDate.year;
     var selectedMonth = _selectedDate.month;
@@ -234,7 +236,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Text('Pilih Bulan dan Tahun'),
+          title: Text(settings.t('Pilih Bulan dan Tahun')),
           content: SizedBox(
             width: 340,
             child: Column(
@@ -243,7 +245,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                 DropdownButtonFormField<int>(
                   initialValue: selectedYear,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Tahun'),
+                  decoration: InputDecoration(labelText: settings.t('Tahun')),
                   items: List.generate(now.year - 2020 + 1, (index) {
                     final year = now.year - index;
                     return DropdownMenuItem(
@@ -303,7 +305,9 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                       ),
                       child: Text(
-                        _monthNames[index].substring(0, 3),
+                        settings.isEnglish
+                            ? DateFormat('MMM').format(DateTime(2026, month))
+                            : _monthNames[index].substring(0, 3),
                         style: const TextStyle(fontSize: 12),
                       ),
                     );
@@ -315,7 +319,7 @@ class _Lampiran6ScreenState extends State<Lampiran6Screen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Batal'),
+              child: Text(settings.t('Batal')),
             ),
           ],
         ),

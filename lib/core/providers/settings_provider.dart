@@ -122,9 +122,13 @@ class SettingsProvider extends ChangeNotifier {
       'Pindah Lokasi': 'Transfer Location',
       'Reset Kata Laluan': 'Reset Password',
       'Perlu Tukar Kata Laluan': 'Password Reset',
+      'Menunggu Kelulusan': 'Waiting for Approval',
+      'Pendaftaran baharu memerlukan semakan':
+          'New registration requires review',
       'Jana kata laluan sementara untuk': 'Generate a temporary password for',
       'Cari nama, IC, telefon atau e-mel...':
           'Search name, IC, phone or email...',
+      'Quick Access': 'Quick Access',
       'Namakan Semula': 'Rename',
       'Nyahaktifkan': 'Deactivate',
       'Nyahaktifkan Lokasi': 'Deactivate Location',
@@ -185,6 +189,11 @@ class SettingsProvider extends ChangeNotifier {
       'KRT': 'KRT',
       'Jana Kod QR': 'Generate QR',
       'Laporan Insiden': 'Incident Reports',
+      'Laporan Operasi': 'Operation Reports',
+      'Jana dokumen demo tanpa meninggalkan dashboard.':
+          'Generate demo documents without leaving the dashboard.',
+      'Lampiran 6': 'Annex 6',
+      'Kedatangan': 'Attendance',
       'Pengurusan Ahli': 'Member Management',
       'Notifikasi': 'Notifications',
       'Tiada notifikasi baharu': 'No new notifications',
@@ -202,6 +211,20 @@ class SettingsProvider extends ChangeNotifier {
       'send_to_krt': 'Send to Ketua KRT',
       'note_pending_submission': 'Pending submission',
       'Jana QR Clock Out': 'Generate Clock Out QR',
+      'Penjanaan QR': 'QR Generation',
+      'Tekan Clock In atau Clock Out untuk terus menjana kod.':
+          'Tap Clock In or Clock Out to generate the code immediately.',
+      'Tekan Clock In atau Clock Out untuk menjana QR 60 saat.':
+          'Tap Clock In or Clock Out to generate a 60-second QR.',
+      'Jana semula QR?': 'Regenerate QR?',
+      'Tukar mod QR?': 'Switch QR mode?',
+      'QR semasa masih aktif. Jana semula akan membatalkan kod yang sedang berjalan.':
+          'The current QR is still active. Regenerating will cancel the running code.',
+      'QR semasa masih aktif. Menukar mod akan membatalkan kod yang sedang berjalan.':
+          'The current QR is still active. Switching mode will cancel the running code.',
+      'Teruskan': 'Continue',
+      'Mod QR': 'QR Mode',
+      'Tempoh': 'Duration',
       'Papar kod QR ini di pos untuk pengesahan pulang peronda.':
           'Show this QR at the post for patroller return confirmation.',
       'Clock In': 'Clock In',
@@ -281,6 +304,32 @@ class SettingsProvider extends ChangeNotifier {
       'font_size': 'Font size',
       'high_contrast': 'High contrast',
       'coming_soon': 'Coming soon',
+      'iRonda': 'iRonda',
+      'SKIM RONDAAN SUKARELA': 'VOLUNTARY PATROL SCHEME',
+      'Sila log masuk untuk menggunakan fungsi kecemasan.':
+          'Please log in to use the emergency function.',
+      'Amaran Kecemasan (SOS)': 'Emergency Warning (SOS)',
+      'Adakah anda pasti mahu menghantar isyarat kecemasan? Kordinat GPS anda akan dihantar ke bilik gerakan serta-merta.':
+          'Are you sure you want to send an emergency signal? Your GPS coordinates will be sent to the control room immediately.',
+      'HANTAR SOS': 'SEND SOS',
+      'SOS Dihantar': 'SOS Sent',
+      'Bantuan sedang dalam perjalanan. Sila pastikan keselamatan diri anda dan hubungi talian 999 jika keadaan kritikal.':
+          'Help is on the way. Please ensure your safety and call 999 if the situation is critical.',
+      'Pusat Kawalan & Kecemasan': 'Control & Emergency Center',
+      'Tekan butang SOS di bawah HANYA pada waktu kecemasan atau ancaman keselamatan.':
+          'Press the SOS button below ONLY during emergencies or security threats.',
+      'MENGESAN LOKASI...': 'DETECTING LOCATION...',
+      'Pilih Bulan dan Tahun': 'Select Month and Year',
+      'Tahun': 'Year',
+      'Tarikh': 'Date',
+      'Masa Bertugas': 'Duty Time',
+      'No. KP': 'IC No.',
+      'Masa Tamat': 'End Time',
+      'PDF masih boleh dijana sebagai borang kosong untuk':
+          'PDF can still be generated as a blank form for',
+      'Cuba lagi': 'Try again',
+      'Bulan Laporan': 'Report Month',
+      'Tarikh Laporan': 'Report Date',
       'new_daily_note': 'New Daily Note',
       'daily_note_received': 'Daily note received',
       'no_notifications': 'No notifications',
@@ -749,9 +798,13 @@ class SettingsProvider extends ChangeNotifier {
       'Pindah Lokasi': 'Pindah Lokasi',
       'Reset Kata Laluan': 'Reset Kata Laluan',
       'Perlu Tukar Kata Laluan': 'Reset Kata Laluan',
+      'Menunggu Kelulusan': 'Menunggu Kelulusan',
+      'Pendaftaran baharu memerlukan semakan':
+          'Pendaftaran baharu memerlukan semakan',
       'Jana kata laluan sementara untuk': 'Jana kata laluan sementara untuk',
       'Cari nama, IC, telefon atau e-mel...':
           'Cari nama, IC, telefon atau e-mel...',
+      'Quick Access': 'Akses Pantas',
       'Namakan Semula': 'Namakan Semula',
       'Nyahaktifkan': 'Nyahaktifkan',
       'Nyahaktifkan Lokasi': 'Nyahaktifkan Lokasi',
@@ -815,6 +868,20 @@ class SettingsProvider extends ChangeNotifier {
       'Notifikasi': 'Notifikasi',
       'Tiada notifikasi baharu': 'Tiada notifikasi baharu',
       'Jana QR Clock Out': 'Jana QR Clock Out',
+      'Penjanaan QR': 'Penjanaan QR',
+      'Tekan Clock In atau Clock Out untuk terus menjana kod.':
+          'Tekan Clock In atau Clock Out untuk terus menjana kod.',
+      'Tekan Clock In atau Clock Out untuk menjana QR 60 saat.':
+          'Tekan Clock In atau Clock Out untuk menjana QR 60 saat.',
+      'Jana semula QR?': 'Jana semula QR?',
+      'Tukar mod QR?': 'Tukar mod QR?',
+      'QR semasa masih aktif. Jana semula akan membatalkan kod yang sedang berjalan.':
+          'QR semasa masih aktif. Jana semula akan membatalkan kod yang sedang berjalan.',
+      'QR semasa masih aktif. Menukar mod akan membatalkan kod yang sedang berjalan.':
+          'QR semasa masih aktif. Menukar mod akan membatalkan kod yang sedang berjalan.',
+      'Teruskan': 'Teruskan',
+      'Mod QR': 'Mod QR',
+      'Tempoh': 'Tempoh',
       'Papar kod QR ini di pos untuk pengesahan pulang peronda.':
           'Papar kod QR ini di pos untuk pengesahan pulang peronda.',
       'Clock In': 'Clock In',

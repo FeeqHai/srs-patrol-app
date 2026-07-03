@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/command_center_widgets.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class QrGeneratorScreen extends StatefulWidget {
   const QrGeneratorScreen({super.key});
@@ -79,7 +81,10 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     });
   }
 
-  Future<void> _fetchLocationAndGenerateQR() async {
+  Future<void> _fetchLocationAndGenerateQR({String? mode}) async {
+    if (mode != null) {
+      _qrMode = mode;
+    }
     setState(() => _isLoading = true);
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -145,6 +150,50 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _handleQrAction(String mode) async {
+    if (_isLoading) return;
+
+    final settings = context.read<SettingsProvider>();
+    final hasRunningQr = _qrData != null && _timeLeft > 0;
+    if (hasRunningQr) {
+      final isSameMode = mode == _qrMode;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            settings.t(isSameMode ? 'Jana semula QR?' : 'Tukar mod QR?'),
+          ),
+          content: Text(
+            settings.t(
+              isSameMode
+                  ? 'QR semasa masih aktif. Jana semula akan membatalkan kod yang sedang berjalan.'
+                  : 'QR semasa masih aktif. Menukar mod akan membatalkan kod yang sedang berjalan.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(settings.t('Batal')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(settings.t('Teruskan')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    _timer?.cancel();
+    setState(() {
+      _qrMode = mode;
+      _qrData = null;
+      _timeLeft = 60;
+    });
+    await _fetchLocationAndGenerateQR(mode: mode);
   }
 
   String _friendlyLocationError(Object error) {
@@ -335,13 +384,431 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     );
   }
 
+  Widget _buildQrInfoChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 17),
+          const SizedBox(width: 7),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.bodyLarge?.color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.62,
+                ),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQrActionButton({
+    required String mode,
+    required String label,
+    required IconData icon,
+  }) {
+    final theme = Theme.of(context);
+    final selected = _qrMode == mode;
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: _isLoading ? null : () => _handleQrAction(mode),
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 42),
+          foregroundColor: selected ? Colors.black87 : theme.primaryColor,
+          backgroundColor: selected
+              ? CommandColors.accentYellow
+              : theme.cardColor,
+          side: BorderSide(
+            color: selected ? Colors.black87 : theme.primaryColor,
+            width: 1.2,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQrGenerationPanel({
+    required SettingsProvider settings,
+    required AuthProvider auth,
+    required ThemeData theme,
+    required bool isDark,
+    required bool isClockOut,
+    required double qrSize,
+    required Color errorBg,
+    required Color errorText,
+    required Color errorSubtext,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: commandCardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Location Card (Replaces QR Generation Title) ──
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E2838) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? Colors.white12 : Colors.grey.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: theme.primaryColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        auth.zoneName ?? settings.t('Kawasan Rondaan'),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textTheme.titleMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _currentLocation,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQrInfoChip(
+                  icon: isClockOut
+                      ? Icons.assignment_return_outlined
+                      : Icons.login_rounded,
+                  label: settings.t('Mod QR'),
+                  value: isClockOut ? 'OUT' : 'IN',
+                  color: theme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQrInfoChip(
+                  icon: Icons.timer_outlined,
+                  label: settings.t('Tempoh'),
+                  value: _qrData == null ? '60s' : '${_timeLeft}s',
+                  color: _timeLeft > 15
+                      ? CommandColors.success
+                      : CommandColors.danger,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildQrActionButton(
+                mode: 'IN',
+                label: settings.t('Clock In'),
+                icon: Icons.login_rounded,
+              ),
+              const SizedBox(width: 8),
+              _buildQrActionButton(
+                mode: 'OUT',
+                label: settings.t('Clock Out'),
+                icon: Icons.assignment_return_outlined,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: _isLoading
+                ? Container(
+                    key: const ValueKey('qr-loading'),
+                    height: 240,
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: theme.primaryColor,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  )
+                : _qrData != null
+                ? Container(
+                    key: const ValueKey('qr-active'),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: theme.primaryColor.withValues(alpha: 0.08),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.25 : 0.05,
+                                ),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: QrImageView(
+                            data: _qrData!,
+                            version: QrVersions.auto,
+                            size: qrSize.toDouble(),
+                            backgroundColor: Colors.white,
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape: QrEyeShape.square,
+                              color: Colors.black,
+                            ),
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: LinearProgressIndicator(
+                            value: _timeLeft / 60.0,
+                            minHeight: 7,
+                            backgroundColor: theme.primaryColor.withValues(
+                              alpha: 0.1,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _timeLeft > 15
+                                  ? theme.primaryColor
+                                  : Colors.redAccent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Container(
+                    key: ValueKey(
+                      _hasBeenGenerated ? 'qr-expired' : 'qr-ready',
+                    ),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: _hasBeenGenerated
+                          ? errorBg
+                          : theme.scaffoldBackgroundColor,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: _hasBeenGenerated
+                            ? errorText.withValues(alpha: 0.2)
+                            : theme.dividerColor.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        CommandIconBox(
+                          icon: _hasBeenGenerated
+                              ? Icons.timer_off_rounded
+                              : Icons.qr_code_scanner_rounded,
+                          color: _hasBeenGenerated
+                              ? errorText
+                              : theme.primaryColor,
+                          size: 54,
+                          iconSize: 28,
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          settings.t(
+                            _hasBeenGenerated
+                                ? 'Kod QR Telah Tamat Tempoh'
+                                : 'Sedia Menjana Kod QR',
+                          ),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _hasBeenGenerated
+                                ? errorText
+                                : theme.textTheme.titleMedium?.color,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          settings.t(
+                            _hasBeenGenerated
+                                ? (isClockOut
+                                      ? 'Sila jana semula kod QR untuk pemulangan seterusnya.'
+                                      : 'Sila jana semula kod QR untuk peronda seterusnya.')
+                                : 'Tekan Clock In atau Clock Out untuk menjana QR 60 saat.',
+                          ),
+                          style: TextStyle(
+                            color: _hasBeenGenerated
+                                ? errorSubtext
+                                : theme.textTheme.bodyMedium?.color?.withValues(
+                                    alpha: 0.66,
+                                  ),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12.5,
+                            height: 1.35,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReturnAcknowledgementPanel({
+    required SettingsProvider settings,
+    required ThemeData theme,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: commandCardDecoration(context),
+      child: Row(
+        children: [
+          CommandIconBox(
+            icon: Icons.fact_check_outlined,
+            color: theme.primaryColor,
+            size: 44,
+            iconSize: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  settings.t('Pengesahan Pemulangan'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.textTheme.titleMedium?.color,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  settings.t('Patrol returns are awaiting acknowledgement.'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.66,
+                    ),
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(
+            onPressed: _showPendingReturns,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: theme.primaryColor,
+              side: BorderSide(color: theme.primaryColor),
+              minimumSize: const Size(88, 42),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              settings.t('Lihat'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final auth = context.watch<AuthProvider>();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // Premium high-contrast colors for expired warning container
     final errorBg = isDark ? const Color(0xFF3F1919) : const Color(0xFFFEEBEE);
     final errorText = isDark
         ? const Color(0xFFFFB4AB)
@@ -351,321 +818,54 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         : const Color(0xFF7A1C1C);
     final isClockOut = _qrMode == 'OUT';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Header section
-          Icon(Icons.qr_code_2_rounded, size: 48, color: theme.primaryColor),
-          const SizedBox(height: 16),
-          Text(
-            settings.t(isClockOut ? 'Jana QR Clock Out' : 'Jana QR Kehadiran'),
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              color: theme.textTheme.headlineMedium?.color,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              settings.t(
-                isClockOut
-                    ? 'Papar kod QR ini di pos untuk pengesahan pulang peronda.'
-                    : 'Papar kod QR ini kepada peronda untuk merekod kehadiran.',
-              ),
-              style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withValues(
-                  alpha: 0.6,
-                ),
-                fontSize: 14,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 20),
-          SegmentedButton<String>(
-            segments: [
-              ButtonSegment<String>(
-                value: 'IN',
-                icon: const Icon(Icons.login_rounded),
-                label: Text(settings.t('Clock In')),
-              ),
-              ButtonSegment<String>(
-                value: 'OUT',
-                icon: const Icon(Icons.assignment_return_outlined),
-                label: Text(settings.t('Clock Out')),
-              ),
-            ],
-            selected: {_qrMode},
-            onSelectionChanged: _isLoading
-                ? null
-                : (selected) {
-                    final mode = selected.first;
-                    if (mode == _qrMode) return;
-                    _timer?.cancel();
-                    setState(() {
-                      _qrMode = mode;
-                      _qrData = null;
-                      _timeLeft = 60;
-                    });
-                  },
-          ),
-          const SizedBox(height: 28),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final qrSize = (constraints.maxWidth - 96).clamp(176.0, 240.0);
 
-          // Main QR Code Card State
-          if (_isLoading)
-            SizedBox(
-              height: 320,
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: theme.primaryColor,
-                  strokeWidth: 3,
-                ),
-              ),
-            )
-          else if (_qrData != null)
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white12
-                      : Colors.black.withValues(alpha: 0.04),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 110),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // QR Frame wrapper for aesthetics
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 10,
-                        ),
-                      ],
+                  CommandHeader(
+                    title: settings.t(
+                      isClockOut ? 'Jana QR Clock Out' : 'Jana QR Kehadiran',
                     ),
-                    child: QrImageView(
-                      data: _qrData!,
-                      version: QrVersions.auto,
-                      size: 240.0,
-                      backgroundColor: Colors.white,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: Colors.black,
-                      ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Countdown Progress Bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(100),
-                    child: LinearProgressIndicator(
-                      value: _timeLeft / 60.0,
-                      minHeight: 6,
-                      backgroundColor: theme.primaryColor.withValues(
-                        alpha: 0.1,
-                      ),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _timeLeft > 15 ? theme.primaryColor : Colors.redAccent,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.timer_outlined,
-                        color: _timeLeft > 15
-                            ? theme.primaryColor
-                            : Colors.redAccent,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${settings.t('Tamat Tempoh:')} $_timeLeft ${settings.t('saat')}',
-                        style: TextStyle(
-                          color: _timeLeft > 15
-                              ? theme.primaryColor
-                              : Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            )
-          else if (!_isLoading && _qrData == null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: errorBg,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: errorText.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: errorText.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.timer_off_rounded,
-                      color: errorText,
-                      size: 44,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    settings.t('Kod QR Telah Tamat Tempoh'),
-                    style: TextStyle(
-                      color: errorText,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    settings.t(
+                    subtitle: settings.t(
                       isClockOut
-                          ? 'Sila jana semula kod QR untuk pemulangan seterusnya.'
-                          : 'Sila jana semula kod QR untuk peronda seterusnya.',
+                          ? 'Papar kod QR pemulangan di pos utama dan sahkan peralatan selepas rondaan.'
+                          : 'Papar kod QR ini kepada peronda untuk merekod kehadiran rondaan.',
                     ),
-                    style: TextStyle(
-                      color: errorSubtext,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
+                    icon: Icons.qr_code_2_rounded,
                   ),
+                  const SizedBox(height: 12),
+                  _buildQrGenerationPanel(
+                    settings: settings,
+                    auth: auth,
+                    theme: theme,
+                    isDark: isDark,
+                    isClockOut: isClockOut,
+                    qrSize: qrSize,
+                    errorBg: errorBg,
+                    errorText: errorText,
+                    errorSubtext: errorSubtext,
+                  ),
+                  if (isClockOut) ...[
+                    const SizedBox(height: 12),
+                    _buildReturnAcknowledgementPanel(
+                      settings: settings,
+                      theme: theme,
+                    ),
+                  ],
                 ],
               ),
             ),
-
-          const SizedBox(height: 24),
-
-          // Location Info Card
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white12
-                    : Colors.black.withValues(alpha: 0.04),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.location_on_rounded,
-                    color: Colors.green,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        settings.t('Lokasi Semasa (Pos Utama)'),
-                        style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color?.withValues(
-                            alpha: 0.5,
-                          ),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _currentLocation,
-                        style: TextStyle(
-                          color: theme.textTheme.bodyLarge?.color,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
-
-          const SizedBox(height: 32),
-
-          // Regenerate Button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: _fetchLocationAndGenerateQR,
-              icon: const Icon(Icons.refresh_rounded, size: 22),
-              label: Text(
-                settings.t(isClockOut ? 'Jana QR Clock Out' : 'Jana Semula QR'),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                elevation: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextButton.icon(
-            onPressed: _showPendingReturns,
-            icon: const Icon(Icons.fact_check_outlined),
-            label: Text(settings.t('Pengesahan Pemulangan')),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

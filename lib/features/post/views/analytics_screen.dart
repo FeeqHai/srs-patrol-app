@@ -16,7 +16,20 @@ import '../../../core/network/api_client.dart';
 import '../../incident/views/lampiran_6_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
-  const AnalyticsScreen({super.key});
+  final VoidCallback? onOpenQr;
+  final VoidCallback? onOpenMembers;
+  final VoidCallback? onOpenSchedule;
+  final VoidCallback? onOpenReports;
+  final VoidCallback? onOpenAttendance;
+
+  const AnalyticsScreen({
+    super.key,
+    this.onOpenQr,
+    this.onOpenMembers,
+    this.onOpenSchedule,
+    this.onOpenReports,
+    this.onOpenAttendance,
+  });
 
   @override
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
@@ -46,8 +59,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   String _chartPeriod = 'Weekly'; // 'Weekly' or 'Monthly'
   int _touchedPieIndex = -1;
   bool _showPieChart = true;
-  bool _showHotspotBarChart = true;
+  bool _showHotspotBarChart = false;
   String _fullName = 'Admin';
+  bool _isQuickAccessExpanded = false;
 
   @override
   void initState() {
@@ -261,10 +275,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     });
 
     final totalIncidents = _allIncidents.length;
+    final totalCategoryIncidents = _categoryCounts.values.fold<int>(
+      0,
+      (sum, count) => sum + count,
+    );
+    final donutTotal = totalCategoryIncidents > 0
+        ? totalCategoryIncidents
+        : totalIncidents;
 
     // Pie Chart preparation
     List<PieChartSectionData> pieSections = [];
-    if (totalIncidents == 0) {
+    if (donutTotal == 0) {
       pieSections = [
         PieChartSectionData(
           color: Colors.grey.shade300,
@@ -295,7 +316,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       pieSections = List.generate(categories.length, (index) {
         final cat = categories[index];
         final count = _categoryCounts[cat] ?? 0;
-        final pct = totalIncidents > 0 ? (count / totalIncidents * 100) : 0.0;
+        final pct = donutTotal > 0 ? (count / donutTotal * 100) : 0.0;
         final isTouched = index == _touchedPieIndex;
         final radius = isTouched ? 45.0 : 35.0;
         final fontSize = isTouched ? 14.0 : 11.0;
@@ -355,6 +376,47 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         zones.map((z) => {'name': z, 'count': _zoneCounts[z] ?? 0}).toList()
           ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
 
+    final pendingReports = _allIncidents.where((incident) {
+      final status = incident['status']?.toString().toLowerCase() ?? '';
+      return status == 'submitted' || status == 'pending';
+    }).length;
+
+    final busiestTrendCount = trendData.isEmpty
+        ? 0
+        : trendData.reduce((a, b) => a > b ? a : b);
+    final busiestTrendIndex = trendData.indexOf(busiestTrendCount);
+    final busiestTrendLabel =
+        busiestTrendIndex >= 0 && busiestTrendIndex < chartLabels.length
+        ? chartLabels[busiestTrendIndex]
+        : '-';
+    final latestTrendCount = trendData.isNotEmpty ? trendData.last : 0;
+    final latestTrendLabel = chartLabels.isNotEmpty ? chartLabels.last : '-';
+    final nonZeroTrendPoints = List.generate(trendData.length, (index) {
+      return MapEntry(chartLabels[index], trendData[index]);
+    }).where((entry) => entry.value > 0).toList();
+    final trendInsight = periodTotal == 0
+        ? settings.t('Tiada insiden direkodkan dalam tempoh ini.')
+        : '${settings.t('Puncak tempoh')}: $busiestTrendLabel ($busiestTrendCount ${settings.t("Insiden")}).';
+
+    final sortedCategories = _categoryCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topCategory = sortedCategories.isNotEmpty
+        ? sortedCategories.first
+        : const MapEntry('Lain-lain', 0);
+    final categoryInsight = donutTotal == 0
+        ? settings.t('Belum ada kategori insiden untuk dipantau.')
+        : '${settings.t(topCategory.key)} ${settings.t('mencatat bahagian tertinggi')} (${topCategory.value}).';
+
+    final topZoneName = sortedZones.isNotEmpty
+        ? sortedZones.first['name'] as String
+        : '-';
+    final topZoneCount = sortedZones.isNotEmpty
+        ? sortedZones.first['count'] as int
+        : 0;
+    final hotspotInsight = topZoneCount == 0
+        ? settings.t('Tiada hotspot aktif dikesan ketika ini.')
+        : '$topZoneName ${settings.t('merekodkan insiden tertinggi')} ($topZoneCount).';
+
     final hour = DateTime.now().hour;
     String greetingKey = 'Selamat Pagi';
     if (hour >= 12 && hour < 14) {
@@ -375,52 +437,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       color: theme.primaryColor,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Personalized Greeting Header Row
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${settings.t(greetingKey)},',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: theme.textTheme.bodyMedium?.color?.withValues(
-                            alpha: 0.6,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _fullName,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textTheme.titleLarge?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Consumer<AuthProvider>(
-                  builder: (context, auth, _) => UserAvatar(
-                    imageUrl: auth.profileImageUrl,
-                    initials: UserAvatar.initialsFromName(
-                      auth.fullName ?? _fullName,
-                      fallback: 'A',
-                    ),
-                    radius: 26,
-                  ),
-                ),
-              ],
-            ),
+            _buildCommandHeader(settings, auth, greetingKey, subtitleColor),
+            const SizedBox(height: 12),
+            _buildQuickActionGrid(settings),
             if (auth.role == 'ketua_krt') ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -463,109 +488,41 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              _buildReportPanel(settings),
             ],
-            const SizedBox(height: 24),
-
-            // KPI Metrics Row (3-Cards)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildKpiCard(
-                    settings.t('Insiden (Minggu)'),
-                    '$_totalWeeklyIncidents',
-                    Icons.warning_amber_rounded,
-                    Colors.redAccent,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildKpiCard(
-                    settings.t('Shif Aktif'),
-                    '$_activeShiftsCount',
-                    Icons.radar,
-                    Colors.green.shade600,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildKpiCard(
-                    settings.t('Peronda Terdaftar'),
-                    '$_totalPatrollers',
-                    Icons.people_alt_outlined,
-                    theme.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Report Generation Actions
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Lampiran6Screen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.analytics_outlined,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    settings.t('JANA LAPORAN LAMPIRAN 6'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AttendanceBookScreen(),
-                      ),
-                    );
-                  },
-                  icon: Icon(
-                    Icons.fact_check_outlined,
-                    color: theme.primaryColor,
-                  ),
-                  label: Text(
-                    settings.t('JANA BUKU KEDATANGAN SRS'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.primaryColor,
-                    side: BorderSide(color: theme.primaryColor),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            _buildInsightGrid(settings, [
+              _MetricData(
+                title: settings.t('Insiden (Minggu)'),
+                value: '$_totalWeeklyIncidents',
+                caption: settings.t('7 hari terakhir'),
+                icon: Icons.warning_amber_rounded,
+                color: Colors.redAccent,
+              ),
+              _MetricData(
+                title: settings.t('Shif Aktif'),
+                value: '$_activeShiftsCount',
+                caption: settings.t('Rondaan aktif semasa'),
+                icon: Icons.radar_rounded,
+                color: Colors.green.shade700,
+              ),
+              _MetricData(
+                title: settings.t('Peronda Terdaftar'),
+                value: '$_totalPatrollers',
+                caption: settings.t('Ahli dalam sistem'),
+                icon: Icons.groups_2_outlined,
+                color: theme.primaryColor,
+              ),
+              _MetricData(
+                title: settings.t('Laporan Menunggu'),
+                value: '$pendingReports',
+                caption: settings.t('Perlu semakan admin'),
+                icon: Icons.assignment_late_outlined,
+                color: Colors.orange.shade800,
+              ),
+            ]),
+            const SizedBox(height: 16),
 
             // Line Chart Card
             Card(
@@ -580,7 +537,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
               margin: EdgeInsets.zero,
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -592,26 +549,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: _buildRectangularSegmentedToggle(
-                        selectedValue: _chartPeriod,
-                        options: {
-                          'Weekly': settings.t('Mingguan'),
-                          'Monthly': settings.t('Bulanan'),
-                        },
-                        width: double.infinity,
-                        onChanged: (value) {
-                          setState(() {
-                            _chartPeriod = value;
-                          });
-                        },
-                      ),
+                    const SizedBox(height: 6),
+                    _buildInsightText(trendInsight, theme.primaryColor),
+                    const SizedBox(height: 10),
+                    _buildTrendSummaryRow(
+                      settings: settings,
+                      total: periodTotal,
+                      latestLabel: latestTrendLabel,
+                      latestCount: latestTrendCount,
+                      peakLabel: busiestTrendLabel,
+                      peakCount: busiestTrendCount,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+                    _buildRectangularSegmentedToggle(
+                      selectedValue: _chartPeriod,
+                      options: {
+                        'Weekly': settings.t('Mingguan'),
+                        'Monthly': settings.t('Bulanan'),
+                      },
+                      width: double.infinity,
+                      onChanged: (value) {
+                        setState(() {
+                          _chartPeriod = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
-                      height: 200,
+                      height: 150,
                       child: LineChart(
                         LineChartData(
                           minY: 0,
@@ -686,11 +651,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    _buildPeriodCountStrip(
+                      settings: settings,
+                      points: nonZeroTrendPoints,
+                    ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // Pie Chart Card
             Card(
@@ -733,6 +703,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                   fontSize: 12,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              _buildInsightText(categoryInsight, Colors.orange),
                             ],
                           ),
                         ),
@@ -760,11 +732,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     const SizedBox(height: 24),
                     _showPieChart
                         ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
-                                flex: 4,
+                                flex: 5,
                                 child: SizedBox(
-                                  height: 140,
+                                  height: 156,
                                   child: PieChart(
                                     PieChartData(
                                       pieTouchData: PieTouchData(
@@ -800,7 +773,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               ),
                               const SizedBox(width: 16),
                               Expanded(
-                                flex: 6,
+                                flex: 7,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -808,7 +781,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                       settings.t('Jenayah Kekerasan'),
                                       _categoryCounts['Jenayah Kekerasan'] ?? 0,
                                       Colors.redAccent,
-                                      totalIncidents,
+                                      donutTotal,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildPieLegendItem(
@@ -816,21 +789,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                       _categoryCounts['Jenayah Harta Benda'] ??
                                           0,
                                       Colors.orange,
-                                      totalIncidents,
+                                      donutTotal,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildPieLegendItem(
                                       settings.t('Narkotik & Sosial'),
                                       _categoryCounts['Narkotik & Sosial'] ?? 0,
                                       Colors.blue,
-                                      totalIncidents,
+                                      donutTotal,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildPieLegendItem(
                                       settings.t('Lain-lain'),
                                       _categoryCounts['Lain-lain'] ?? 0,
                                       Colors.grey,
-                                      totalIncidents,
+                                      donutTotal,
                                     ),
                                   ],
                                 ),
@@ -844,28 +817,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                 settings.t('Jenayah Kekerasan'),
                                 _categoryCounts['Jenayah Kekerasan'] ?? 0,
                                 Colors.redAccent,
-                                totalIncidents,
+                                donutTotal,
                               ),
                               const SizedBox(height: 16),
                               _buildSeverityProgressItem(
                                 settings.t('Jenayah Harta Benda'),
                                 _categoryCounts['Jenayah Harta Benda'] ?? 0,
                                 Colors.orange,
-                                totalIncidents,
+                                donutTotal,
                               ),
                               const SizedBox(height: 16),
                               _buildSeverityProgressItem(
                                 settings.t('Narkotik & Sosial'),
                                 _categoryCounts['Narkotik & Sosial'] ?? 0,
                                 Colors.blue,
-                                totalIncidents,
+                                donutTotal,
                               ),
                               const SizedBox(height: 16),
                               _buildSeverityProgressItem(
                                 settings.t('Lain-lain'),
                                 _categoryCounts['Lain-lain'] ?? 0,
                                 Colors.grey,
-                                totalIncidents,
+                                donutTotal,
                               ),
                             ],
                           ),
@@ -915,6 +888,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                   color: subtitleColor,
                                   fontSize: 12,
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildInsightText(
+                                hotspotInsight,
+                                Colors.redAccent,
                               ),
                             ],
                           ),
@@ -1102,32 +1080,793 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  Widget _buildCommandHeader(
+    SettingsProvider settings,
+    AuthProvider auth,
+    String greetingKey,
+    Color subtitleColor,
+  ) {
+    final theme = Theme.of(context);
+    final roleText = _roleLabel(auth.role, settings);
+    final scopeParts = [
+      auth.districtName,
+      auth.zoneName ?? settings.t('Semua Zon'),
+    ].where((part) => part != null && part.trim().isNotEmpty).cast<String>();
+    final scopeText = scopeParts.isEmpty
+        ? settings.t('Pemantauan semua kawasan SRS')
+        : scopeParts.join(' / ');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [theme.primaryColor, const Color(0xFF1E5AB6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primaryColor.withValues(alpha: 0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.t(greetingKey),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _fullName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Consumer<AuthProvider>(
+                builder: (context, profile, _) => UserAvatar(
+                  imageUrl: profile.profileImageUrl,
+                  initials: UserAvatar.initialsFromName(
+                    profile.fullName ?? _fullName,
+                    fallback: 'A',
+                  ),
+                  radius: 23,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _headerPill(Icons.admin_panel_settings_outlined, roleText),
+              _headerPill(Icons.location_on_outlined, scopeText),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _headerPill(IconData icon, String text) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 30, maxWidth: 210),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionGrid(SettingsProvider settings) {
+    final actions = [
+      _QuickActionData(
+        label: settings.t('Jana QR'),
+        icon: Icons.qr_code_2_rounded,
+        onTap: widget.onOpenQr,
+      ),
+      _QuickActionData(
+        label: settings.t('Ahli'),
+        icon: Icons.groups_2_outlined,
+        onTap: widget.onOpenMembers,
+      ),
+      _QuickActionData(
+        label: settings.t('Jadual & Skuad'),
+        icon: Icons.calendar_month_outlined,
+        onTap: widget.onOpenSchedule,
+      ),
+      _QuickActionData(
+        label: settings.t('Laporan'),
+        icon: Icons.folder_shared_outlined,
+        onTap: widget.onOpenReports,
+      ),
+      _QuickActionData(
+        label: settings.t('Laporan Bulanan'),
+        icon: Icons.picture_as_pdf_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Lampiran6Screen()),
+          );
+        },
+      ),
+      _QuickActionData(
+        label: settings.t('Kedatangan'),
+        icon: Icons.fact_check_outlined,
+        onTap: () {
+          if (widget.onOpenAttendance != null) {
+            widget.onOpenAttendance!();
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AttendanceBookScreen()),
+            );
+          }
+        },
+      ),
+    ];
+
+    final theme = Theme.of(context);
+    final displayActions = _isQuickAccessExpanded
+        ? actions
+        : actions.take(4).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isQuickAccessExpanded = !_isQuickAccessExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.flash_on_rounded, size: 18, color: theme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    settings.t('Quick Access'),
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: theme.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const columns = 2;
+                const spacing = 8.0;
+                final tileWidth =
+                    (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: displayActions
+                      .map(
+                        (action) => SizedBox(
+                          width: tileWidth,
+                          child: _buildQuickActionTile(action),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+ 
+  Widget _buildQuickActionTile(_QuickActionData action) {
+    final theme = Theme.of(context);
+    final enabled = action.onTap != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: theme.dividerColor.withValues(alpha: 0.12),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: enabled
+                      ? theme.primaryColor.withValues(alpha: 0.1)
+                      : theme.dividerColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  action.icon,
+                  size: 20,
+                  color: enabled
+                      ? theme.primaryColor
+                      : theme.disabledColor.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                action.label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: enabled
+                      ? theme.textTheme.bodyLarge?.color
+                      : theme.disabledColor,
+                  fontSize: 13,
+                  height: 1.2,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightGrid(SettingsProvider settings, List<_MetricData> items) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.monitor_heart_outlined,
+                size: 18,
+                color: theme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                settings.t('Ringkasan Operasi'),
+                style: TextStyle(
+                  color: theme.textTheme.bodyLarge?.color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const columns = 2;
+              const spacing = 8.0;
+              final itemWidth =
+                  (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: items
+                    .map(
+                      (item) => SizedBox(
+                        width: itemWidth,
+                        child: _buildMetricCard(item),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(_MetricData item) {
+    final theme = Theme.of(context);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 92),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(item.icon, color: item.color, size: 17),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.trending_up_rounded,
+                color: item.color.withValues(alpha: 0.45),
+                size: 15,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.titleLarge?.color,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.bodyLarge?.color,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            item.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.58),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportPanel(SettingsProvider settings) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.primaryColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.24),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.summarize_outlined,
+                  color: theme.primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.t('Laporan Operasi'),
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      settings.t(
+                        'Jana dokumen demo tanpa meninggalkan dashboard.',
+                      ),
+                      style: TextStyle(
+                        color: theme.textTheme.bodyMedium?.color?.withValues(
+                          alpha: 0.62,
+                        ),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Lampiran6Screen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics_outlined, size: 18),
+                  label: Text(
+                    settings.t('Lampiran 6'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    if (widget.onOpenAttendance != null) {
+                      widget.onOpenAttendance!();
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AttendanceBookScreen(),
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(
+                    Icons.fact_check_outlined,
+                    color: theme.primaryColor,
+                    size: 18,
+                  ),
+                  label: Text(
+                    settings.t('Kedatangan'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.primaryColor,
+                    side: BorderSide(color: theme.primaryColor),
+                    minimumSize: const Size(0, 42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightText(String text, Color color) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.insights_outlined, size: 16, color: color),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.72,
+                ),
+                fontSize: 12,
+                height: 1.25,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendSummaryRow({
+    required SettingsProvider settings,
+    required int total,
+    required String latestLabel,
+    required int latestCount,
+    required String peakLabel,
+    required int peakCount,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildTrendCountPill(
+          label: settings.t('Jumlah'),
+          value: '$total',
+          icon: Icons.summarize_outlined,
+          color: Theme.of(context).primaryColor,
+        ),
+        _buildTrendCountPill(
+          label: latestLabel,
+          value: '$latestCount',
+          icon: Icons.today_outlined,
+          color: Colors.green.shade700,
+        ),
+        _buildTrendCountPill(
+          label: '${settings.t('Puncak')} $peakLabel',
+          value: '$peakCount',
+          icon: Icons.trending_up_rounded,
+          color: Colors.orange.shade800,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrendCountPill({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 5),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 104),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.7,
+                ),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodCountStrip({
+    required SettingsProvider settings,
+    required List<MapEntry<String, int>> points,
+  }) {
+    if (points.isEmpty) {
+      return Text(
+        settings.t('Tiada hari dengan laporan dalam tempoh ini.'),
+        style: TextStyle(
+          color: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.color?.withValues(alpha: 0.62),
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    final visiblePoints = points.length > 8
+        ? points.skip(points.length - 8).toList()
+        : points;
+    final theme = Theme.of(context);
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: visiblePoints.map((point) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: theme.primaryColor.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '${point.key}: ${point.value}',
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _roleLabel(String? role, SettingsProvider settings) {
+    switch (role) {
+      case 'super_admin':
+        return settings.t('Super Admin');
+      case 'ketua_krt':
+      case 'ketua':
+        return settings.t('Ketua KRT');
+      default:
+        return settings.t('Administrator');
+    }
+  }
+
   Widget _buildPieLegendItem(String label, int count, Color color, int total) {
     final theme = Theme.of(context);
     final pct = total > 0 ? (count / total * 100).toStringAsFixed(0) : '0';
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
-            ),
-            overflow: TextOverflow.ellipsis,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-        ),
-        Text(
-          '$count ($pct%)',
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.15,
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.8,
+                ),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '$count ($pct%)',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1171,63 +1910,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildKpiCard(String title, String value, IconData icon, Color color) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color,
-              height: 1.1,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 
@@ -1329,6 +2011,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       ),
     );
   }
+}
+
+class _QuickActionData {
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _QuickActionData({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+}
+
+class _MetricData {
+  final String title;
+  final String value;
+  final String caption;
+  final IconData icon;
+  final Color color;
+
+  const _MetricData({
+    required this.title,
+    required this.value,
+    required this.caption,
+    required this.icon,
+    required this.color,
+  });
 }
 
 class _ActivePulseDot extends StatefulWidget {

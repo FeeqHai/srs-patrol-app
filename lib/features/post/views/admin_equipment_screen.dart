@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 
 class AdminEquipmentScreen extends StatefulWidget {
   const AdminEquipmentScreen({super.key});
@@ -551,61 +552,70 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: Container(
-          color: theme.colorScheme.surface,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  dividerColor: Colors.transparent,
-                  tabs: [
-                    Tab(text: settings.t('Inventori')),
-                    Tab(text: settings.t('Rekod Log')),
-                    Tab(text: settings.t('Pemulangan')),
-                  ],
-                  labelColor: theme.colorScheme.primary,
-                  unselectedLabelColor: theme.unselectedWidgetColor,
-                  indicatorColor: theme.colorScheme.primary,
-                ),
-              ),
-              if (_tabController.index == 0)
-                IconButton(
-                  icon: Icon(
-                    Icons.add_box_outlined,
-                    color: theme.colorScheme.primary,
-                  ),
-                  tooltip: settings.t('Tambah Peralatan'),
-                  onPressed: () => _showAddEquipmentDialog(settings),
-                ),
-            ],
-          ),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Column(
         children: [
-          // Tab 1: Inventory
-          RefreshIndicator(
-            onRefresh: _fetchInventory,
-            child: _buildInventoryTab(settings, theme),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: Column(
+              children: [
+                CommandHeader(
+                  title: settings.t('Log & Inventori Peralatan'),
+                  subtitle: settings.t(
+                    'Pantau stok, pinjaman, dan pengesahan pemulangan rondaan.',
+                  ),
+                  icon: Icons.inventory_2_outlined,
+                  compact: true,
+                  trailing: _tabController.index == 0
+                      ? IconButton.filledTonal(
+                          icon: const Icon(Icons.add),
+                          tooltip: settings.t('Tambah Peralatan'),
+                          onPressed: () => _showAddEquipmentDialog(settings),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: commandCardDecoration(context),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    dividerColor: Colors.transparent,
+                    tabs: [
+                      Tab(text: settings.t('Inventori')),
+                      Tab(text: settings.t('Rekod Log')),
+                      Tab(text: settings.t('Pemulangan')),
+                    ],
+                    labelColor: theme.colorScheme.primary,
+                    unselectedLabelColor: theme.unselectedWidgetColor,
+                    indicatorColor: theme.colorScheme.secondary,
+                    indicatorWeight: 3,
+                  ),
+                ),
+              ],
+            ),
           ),
-          // Tab 2: Logs
-          RefreshIndicator(
-            onRefresh: _fetchLogs,
-            child: _buildLogsTab(settings, theme),
-          ),
-          // Tab 3: Pending return acknowledgements
-          RefreshIndicator(
-            onRefresh: _fetchPendingReturns,
-            child: _buildPendingReturnsTab(settings, theme),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                RefreshIndicator(
+                  onRefresh: _fetchInventory,
+                  child: _buildInventoryTab(settings, theme),
+                ),
+                RefreshIndicator(
+                  onRefresh: _fetchLogs,
+                  child: _buildLogsTab(settings, theme),
+                ),
+                RefreshIndicator(
+                  onRefresh: _fetchPendingReturns,
+                  child: _buildPendingReturnsTab(settings, theme),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -721,25 +731,35 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                 ),
               ],
             );
-            final actions = Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: Colors.blueAccent,
+            final actions = PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _showEditEquipmentDialog(item, settings);
+                } else if (value == 'delete') {
+                  _showDeleteEquipmentConfirm(item, settings);
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem<String>(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, color: Colors.blueAccent, size: 20),
+                      const SizedBox(width: 8),
+                      Text(settings.t('Kemaskini')),
+                    ],
                   ),
-                  tooltip: settings.t('Kemaskini Peralatan'),
-                  onPressed: () => _showEditEquipmentDialog(item, settings),
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent,
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                      const SizedBox(width: 8),
+                      Text(settings.t('Padam')),
+                    ],
                   ),
-                  tooltip: settings.t('Padam Peralatan'),
-                  onPressed: () => _showDeleteEquipmentConfirm(item, settings),
                 ),
               ],
             );

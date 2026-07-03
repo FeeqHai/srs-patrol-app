@@ -259,12 +259,18 @@ class _AdminLocationScreenState extends State<AdminLocationScreen> {
 
   Widget _statusChip(dynamic active, SettingsProvider settings) {
     final isActive = active.toString() == '1';
+    final color = isActive ? Colors.green.shade800 : Colors.red.shade800;
     return Chip(
-      label: Text(settings.t(isActive ? 'Aktif' : 'Nyahaktif')),
-      visualDensity: VisualDensity.compact,
-      backgroundColor: (isActive ? Colors.green : Colors.redAccent).withValues(
-        alpha: 0.12,
+      label: Text(
+        settings.t(isActive ? 'Aktif' : 'Nyahaktif'),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
+      backgroundColor: color.withValues(alpha: 0.12),
     );
   }
 

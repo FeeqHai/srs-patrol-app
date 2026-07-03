@@ -176,7 +176,7 @@ class _MainShellState extends State<MainShell> {
           );
           // Switch to Incident Feed tab so they can see the broadcast
           setState(() {
-            _currentIndex = 1;
+            _currentIndex = 2;
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -212,6 +212,17 @@ class _MainShellState extends State<MainShell> {
             _currentIndex = 3;
           });
         },
+        onNavigateToSchedule: () {
+          setState(() {
+            _currentIndex = 1;
+          });
+        },
+        onNavigateToIncident: () {
+          setState(() {
+            _currentIndex = 2;
+          });
+        },
+        onSosPressed: _triggerSOS,
       ),
       const ScheduleScreen(),
       const IncidentScreen(),

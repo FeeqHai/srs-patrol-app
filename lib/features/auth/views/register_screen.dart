@@ -340,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       color: Colors.white.withValues(alpha: 0.2),
                     ),
                   ),
-                  child: Image.asset('assets/icon.png', height: 90),
+                  child: Image.asset('assets/icon.png', height: 120),
                 ),
                 const SizedBox(height: 48),
                 Text(

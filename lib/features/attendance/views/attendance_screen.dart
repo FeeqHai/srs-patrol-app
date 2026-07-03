@@ -5,11 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
+
 
 import '../../auth/providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/widgets/command_center_widgets.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final VoidCallback onNavigateToDashboard;
@@ -34,7 +35,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   String? _pendingMessage;
   String _activeCheckpoint = "";
   String _activeLocation = "";
-  DateTime? _shiftStartTime;
   List<String> _activeEquipment = [];
   List<dynamic> _inventory = [];
 
@@ -80,7 +80,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         _returnScannerOpen = false;
         _activeCheckpoint = _formatCheckpoint(provider.checkpointId ?? '');
         _activeLocation = 'Pos Utama KRT';
-        _shiftStartTime = provider.clockInTime;
         _activeEquipment = provider.borrowedEquipmentNames;
       });
     } else {
@@ -90,7 +89,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         _shiftActive = false;
         _returnScannerOpen = false;
         _activeEquipment = [];
-        _shiftStartTime = null;
       });
       _loadInventory();
     }
@@ -536,6 +534,32 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     );
   }
 
+  Widget _buildReturnScanButton(SettingsProvider settings) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          _initializeScanner();
+          setState(() => _returnScannerOpen = true);
+          _startScannerIfVisible();
+        },
+        icon: const Icon(Icons.qr_code_scanner),
+        label: Text(
+          settings.t('IMBAS QR PULANG'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.redAccent,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -544,11 +568,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     }
 
     if (_shiftActive && !_returnScannerOpen) {
-      final String endTimeStr = _shiftStartTime != null
-          ? DateFormat(
-              'hh:mm a',
-            ).format(_shiftStartTime!.add(const Duration(hours: 4)))
-          : "TBA";
 
       return Scaffold(
         body: Center(
@@ -558,38 +577,29 @@ class _AttendanceScreenState extends State<AttendanceScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.greenAccent.withValues(alpha: 0.1),
+                  CommandHeader(
+                    title: settings.t('Rondaan Aktif'),
+                    subtitle: settings.t(
+                      'Shif sedang berjalan. Kembali ke pos utama untuk imbas QR pulang.',
                     ),
-                    child: const Icon(
-                      Icons.verified_user,
-                      color: Colors.greenAccent,
-                      size: 90,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    settings.t('Rondaan Aktif'),
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).primaryColor,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${settings.t('Anggaran Tamat Shif')}: $endTimeStr',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.orange.shade800,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    icon: Icons.verified_user_outlined,
+                    compact: true,
                   ),
                   const SizedBox(height: 16),
+                  _buildReturnScanButton(settings),
+                  const SizedBox(height: 8),
+                  Text(
+                    settings.t(
+                      'Sila kembali ke pos rondaan untuk imbas QR pulang.',
+                    ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -629,43 +639,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        _initializeScanner();
-                        setState(() => _returnScannerOpen = true);
-                        _startScannerIfVisible();
-                      },
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: Text(
-                        settings.t('IMBAS QR PULANG'),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    settings.t(
-                      'Sila kembali ke pos rondaan untuk imbas QR pulang.',
-                    ),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -878,7 +852,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   }
 
   Widget _buildPendingAcknowledgementView(SettingsProvider settings) {
-    final theme = Theme.of(context);
     final message =
         _pendingMessage ??
         settings.t(
@@ -892,39 +865,20 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.orange.withValues(alpha: 0.12),
+              CommandHeader(
+                title: settings.t('Menunggu Pengesahan Ketua KRT'),
+                subtitle: settings.t(
+                  'Pemulangan telah dihantar. Status akan dikemas kini selepas semakan peralatan.',
                 ),
-                child: const Icon(
-                  Icons.hourglass_top,
-                  color: Colors.orange,
-                  size: 86,
-                ),
+                icon: Icons.hourglass_top_rounded,
+                compact: true,
               ),
-              const SizedBox(height: 28),
-              Text(
-                settings.t('Menunggu Pengesahan Ketua KRT'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: theme.primaryColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: theme.textTheme.bodyMedium?.color?.withValues(
-                    alpha: 0.72,
-                  ),
-                ),
+              const SizedBox(height: 14),
+              CommandBanner(
+                icon: Icons.info_outline_rounded,
+                color: CommandColors.warning,
+                title: settings.t('Status Pemulangan'),
+                message: message,
               ),
               if (_activeEquipment.isNotEmpty) ...[
                 const SizedBox(height: 20),

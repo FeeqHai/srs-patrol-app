@@ -7,6 +7,7 @@ import 'features/auth/views/change_password_screen.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/incident/providers/incident_provider.dart';
 import 'core/widgets/main_shell.dart';
+import 'core/widgets/splash_screen.dart';
 import 'features/tracking/providers/tracking_provider.dart';
 import 'features/attendance/providers/attendance_provider.dart';
 import 'features/post/views/admin_shell.dart';
@@ -48,7 +49,7 @@ class SRSPatrolApp extends StatelessWidget {
         builder: (context, settings, child) {
           return MaterialApp(
             navigatorKey: SosAlertService.navigatorKey,
-            title: 'SRS Patrol System',
+            title: 'iRonda',
             debugShowCheckedModeBanner: false,
             themeMode: ThemeMode.light,
             locale: settings.locale,
@@ -60,7 +61,7 @@ class SRSPatrolApp extends StatelessWidget {
             ],
 
             // --- DYNAMIC ROUTING ---
-            home: const RootRouter(),
+            home: const SplashScreen(nextScreen: RootRouter()),
 
             routes: {
               '/login': (context) => const LoginScreen(),
@@ -71,14 +72,55 @@ class SRSPatrolApp extends StatelessWidget {
 
             // --- LIGHT THEME ---
             theme: ThemeData(
+              useMaterial3: true,
               brightness: Brightness.light,
               primaryColor: const Color(0xFF0F3D87),
-              scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+              scaffoldBackgroundColor: const Color(0xFFF3F6FA),
+              dividerColor: const Color(0xFFE3E9F2),
               colorScheme: const ColorScheme.light(
                 primary: Color(0xFF0F3D87),
                 secondary: Color(0xFFFFD100),
-                surface: Color(0xFFF8F9FA),
+                surface: Colors.white,
                 onSurface: Colors.black87,
+                error: Color(0xFFE5484D),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F3D87),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(48, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF0F3D87),
+                  minimumSize: const Size(48, 48),
+                  side: const BorderSide(color: Color(0xFF0F3D87)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              chipTheme: ChipThemeData(
+                backgroundColor: Colors.white,
+                selectedColor: const Color(0xFF0F3D87),
+                checkmarkColor: Colors.white,
+                side: const BorderSide(color: Color(0xFFE3E9F2)),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              snackBarTheme: SnackBarThemeData(
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               popupMenuTheme: const PopupMenuThemeData(
                 color: Colors.white,
@@ -173,14 +215,55 @@ class SRSPatrolApp extends StatelessWidget {
 
             // --- DARK THEME ---
             darkTheme: ThemeData(
+              useMaterial3: true,
               brightness: Brightness.dark,
               primaryColor: const Color(0xFF0F3D87),
               scaffoldBackgroundColor: const Color(0xFF121212),
+              dividerColor: Colors.white12,
               colorScheme: const ColorScheme.dark(
                 primary: Color(0xFF0F3D87),
                 secondary: Color(0xFFFFD100),
                 surface: Color(0xFF121212),
                 onSurface: Colors.white,
+                error: Color(0xFFFFB4AB),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F3D87),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(48, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFFFD100),
+                  minimumSize: const Size(48, 48),
+                  side: const BorderSide(color: Color(0xFFFFD100)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              chipTheme: ChipThemeData(
+                backgroundColor: const Color(0xFF1E1E1E),
+                selectedColor: const Color(0xFFFFD100),
+                checkmarkColor: const Color(0xFF121212),
+                side: const BorderSide(color: Colors.white12),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              snackBarTheme: SnackBarThemeData(
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               popupMenuTheme: const PopupMenuThemeData(
                 color: Color(0xFF1E1E1E),

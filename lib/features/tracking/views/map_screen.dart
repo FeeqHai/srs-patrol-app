@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../providers/tracking_provider.dart';
+import '../../../core/providers/settings_provider.dart';
 
 class MapScreen extends StatelessWidget {
   const MapScreen({super.key});
@@ -10,12 +11,13 @@ class MapScreen extends StatelessWidget {
   void _triggerSos(BuildContext context) async {
     final trackingProvider = context.read<TrackingProvider>();
     final authProvider = context.read<AuthProvider>();
+    final settings = context.read<SettingsProvider>();
 
     final userId = authProvider.userId;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sila log masuk untuk menggunakan fungsi kecemasan.'),
+        SnackBar(
+          content: Text(settings.t('Sila log masuk untuk menggunakan fungsi kecemasan.')),
         ),
       );
       return;
@@ -25,20 +27,20 @@ class MapScreen extends StatelessWidget {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Amaran Kecemasan (SOS)',
-          style: TextStyle(
+        title: Text(
+          settings.t('Amaran Kecemasan (SOS)'),
+          style: const TextStyle(
             color: Colors.redAccent,
             fontWeight: FontWeight.bold,
           ),
         ),
-        content: const Text(
-          'Adakah anda pasti mahu menghantar isyarat kecemasan? Kordinat GPS anda akan dihantar ke bilik gerakan serta-merta.',
+        content: Text(
+          settings.t('Adakah anda pasti mahu menghantar isyarat kecemasan? Kordinat GPS anda akan dihantar ke bilik gerakan serta-merta.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Batal'),
+            child: Text(settings.t('Batal')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -46,7 +48,7 @@ class MapScreen extends StatelessWidget {
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('HANTAR SOS'),
+            child: Text(settings.t('HANTAR SOS')),
           ),
         ],
       ),
@@ -62,20 +64,20 @@ class MapScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('SOS Dihantar'),
+              const Icon(Icons.check_circle, color: Colors.green),
+              const SizedBox(width: 8),
+              Text(settings.t('SOS Dihantar')),
             ],
           ),
-          content: const Text(
-            'Bantuan sedang dalam perjalanan. Sila pastikan keselamatan diri anda dan hubungi talian 999 jika keadaan kritikal.',
+          content: Text(
+            settings.t('Bantuan sedang dalam perjalanan. Sila pastikan keselamatan diri anda dan hubungi talian 999 jika keadaan kritikal.'),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Tutup'),
+              child: Text(settings.t('Tutup')),
             ),
           ],
         ),
@@ -84,7 +86,7 @@ class MapScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            trackingProvider.errorMessage ?? 'Gagal menghantar SOS',
+            settings.t(trackingProvider.errorMessage ?? 'Gagal menghantar SOS'),
           ),
           backgroundColor: Colors.red,
         ),
@@ -94,14 +96,16 @@ class MapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+
     return Consumer<TrackingProvider>(
       builder: (context, provider, child) {
         return Scaffold(
           backgroundColor: const Color(0xFF121212),
           appBar: AppBar(
-            title: const Text(
-              'Pusat Kawalan & Kecemasan',
-              style: TextStyle(
+            title: Text(
+              settings.t('Pusat Kawalan & Kecemasan'),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -116,12 +120,12 @@ class MapScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.shield, size: 80, color: Colors.white38),
                 const SizedBox(height: 20),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40.0),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40.0),
                   child: Text(
-                    'Tekan butang SOS di bawah HANYA pada waktu kecemasan atau ancaman keselamatan.',
+                    settings.t('Tekan butang SOS di bawah HANYA pada waktu kecemasan atau ancaman keselamatan.'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                 ),
                 const SizedBox(height: 60),
@@ -146,23 +150,23 @@ class MapScreen extends StatelessWidget {
                     ),
                     child: Center(
                       child: provider.isLoading
-                          ? const Column(
+                          ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                CircularProgressIndicator(color: Colors.white),
-                                SizedBox(height: 10),
+                                const CircularProgressIndicator(color: Colors.white),
+                                const SizedBox(height: 10),
                                 Text(
-                                  'MENGESAN LOKASI...',
-                                  style: TextStyle(
+                                  settings.t('MENGESAN LOKASI...'),
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
                             )
-                          : const Text(
-                              'SOS',
-                              style: TextStyle(
+                          : Text(
+                              settings.t('SOS'),
+                              style: const TextStyle(
                                 fontSize: 48,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,

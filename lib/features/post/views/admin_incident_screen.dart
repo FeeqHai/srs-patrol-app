@@ -6,6 +6,10 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../../core/widgets/command_center_widgets.dart';
+import '../../auth/models/location_option.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/services/auth_service.dart';
 import '../../incident/views/incident_screen.dart';
 
 class AdminIncidentScreen extends StatefulWidget {
@@ -19,16 +23,55 @@ class AdminIncidentScreen extends StatefulWidget {
 class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
   List<dynamic> _patrollers = [];
   String _searchQuery = '';
-  String _selectedZone = 'Semua Zon';
+  final AuthService _authService = AuthService();
+  List<LocationOption> _states = const [];
+  List<LocationOption> _districts = const [];
+  List<LocationOption> _zones = const [];
+  LocationOption? _selectedState;
+  LocationOption? _selectedDistrict;
+  LocationOption? _selectedZone;
+  String _selectedNoteFilter = 'all';
   String _selectedSortPriority = 'Default';
   bool _isLoading = true;
+  bool _isLoadingFilters = false;
   String? _error;
-  String? _selectedPatrollerId;
+  String? _filterError;
 
   @override
   void initState() {
     super.initState();
+    _initializeFilters();
     _fetchPatrollers();
+  }
+
+  Future<void> _initializeFilters() async {
+    final auth = context.read<AuthProvider>();
+    setState(() => _isLoadingFilters = true);
+    try {
+      if (auth.role == 'super_admin') {
+        final states = await _authService.fetchLocations(level: 'states');
+        if (!mounted) return;
+        setState(() {
+          _states = states;
+          _filterError = null;
+        });
+      } else if (auth.districtId != null) {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: auth.districtId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _zones = zones;
+          _filterError = null;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _filterError = 'Tidak dapat memuatkan senarai lokasi.');
+    } finally {
+      if (mounted) setState(() => _isLoadingFilters = false);
+    }
   }
 
   Future<void> _fetchPatrollers() async {
@@ -105,11 +148,84 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
     }
   }
 
-  void _showFilterBottomSheet(Set<String> zones) {
+  void _showFilterBottomSheet() {
     final settings = context.read<SettingsProvider>();
+    final auth = context.read<AuthProvider>();
     final theme = Theme.of(context);
-    String tempZone = _selectedZone;
+    final isSuperAdmin = auth.role == 'super_admin';
+    var tempState = _selectedState;
+    var tempDistrict = _selectedDistrict;
+    var tempZone = _selectedZone;
+    var sheetDistricts = List<LocationOption>.from(_districts);
+    var sheetZones = List<LocationOption>.from(_zones);
     String tempSortPriority = _selectedSortPriority;
+    var sheetError = _filterError;
+    var isLoadingLocations = false;
+    var sheetOpen = true;
+
+    Future<void> loadDistricts(
+      LocationOption? state,
+      StateSetter setSheetState,
+    ) async {
+      setSheetState(() {
+        tempState = state;
+        tempDistrict = null;
+        tempZone = null;
+        sheetDistricts = const [];
+        sheetZones = const [];
+        sheetError = null;
+        isLoadingLocations = state != null;
+      });
+      if (state == null) return;
+      try {
+        final districts = await _authService.fetchLocations(
+          level: 'districts',
+          parentId: state.id,
+        );
+        if (!mounted || !sheetOpen || tempState?.id != state.id) return;
+        setSheetState(() {
+          sheetDistricts = districts;
+          isLoadingLocations = false;
+        });
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setSheetState(() {
+          sheetError = settings.t('Tidak dapat memuatkan daerah.');
+          isLoadingLocations = false;
+        });
+      }
+    }
+
+    Future<void> loadZones(
+      LocationOption? district,
+      StateSetter setSheetState,
+    ) async {
+      setSheetState(() {
+        tempDistrict = district;
+        tempZone = null;
+        sheetZones = const [];
+        sheetError = null;
+        isLoadingLocations = district != null;
+      });
+      if (district == null) return;
+      try {
+        final zones = await _authService.fetchLocations(
+          level: 'zones',
+          parentId: district.id,
+        );
+        if (!mounted || !sheetOpen || tempDistrict?.id != district.id) return;
+        setSheetState(() {
+          sheetZones = zones;
+          isLoadingLocations = false;
+        });
+      } catch (_) {
+        if (!mounted || !sheetOpen) return;
+        setSheetState(() {
+          sheetError = settings.t('Tidak dapat memuatkan zon.');
+          isLoadingLocations = false;
+        });
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -161,46 +277,52 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                   ),
                   const Divider(),
                   const SizedBox(height: 12),
-                  Text(
-                    settings.t("Zon Rondaan"),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: tempZone,
-                    isExpanded: true,
-                    dropdownColor: theme.cardColor,
-                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: theme.dividerColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                  if (isLoadingLocations || _isLoadingFilters) ...[
+                    LinearProgressIndicator(color: theme.primaryColor),
+                    const SizedBox(height: 12),
+                  ],
+                  if (sheetError != null) ...[
+                    Text(
+                      sheetError!,
+                      style: TextStyle(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    items: zones.map((String zone) {
-                      return DropdownMenuItem(
-                        value: zone,
-                        child: Text(
-                          zone == 'Semua Zon' ? settings.t(zone) : zone,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setSheetState(() => tempZone = val);
-                      }
-                    },
+                    const SizedBox(height: 12),
+                  ],
+                  if (isSuperAdmin) ...[
+                    _LocationDropdown(
+                      label: settings.t('Negeri'),
+                      value: tempState,
+                      items: _states,
+                      allLabel: settings.t('Semua Negeri'),
+                      onChanged: (value) => loadDistricts(value, setSheetState),
+                    ),
+                    const SizedBox(height: 12),
+                    _LocationDropdown(
+                      label: settings.t('Daerah'),
+                      value: tempDistrict,
+                      items: sheetDistricts,
+                      allLabel: settings.t('Semua Daerah'),
+                      enabled: tempState != null,
+                      onChanged: (value) => loadZones(value, setSheetState),
+                    ),
+                    const SizedBox(height: 12),
+                  ] else ...[
+                    Text(
+                      '${settings.t("Negeri")}: ${auth.stateName ?? "-"}  |  ${settings.t("Daerah")}: ${auth.districtName ?? "-"}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  _LocationDropdown(
+                    label: settings.t('Zon Rondaan'),
+                    value: tempZone,
+                    items: sheetZones,
+                    allLabel: settings.t('Semua Zon'),
+                    enabled: isSuperAdmin ? tempDistrict != null : true,
+                    onChanged: (value) => setSheetState(() => tempZone = value),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -267,8 +389,16 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                         child: OutlinedButton(
                           onPressed: () {
                             setState(() {
-                              _selectedZone = 'Semua Zon';
+                              _selectedState = null;
+                              _selectedDistrict = null;
+                              _selectedZone = null;
+                              _districts = const [];
+                              _zones = isSuperAdmin
+                                  ? const []
+                                  : List<LocationOption>.from(_zones);
+                              _selectedNoteFilter = 'all';
                               _selectedSortPriority = 'Default';
+                              _filterError = null;
                             });
                             Navigator.pop(context);
                           },
@@ -286,7 +416,12 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                         child: FilledButton(
                           onPressed: () {
                             setState(() {
+                              _selectedState = tempState;
+                              _selectedDistrict = tempDistrict;
                               _selectedZone = tempZone;
+                              _districts = sheetDistricts;
+                              _zones = sheetZones;
+                              _filterError = sheetError;
                               _selectedSortPriority = tempSortPriority;
                             });
                             Navigator.pop(context);
@@ -309,22 +444,281 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
           },
         );
       },
+    ).whenComplete(() => sheetOpen = false);
+  }
+
+  void _openPatrollerReports(dynamic patroller) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            IncidentScreen(patrollerIdFilter: patroller['id']),
+      ),
+    );
+  }
+
+  Widget _buildStatusChips(
+    SettingsProvider settings,
+    ThemeData theme,
+    List<LocationOption> zones,
+  ) {
+    final zoneChips = zones
+        .take(4)
+        .map(
+          (zone) =>
+              _ReportChipData(zone.id, zone.name, Icons.location_on_outlined),
+        );
+    final chips = [
+      _ReportChipData('all', settings.t('Semua'), Icons.dashboard_outlined),
+      _ReportChipData(
+        'with_notes',
+        settings.t('Ada Nota'),
+        Icons.sticky_note_2_outlined,
+      ),
+      _ReportChipData(
+        'no_notes',
+        settings.t('No Notes'),
+        Icons.note_alt_outlined,
+      ),
+      ...zoneChips,
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: chips.map((chip) {
+            final isZoneChip =
+                zones.any((zone) => zone.id == chip.key) && chip.key != 'all';
+            final selected = isZoneChip
+                ? _selectedZone?.id == chip.key
+                : _selectedNoteFilter == chip.key ||
+                      (chip.key == 'all' &&
+                          _selectedNoteFilter == 'all' &&
+                          _selectedZone == null);
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                selected: selected,
+                showCheckmark: false,
+                avatar: Icon(
+                  chip.icon,
+                  size: 17,
+                  color: selected ? Colors.white : theme.primaryColor,
+                ),
+                label: Text(
+                  chip.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                labelStyle: TextStyle(
+                  color: selected ? Colors.white : theme.primaryColor,
+                  fontWeight: FontWeight.w800,
+                ),
+                selectedColor: theme.primaryColor,
+                backgroundColor: theme.cardColor,
+                side: BorderSide(
+                  color: selected
+                      ? theme.primaryColor
+                      : theme.dividerColor.withValues(alpha: 0.22),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
+                ),
+                onSelected: (_) {
+                  setState(() {
+                    if (chip.key == 'all') {
+                      _selectedNoteFilter = 'all';
+                      _selectedZone = null;
+                    } else if (isZoneChip) {
+                      _selectedZone = zones.firstWhere(
+                        (zone) => zone.id == chip.key,
+                      );
+                    } else {
+                      _selectedNoteFilter = chip.key;
+                    }
+                  });
+                },
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportCard(
+    dynamic patroller,
+    SettingsProvider settings,
+    ThemeData theme,
+  ) {
+    final noteCount = patroller['note_count'] as int? ?? 0;
+    final hasNotes = noteCount > 0;
+    final zone = patroller['district_zone'] ?? settings.t('Tiada');
+    final ic = patroller['ic_number'] ?? '-';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 1.5,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openPatrollerReports(patroller),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              UserAvatar(
+                imageUrl: patroller['profile_image_url'] as String?,
+                initials: UserAvatar.initialsFromName(
+                  patroller['full_name'] as String?,
+                  fallback: 'P',
+                ),
+                radius: 23,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      patroller['full_name']?.toString() ??
+                          settings.t('Tidak Diketahui'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 7,
+                      runSpacing: 7,
+                      children: [
+                        _reportPill(
+                          Icons.location_on_outlined,
+                          '${settings.t('Zon')}: $zone',
+                          theme.primaryColor,
+                        ),
+                        _reportPill(
+                          Icons.badge_outlined,
+                          'IC: $ic',
+                          theme.textTheme.bodyMedium?.color?.withValues(
+                                alpha: 0.62,
+                              ) ??
+                              Colors.grey,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: hasNotes
+                          ? theme.primaryColor.withValues(alpha: 0.1)
+                          : Colors.redAccent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      '$noteCount ${settings.t('Nota')}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: hasNotes ? theme.primaryColor : Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        settings.t('Lihat'),
+                        style: TextStyle(
+                          color: theme.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: theme.primaryColor,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _reportPill(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(SettingsProvider settings) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(8, 92, 8, 120),
+      children: [
+        CommandEmptyStateCard(
+          icon: Icons.assignment_outlined,
+          title: settings.t('Tiada padanan carian.'),
+          message: settings.t(
+            'Ubah carian, nota, atau penapis zon untuk melihat laporan.',
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-
-    if (_selectedPatrollerId != null) {
-      return IncidentScreen(
-        patrollerIdFilter: _selectedPatrollerId,
-        onClose: () {
-          widget.onSubViewChanged?.call(false);
-          setState(() => _selectedPatrollerId = null);
-        },
-      );
-    }
 
     if (_isLoading) {
       return Center(
@@ -347,23 +741,32 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
       );
     }
 
-    // Extract unique zones for the dropdown
-    final Set<String> zones = {'Semua Zon'};
-    for (var p in _patrollers) {
-      if (p['district_zone'] != null &&
-          p['district_zone'].toString().isNotEmpty) {
-        zones.add(p['district_zone']);
-      }
-    }
+    final zones = _zones;
 
     // Apply filtering
     final filteredPatrollers = _patrollers.where((p) {
       final matchesSearch = p['full_name'].toString().toLowerCase().contains(
         _searchQuery.toLowerCase(),
       );
+      final matchesState =
+          _selectedState == null ||
+          p['state_id']?.toString() == _selectedState!.id;
+      final matchesDistrict =
+          _selectedDistrict == null ||
+          p['district_id']?.toString() == _selectedDistrict!.id;
       final matchesZone =
-          _selectedZone == 'Semua Zon' || p['district_zone'] == _selectedZone;
-      return matchesSearch && matchesZone;
+          _selectedZone == null ||
+          p['zone_id']?.toString() == _selectedZone!.id;
+      final noteCount = p['note_count'] as int? ?? 0;
+      final matchesNotes =
+          _selectedNoteFilter == 'all' ||
+          (_selectedNoteFilter == 'with_notes' && noteCount > 0) ||
+          (_selectedNoteFilter == 'no_notes' && noteCount == 0);
+      return matchesSearch &&
+          matchesState &&
+          matchesDistrict &&
+          matchesZone &&
+          matchesNotes;
     }).toList();
 
     if (_selectedSortPriority == 'Paling Banyak Nota') {
@@ -388,12 +791,29 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
     }
 
     final bool isFilterActive =
-        _selectedZone != 'Semua Zon' || _selectedSortPriority != 'Default';
+        _selectedState != null ||
+        _selectedDistrict != null ||
+        _selectedZone != null ||
+        _selectedNoteFilter != 'all' ||
+        _selectedSortPriority != 'Default';
     final theme = Theme.of(context);
-
     return Column(
       children: [
-        // Search and Filter Bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: Column(
+            children: [
+              CommandHeader(
+                title: settings.t('Suapan Laporan Peronda'),
+                subtitle: settings.t(
+                  'Pantau nota harian, zon rondaan, dan rekod peronda dari satu paparan operasi.',
+                ),
+                icon: Icons.assignment_outlined,
+                compact: true,
+              ),
+            ],
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
           child: Row(
@@ -466,7 +886,7 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
                       ),
                       padding: const EdgeInsets.all(12),
                     ),
-                    onPressed: () => _showFilterBottomSheet(zones),
+                    onPressed: _showFilterBottomSheet,
                   ),
                   if (isFilterActive)
                     Positioned(
@@ -486,122 +906,86 @@ class _AdminIncidentScreenState extends State<AdminIncidentScreen> {
             ],
           ),
         ),
+        _buildStatusChips(settings, theme, zones),
 
         // List of filtered patrollers
         Expanded(
           child: filteredPatrollers.isEmpty
-              ? Center(
-                  child: Text(
-                    settings.t('Tiada padanan carian.'),
-                    style: const TextStyle(color: Colors.white54),
-                  ),
-                )
+              ? _buildEmptyState(settings)
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                   itemCount: filteredPatrollers.length,
                   itemBuilder: (context, index) {
                     final patroller = filteredPatrollers[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
-                        ),
-                        leading: UserAvatar(
-                          imageUrl: patroller['profile_image_url'] as String?,
-                          initials: UserAvatar.initialsFromName(
-                            patroller['full_name'] as String?,
-                            fallback: 'P',
-                          ),
-                          radius: 22,
-                        ),
-                        title: Text(
-                          patroller['full_name'],
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${settings.t('Zon')}: ${patroller['district_zone'] ?? settings.t('Tiada')} | IC: ${patroller['ic_number']}',
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyLarge?.color
-                                ?.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: (patroller['note_count'] ?? 0) == 0
-                                    ? Colors.redAccent.withValues(alpha: 0.15)
-                                    : Theme.of(
-                                        context,
-                                      ).primaryColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${patroller['note_count'] ?? 0} ${settings.t('Nota')}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: (patroller['note_count'] ?? 0) == 0
-                                      ? Colors.redAccent
-                                      : Theme.of(context).primaryColor,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.color
-                                  ?.withValues(alpha: 0.6),
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                        onTap: () {
-                          if (MediaQuery.of(context).size.width > 600) {
-                            showDialog(
-                              context: context,
-                              builder: (context) => Dialog(
-                                backgroundColor: Colors.transparent,
-                                insetPadding: const EdgeInsets.all(40),
-                                child: Container(
-                                  width: 800,
-                                  height: 700,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: IncidentScreen(
-                                    patrollerIdFilter: patroller['id'],
-                                  ),
-                                ),
-                              ),
-                            );
-                          } else {
-                            widget.onSubViewChanged?.call(true);
-                            setState(() {
-                              _selectedPatrollerId = patroller['id'];
-                            });
-                          }
-                        },
-                      ),
-                    );
+                    return _buildReportCard(patroller, settings, theme);
                   },
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _ReportChipData {
+  final String key;
+  final String label;
+  final IconData icon;
+
+  const _ReportChipData(this.key, this.label, this.icon);
+}
+
+class _LocationDropdown extends StatelessWidget {
+  const _LocationDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.allLabel,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final String label;
+  final LocationOption? value;
+  final List<LocationOption> items;
+  final String allLabel;
+  final ValueChanged<LocationOption?> onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DropdownButtonFormField<LocationOption?>(
+      key: ValueKey('$label-${value?.id ?? "all"}-${items.length}'),
+      initialValue: value,
+      isExpanded: true,
+      dropdownColor: theme.cardColor,
+      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: theme.dividerColor.withValues(alpha: 0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+      ),
+      items: [
+        DropdownMenuItem<LocationOption?>(
+          value: null,
+          child: Text(allLabel, overflow: TextOverflow.ellipsis),
+        ),
+        ...items.map(
+          (item) => DropdownMenuItem<LocationOption?>(
+            value: item,
+            child: Text(item.name, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: enabled ? onChanged : null,
     );
   }
 }

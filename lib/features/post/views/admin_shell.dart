@@ -13,6 +13,7 @@ import 'admin_member_screen.dart';
 import 'admin_equipment_screen.dart';
 import 'super_admin_screen.dart';
 import 'admin_location_screen.dart';
+import '../../attendance/views/attendance_book_screen.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -25,10 +26,29 @@ class _AdminShellState extends State<AdminShell> {
   int _currentIndex = 0;
   bool _hideAppBar = false;
 
+  void _selectTab(int index) {
+    setState(() {
+      _currentIndex = index;
+      _hideAppBar = false;
+    });
+  }
+
+  Future<void> _openAttendanceBook() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AttendanceBookScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final isSuperAdmin = context.watch<AuthProvider>().role == 'super_admin';
+    final qrIndex = isSuperAdmin ? 3 : 1;
+    final scheduleIndex = isSuperAdmin ? 5 : 3;
+    final attendanceIndex = isSuperAdmin ? 6 : 4;
+    final reportsIndex = isSuperAdmin ? 7 : 5;
+    final membersIndex = isSuperAdmin ? 8 : 6;
 
     final List<String> pageTitles = [
       if (isSuperAdmin) 'Super Admin',
@@ -37,17 +57,29 @@ class _AdminShellState extends State<AdminShell> {
       'Jana Kod QR',
       'Log & Inventori Peralatan',
       'Jadual & Skuad',
+      'Buku Rekod Kedatangan SRS',
       'Laporan Insiden',
       'Pengurusan Ahli',
     ];
 
     final List<Widget> screens = [
-      if (isSuperAdmin) const SuperAdminScreen(),
-      const AnalyticsScreen(),
+      if (isSuperAdmin)
+        SuperAdminScreen(
+          onOpenMembers: () => _selectTab(membersIndex),
+          onOpenLocations: () => _selectTab(2),
+        ),
+      AnalyticsScreen(
+        onOpenQr: () => _selectTab(qrIndex),
+        onOpenMembers: () => _selectTab(membersIndex),
+        onOpenSchedule: () => _selectTab(scheduleIndex),
+        onOpenReports: () => _selectTab(reportsIndex),
+        onOpenAttendance: _openAttendanceBook,
+      ),
       if (isSuperAdmin) const AdminLocationScreen(),
       const QrGeneratorScreen(),
       const AdminEquipmentScreen(),
       const AdminSquadScheduleScreen(),
+      const AttendanceBookScreen(),
       AdminIncidentScreen(
         onSubViewChanged: (hide) {
           setState(() {
@@ -61,6 +93,10 @@ class _AdminShellState extends State<AdminShell> {
     return ResponsiveShell(
       currentIndex: _currentIndex,
       onIndexChanged: (index) {
+        if (index == attendanceIndex) {
+          _openAttendanceBook();
+          return;
+        }
         setState(() {
           _currentIndex = index;
           _hideAppBar = false;
@@ -89,6 +125,10 @@ class _AdminShellState extends State<AdminShell> {
           label: settings.t('Peralatan'),
         ),
         NavigationItem(icon: Icons.calendar_month, label: settings.t('Skuad')),
+        NavigationItem(
+          icon: Icons.fact_check_outlined,
+          label: settings.t('Kedatangan'),
+        ),
         NavigationItem(icon: Icons.folder_shared, label: settings.t('Laporan')),
         NavigationItem(icon: Icons.people, label: settings.t('Ahli')),
       ],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 
+
 class ResponsiveShell extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onIndexChanged;
@@ -33,8 +34,50 @@ class ResponsiveShell extends StatefulWidget {
   State<ResponsiveShell> createState() => _ResponsiveShellState();
 }
 
-class _ResponsiveShellState extends State<ResponsiveShell> {
+class _ResponsiveShellState extends State<ResponsiveShell> with SingleTickerProviderStateMixin {
   bool _isFabMenuOpen = false;
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutBack,
+      ),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleFabMenu(bool open) {
+    if (open == _isFabMenuOpen) return;
+    setState(() {
+      _isFabMenuOpen = open;
+    });
+    if (open) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
+    }
+  }
 
   _BottomBarConfig _getBottomBarConfig() {
     if (widget.items.length == 4 && widget.onSosPressed != null) {
@@ -135,19 +178,17 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                 left: 24,
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.local_police,
-                      color: colorScheme.primary,
-                      size: 28,
+                    Image.asset(
+                      'assets/icon.png',
+                      height: 38,
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'SRS App',
+                      'iRonda',
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         color: colorScheme.onSurface,
-                        letterSpacing: 0.5,
                       ),
                     ),
                   ],
@@ -168,9 +209,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
-                          setState(() {
-                            _isFabMenuOpen = false;
-                          });
+                          _toggleFabMenu(false);
                           widget.onIndexChanged(index);
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -328,83 +367,95 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
         // Screen Content (shifted up slightly to clear custom bottom bar height)
         Positioned.fill(
           child: Padding(
-            padding: EdgeInsets.only(bottom: 75 + bottomPadding),
+            padding: EdgeInsets.only(bottom: 78 + bottomPadding),
             child: widget.screens[widget.currentIndex],
           ),
         ),
 
         // Floating Card Menu (rendered directly above bottom bar)
-        if (_isFabMenuOpen && config.fabItemIndices.isNotEmpty)
+        if ((_isFabMenuOpen || _animationController.status != AnimationStatus.dismissed) &&
+            config.fabItemIndices.isNotEmpty)
           Positioned(
             left: 16,
             right: 16,
-            bottom: 85 + bottomPadding,
-            child: Card(
-              elevation: 8,
-              shadowColor: Colors.black.withValues(alpha: 0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              color: theme.cardColor.withValues(alpha: 0.95),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12.0,
-                      horizontal: 16.0,
-                    ),
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: config.fabItemIndices.map((index) {
-                        final item = widget.items[index];
-                        final isSelected = widget.currentIndex == index;
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              _isFabMenuOpen = false;
-                            });
-                            widget.onIndexChanged(index);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: 8.0,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  item.icon,
-                                  color: isSelected
-                                      ? theme.primaryColor
-                                      : theme.textTheme.bodyMedium?.color
-                                            ?.withValues(alpha: 0.7),
-                                  size: 24,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+            bottom: 92 + bottomPadding,
+            child: AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Transform.scale(
+                    scale: _scaleAnimation.value,
+                    alignment: Alignment.bottomCenter,
+                    child: child,
+                  ),
+                );
+              },
+              child: Card(
+                elevation: 8,
+                shadowColor: Colors.black.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                color: theme.cardColor.withValues(alpha: 0.95),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12.0,
+                        horizontal: 16.0,
+                      ),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: config.fabItemIndices.map((index) {
+                          final item = widget.items[index];
+                          final isSelected = widget.currentIndex == index;
+                          return InkWell(
+                            onTap: () {
+                              _toggleFabMenu(false);
+                              widget.onIndexChanged(index);
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: 8.0,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    item.icon,
                                     color: isSelected
                                         ? theme.primaryColor
                                         : theme.textTheme.bodyMedium?.color
                                               ?.withValues(alpha: 0.7),
+                                    size: 24,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.label,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: isSelected
+                                          ? theme.primaryColor
+                                          : theme.textTheme.bodyMedium?.color
+                                                ?.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ),
@@ -433,19 +484,27 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          height: 75 + bottomPadding,
+          height: 78 + bottomPadding,
           padding: EdgeInsets.only(bottom: bottomPadding),
           decoration: BoxDecoration(
-            color: colorScheme.surface.withValues(alpha: 0.85),
+            color: colorScheme.surface.withValues(alpha: 0.92),
             border: Border(
               top: BorderSide(
-                color: theme.dividerColor.withValues(alpha: 0.1),
+                color: theme.dividerColor.withValues(alpha: 0.12),
                 width: 1.0,
               ),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.09),
+                blurRadius: 18,
+                offset: const Offset(0, -8),
+              ),
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -488,23 +547,32 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            setState(() {
-              _isFabMenuOpen = false;
-            });
+            _toggleFabMenu(false);
             widget.onIndexChanged(index);
           },
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                isSelected && item.selectedIcon != null
-                    ? item.selectedIcon
-                    : item.icon,
-                color: color,
-                size: 24,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 36,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isSelected && item.selectedIcon != null
+                      ? item.selectedIcon
+                      : item.icon,
+                  color: color,
+                  size: 22,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 item.label,
                 style: TextStyle(
@@ -528,9 +596,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            setState(() {
-              _isFabMenuOpen = false;
-            });
+            _toggleFabMenu(false);
             if (widget.onSosPressed != null && !widget.isSosBroadcasting) {
               widget.onSosPressed!();
             }
@@ -557,9 +623,9 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
               Text(
                 'SOS',
                 style: TextStyle(
-                  color: Colors.redAccent.withValues(alpha: 0.8),
+                  color: Colors.redAccent,
                   fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
@@ -571,6 +637,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
 
   Widget _buildMiddleFab(ThemeData theme, _BottomBarConfig config) {
     final colorScheme = theme.colorScheme;
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
     final isFabItemSelected = config.fabItemIndices.contains(
       widget.currentIndex,
     );
@@ -579,9 +646,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() {
-            _isFabMenuOpen = !_isFabMenuOpen;
-          });
+          _toggleFabMenu(!_isFabMenuOpen);
         },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -624,6 +689,19 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                   color: Colors.white,
                   size: 24,
                 ),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              settings.t('Aksi'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isCurrentFabActive
+                    ? colorScheme.primary
+                    : colorScheme.onSurface.withValues(alpha: 0.62),
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ],
