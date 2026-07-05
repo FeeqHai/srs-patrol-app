@@ -4,6 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../utils/logger.dart';
 
+class ApiException implements Exception {
+  const ApiException(this.message, {this.statusCode});
+
+  final String message;
+  final int? statusCode;
+
+  @override
+  String toString() => message;
+}
+
 class ApiClient {
   /// Sends a POST request to your PHP server.
   /// Used for Logging in, Registering, and sending text data.
@@ -27,30 +37,21 @@ class ApiClient {
       appLogger.d(
         '=== RAW HTTP NETWORK DATA ===\nTarget URI Hit: ${response.request?.url}\nHTTP Status Code: ${response.statusCode}\nRaw Body Response: "${response.body}"\n=============================',
       );
-      // Prevent the crash if the server returns a blank response
-      if (response.body.isEmpty) {
-        throw Exception(
-          "Server returned a completely blank response. Status Code: ${response.statusCode}",
-        );
-      }
-      // 200 means "OK" from the server
-      if (response.statusCode == 200) {
-        // We expect our PHP scripts to always return JSON (e.g., {"status": "success", "message": "..."})
-        try {
-          return json.decode(response.body);
-        } on FormatException {
-          throw Exception(_cleanNonJsonResponse(response.body));
-        }
-      } else {
-        throw Exception("Server Error: ${response.statusCode}");
-      }
+      return _handleMapResponse(response);
+    } on ApiException catch (e, stackTrace) {
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      Error.throwWithStackTrace(e, stackTrace);
     } catch (e, stackTrace) {
       appLogger.e(
         '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================',
         error: e,
         stackTrace: stackTrace,
       );
-      throw Exception("Network connection failed: $e");
+      throw ApiException("Network connection failed: $e");
     }
   }
 
@@ -69,23 +70,93 @@ class ApiClient {
 
       final response = await http.get(url, headers: headers);
 
-      if (response.statusCode == 200) {
-        try {
-          return json.decode(response.body);
-        } on FormatException {
-          throw Exception(_cleanNonJsonResponse(response.body));
-        }
-      } else {
-        throw Exception("Server Error: ${response.statusCode}");
-      }
+      return _handleJsonResponse(response);
+    } on ApiException catch (e, stackTrace) {
+      appLogger.e(
+        '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      Error.throwWithStackTrace(e, stackTrace);
     } catch (e, stackTrace) {
       appLogger.e(
         '=== CRITICAL NETWORK EXCEPTION ===\nException: $e\nTarget URI: $url\n==================================',
         error: e,
         stackTrace: stackTrace,
       );
-      throw Exception("Network connection failed: $e");
+      throw ApiException("Network connection failed: $e");
     }
+  }
+
+  static Map<String, dynamic> _handleMapResponse(http.Response response) {
+    _throwIfBlankResponse(response);
+    if (_isSuccessfulStatus(response.statusCode)) {
+      final decoded = _decodeJsonBody(
+        response.body,
+        statusCode: response.statusCode,
+      );
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+      throw ApiException(
+        _cleanNonJsonResponse(response.body),
+        statusCode: response.statusCode,
+      );
+    }
+
+    throw ApiException(
+      _extractServerMessage(response),
+      statusCode: response.statusCode,
+    );
+  }
+
+  static dynamic _handleJsonResponse(http.Response response) {
+    _throwIfBlankResponse(response);
+    if (_isSuccessfulStatus(response.statusCode)) {
+      return _decodeJsonBody(response.body, statusCode: response.statusCode);
+    }
+
+    throw ApiException(
+      _extractServerMessage(response),
+      statusCode: response.statusCode,
+    );
+  }
+
+  static bool _isSuccessfulStatus(int statusCode) {
+    return statusCode >= 200 && statusCode < 300;
+  }
+
+  static void _throwIfBlankResponse(http.Response response) {
+    if (response.body.isNotEmpty) return;
+    throw ApiException(
+      'Server returned a completely blank response. Status Code: ${response.statusCode}',
+      statusCode: response.statusCode,
+    );
+  }
+
+  static dynamic _decodeJsonBody(String body, {int? statusCode}) {
+    try {
+      return json.decode(body);
+    } on FormatException {
+      throw ApiException(_cleanNonJsonResponse(body), statusCode: statusCode);
+    }
+  }
+
+  static String _extractServerMessage(http.Response response) {
+    try {
+      final decoded = json.decode(response.body);
+      if (decoded is Map) {
+        final message = decoded['message'] ?? decoded['error'];
+        if (message != null && message.toString().trim().isNotEmpty) {
+          return message.toString().trim();
+        }
+      }
+    } on FormatException {
+      return _cleanNonJsonResponse(response.body);
+    }
+
+    return 'Server Error: ${response.statusCode}';
   }
 
   static String _cleanNonJsonResponse(String body) {

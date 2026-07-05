@@ -52,6 +52,8 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
 
   bool _isLoadingFilters = false;
   String? _filterError;
+  String? _currentSquadId;
+  String? _currentSquadName;
 
   @override
   void initState() {
@@ -63,6 +65,9 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
     final auth = context.read<AuthProvider>();
     setState(() => _isLoadingFilters = true);
     try {
+      if (auth.role == 'ketua_peronda') {
+        await _loadCurrentSquadScope();
+      }
       if (auth.role == 'super_admin') {
         final states = await _authService.fetchLocations(level: 'states');
         if (!mounted) return;
@@ -78,8 +83,12 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
             parentId: auth.districtId,
           );
           if (!mounted) return;
+          final defaultZone = auth.role == 'ketua_peronda'
+              ? _locationById(zones, auth.zoneId)
+              : null;
           setState(() {
             _zones = zones;
+            _selectedZone = defaultZone;
             _isLoadingFilters = false;
             _filterError = null;
           });
@@ -95,6 +104,32 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
       });
     }
     await _fetchRecords();
+  }
+
+  Future<void> _loadCurrentSquadScope() async {
+    try {
+      final response = await ApiClient.getData(
+        'schedules/get_user_schedule.php',
+      );
+      if (response['status'] != 'success') return;
+      final squad = response['squad'];
+      if (squad is! Map) return;
+      if (!mounted) return;
+      setState(() {
+        _currentSquadId = _firstValue(squad, ['id', 'squad_id']);
+        _currentSquadName = _firstValue(squad, ['squad_name', 'name']);
+      });
+    } catch (_) {
+      // If the backend already scopes by token, the report can still load.
+    }
+  }
+
+  LocationOption? _locationById(List<LocationOption> options, String? id) {
+    if (id == null || id.trim().isEmpty) return null;
+    for (final option in options) {
+      if (option.id == id) return option;
+    }
+    return null;
   }
 
   Future<void> _selectState(LocationOption? state) async {
@@ -150,6 +185,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
   List<Map<String, dynamic>> _filteredRecords() {
     final auth = context.read<AuthProvider>();
     final isSuperAdmin = auth.role == 'super_admin';
+    final isSquadLeader = auth.role == 'ketua_peronda';
 
     return _records.where((row) {
       if (!isSuperAdmin) {
@@ -176,8 +212,37 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
           _firstValue(row, ['zone_id']) != _selectedZone!.id) {
         return false;
       }
+      if (isSquadLeader && !_matchesCurrentSquad(row)) {
+        return false;
+      }
       return true;
     }).toList();
+  }
+
+  bool _matchesCurrentSquad(Map<String, dynamic> row) {
+    final rowSquadId = _firstValue(row, [
+      'squad_id',
+      'assigned_squad_id',
+      'patrol_squad_id',
+    ]);
+    final rowSquadName = _firstValue(row, [
+      'squad_name',
+      'squad',
+      'village_name',
+      'kampung_name',
+    ]);
+
+    if (rowSquadId == null && rowSquadName == null) {
+      return true;
+    }
+    if (_currentSquadId != null && rowSquadId == _currentSquadId) {
+      return true;
+    }
+    if (_currentSquadName != null && rowSquadName != null) {
+      return _normalizeLookup(rowSquadName) ==
+          _normalizeLookup(_currentSquadName!);
+    }
+    return false;
   }
 
   String get _locationFilterLabel {
@@ -194,6 +259,11 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
     }
 
     if (_selectedZone != null) parts.add(_selectedZone!.name);
+    if (auth.role == 'ketua_peronda' &&
+        _currentSquadName != null &&
+        _currentSquadName!.trim().isNotEmpty) {
+      parts.add(_currentSquadName!);
+    }
 
     return parts.isEmpty ? 'Malaysia' : parts.join(' | ');
   }
@@ -333,6 +403,8 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
           enriched['state_name'] ??= member['state_name'];
           enriched['district_name'] ??= member['district_name'];
           enriched['zone_name'] ??= member['zone_name'];
+          enriched['squad_id'] ??= member['squad_id'];
+          enriched['squad_name'] ??= member['squad_name'];
         }
         return enriched;
       }).toList();
@@ -556,7 +628,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
     return DateFormat('hh:mm a').format(value);
   }
 
-  String? _firstValue(Map<String, dynamic> row, List<String> keys) {
+  String? _firstValue(Map<dynamic, dynamic> row, List<String> keys) {
     for (final key in keys) {
       final value = row[key];
       if (value == null) continue;
@@ -645,6 +717,7 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
   Widget _buildLocationFilters(SettingsProvider settings, ThemeData theme) {
     final auth = context.watch<AuthProvider>();
     final isSuperAdmin = auth.role == 'super_admin';
+    final isSquadLeader = auth.role == 'ketua_peronda';
 
     Widget dropdown({
       required String label,
@@ -698,6 +771,54 @@ class _AttendanceBookScreenState extends State<AttendanceBookScreen> {
               items: _zones,
               allLabel: settings.t('Semua Zon'),
               onChanged: _selectZone,
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isSquadLeader) {
+      final squadLabel =
+          (_currentSquadName != null && _currentSquadName!.trim().isNotEmpty)
+          ? _currentSquadName!
+          : settings.t('Skuad belum ditetapkan');
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        color: theme.cardColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${settings.t("Negeri")}: ${auth.stateName ?? "-"}  |  ${settings.t("Daerah")}: ${auth.districtName ?? "-"}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${settings.t("Zon")}: ${_selectedZone?.name ?? auth.zoneName ?? "-"}',
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.75,
+                ),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${settings.t("Skuad/Kampung")}: $squadLabel',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              settings.t('Paparan dihadkan kepada skuad rondaan anda.'),
+              style: TextStyle(
+                color: theme.textTheme.bodySmall?.color?.withValues(
+                  alpha: 0.68,
+                ),
+                fontSize: 12,
+              ),
             ),
           ],
         ),

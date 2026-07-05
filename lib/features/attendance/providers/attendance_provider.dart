@@ -23,7 +23,8 @@ class AttendanceProvider extends ChangeNotifier {
   String get returnStatus => _returnStatus;
   DateTime? get clockInTime => _clockInTime;
   String? get checkpointId => _checkpointId;
-  String? get pendingAcknowledgementMessage => _pendingAcknowledgementMessage;
+  String? get pendingAcknowledgementMessage =>
+      _normalizePendingMessage(_pendingAcknowledgementMessage);
   bool get hasServerShift =>
       _returnStatus == 'active' || _returnStatus == 'pending_acknowledgement';
   bool get isPendingAcknowledgement =>
@@ -39,6 +40,14 @@ class AttendanceProvider extends ChangeNotifier {
       })
       .where((name) => name.isNotEmpty)
       .toList();
+
+  String? _normalizePendingMessage(String? message) {
+    if (message == null) return null;
+    if (message.contains('Ketua KRT') && !message.contains('Ketua Peronda')) {
+      return 'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.';
+    }
+    return message;
+  }
 
   Future<void> syncActiveShiftFromServer() async {
     _isLoading = true;
@@ -206,7 +215,7 @@ class AttendanceProvider extends ChangeNotifier {
       if (result['success'] == true) {
         _returnStatus = 'pending_acknowledgement';
         _pendingAcknowledgementMessage =
-            'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.';
+            'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.';
         await syncActiveShiftFromServer();
         _isRequestingClockOut = false;
         _isLoading = false;
@@ -260,11 +269,9 @@ class AttendanceProvider extends ChangeNotifier {
       await prefs.setString('shiftStartTime', _clockInTime!.toIso8601String());
     }
     await prefs.setStringList('activeEquipment', borrowedEquipmentNames);
-    if (_pendingAcknowledgementMessage != null) {
-      await prefs.setString(
-        'pendingAcknowledgementMessage',
-        _pendingAcknowledgementMessage!,
-      );
+    final pendingMessage = pendingAcknowledgementMessage;
+    if (pendingMessage != null) {
+      await prefs.setString('pendingAcknowledgementMessage', pendingMessage);
     } else {
       await prefs.remove('pendingAcknowledgementMessage');
     }

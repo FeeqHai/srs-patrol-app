@@ -1243,7 +1243,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           } else {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AttendanceBookScreen()),
+              MaterialPageRoute(
+                builder: (context) => const AttendanceBookScreen(),
+              ),
             );
           }
         },
@@ -1251,9 +1253,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     ];
 
     final theme = Theme.of(context);
+    final isExpandable = actions.length > 4;
     final displayActions = _isQuickAccessExpanded
         ? actions
         : actions.take(4).toList();
+
+    void toggleQuickAccess() {
+      if (!isExpandable) return;
+      setState(() {
+        _isQuickAccessExpanded = !_isQuickAccessExpanded;
+      });
+    }
 
     return Container(
       width: double.infinity,
@@ -1274,17 +1284,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
-            onTap: () {
-              setState(() {
-                _isQuickAccessExpanded = !_isQuickAccessExpanded;
-              });
-            },
+            onTap: isExpandable ? toggleQuickAccess : null,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
               child: Row(
                 children: [
-                  Icon(Icons.flash_on_rounded, size: 18, color: theme.primaryColor),
+                  Icon(
+                    Icons.flash_on_rounded,
+                    size: 18,
+                    color: theme.primaryColor,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     settings.t('Quick Access'),
@@ -1294,16 +1304,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const Spacer(),
-                  AnimatedRotation(
-                    turns: _isQuickAccessExpanded ? 0.5 : 0.0,
-                    duration: const Duration(milliseconds: 250),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: theme.primaryColor,
-                      size: 20,
+                  if (isExpandable) ...[
+                    const Spacer(),
+                    AnimatedRotation(
+                      turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 250),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: theme.primaryColor,
+                        size: 20,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1317,7 +1329,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 const columns = 2;
                 const spacing = 8.0;
                 final tileWidth =
-                    (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+                    (constraints.maxWidth - (spacing * (columns - 1))) /
+                    columns;
                 return Wrap(
                   spacing: spacing,
                   runSpacing: spacing,
@@ -1333,11 +1346,59 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               },
             ),
           ),
+          if (isExpandable) ...[
+            const SizedBox(height: 8),
+            Center(
+              child: Tooltip(
+                message: settings.t(
+                  _isQuickAccessExpanded
+                      ? 'Tutup Akses Pantas'
+                      : 'Buka Akses Pantas',
+                ),
+                child: Semantics(
+                  button: true,
+                  label: settings.t(
+                    _isQuickAccessExpanded
+                        ? 'Tutup Akses Pantas'
+                        : 'Buka Akses Pantas',
+                  ),
+                  child: InkWell(
+                    onTap: toggleQuickAccess,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 76,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                          bottom: Radius.circular(16),
+                        ),
+                        border: Border.all(
+                          color: theme.primaryColor.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: AnimatedRotation(
+                        turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                        duration: const Duration(milliseconds: 250),
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: theme.primaryColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
- 
+
   Widget _buildQuickActionTile(_QuickActionData action) {
     final theme = Theme.of(context);
     final enabled = action.onTap != null;

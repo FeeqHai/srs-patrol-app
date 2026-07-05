@@ -20,7 +20,7 @@ class IncidentService {
     required String locationName,
     required String reportedTo,
     required List<File> imageFiles,
-    required Position location,
+    required Position? location,
   }) async {
     try {
       var uri = Uri.parse(_uploadEndpoint);
@@ -43,8 +43,8 @@ class IncidentService {
       request.fields['category'] = category;
       request.fields['location_name'] = locationName;
       request.fields['reported_to'] = reportedTo;
-      request.fields['latitude'] = location.latitude.toString();
-      request.fields['longitude'] = location.longitude.toString();
+      request.fields['latitude'] = (location?.latitude ?? 0.0).toString();
+      request.fields['longitude'] = (location?.longitude ?? 0.0).toString();
 
       // 3. Attach Binary Images
       for (var file in imageFiles) {
@@ -52,9 +52,24 @@ class IncidentService {
         request.files.add(pic);
       }
 
+      appLogger.d(
+        '=== MULTIPART INCIDENT REQUEST ===\n'
+        'Target URI Hit: $uri\n'
+        'Fields: ${request.fields}\n'
+        'Image Count: ${request.files.length}\n'
+        '=============================',
+      );
+
       // 4. Send and evaluate response
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
+      appLogger.d(
+        '=== RAW MULTIPART NETWORK DATA ===\n'
+        'Target URI Hit: ${response.request?.url ?? uri}\n'
+        'HTTP Status Code: ${response.statusCode}\n'
+        'Raw Body Response: "${response.body}"\n'
+        '=============================',
+      );
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);

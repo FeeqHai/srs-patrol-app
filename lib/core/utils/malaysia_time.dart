@@ -5,7 +5,10 @@ class MalaysiaTime {
     caseSensitive: false,
   );
 
-  /// Parses MySQL incident timestamps as UTC, then exposes Malaysia's UTC+8 clock values.
+  /// Parses incident timestamps for Malaysia calendar display.
+  ///
+  /// XAMPP/MySQL rows in this project are stored as local Malaysia timestamps
+  /// without a timezone suffix. Only explicitly zoned timestamps are converted.
   static DateTime fromUtcDatabase(dynamic value) {
     final raw = value?.toString().trim() ?? '';
     if (raw.isEmpty) {
@@ -13,10 +16,10 @@ class MalaysiaTime {
     }
 
     final normalized = raw.replaceFirst(' ', 'T');
-    final utcValue = _timezoneSuffix.hasMatch(normalized)
-        ? normalized
-        : '${normalized}Z';
-    return DateTime.parse(utcValue).toUtc().add(_utcOffset);
+    if (!_timezoneSuffix.hasMatch(normalized)) {
+      return DateTime.parse(normalized);
+    }
+    return DateTime.parse(normalized).toUtc().add(_utcOffset);
   }
 
   static DateTime now() => DateTime.now().toUtc().add(_utcOffset);

@@ -5,9 +5,19 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/command_center_widgets.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class AdminEquipmentScreen extends StatefulWidget {
-  const AdminEquipmentScreen({super.key});
+  const AdminEquipmentScreen({
+    super.key,
+    this.readOnlyInventory = false,
+    this.squadLeaderMode = false,
+    this.initialTabIndex = 0,
+  });
+
+  final bool readOnlyInventory;
+  final bool squadLeaderMode;
+  final int initialTabIndex;
 
   @override
   State<AdminEquipmentScreen> createState() => _AdminEquipmentScreenState();
@@ -20,6 +30,8 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   List<dynamic> _inventory = [];
   List<dynamic> _logs = [];
   List<dynamic> _pendingReturns = [];
+  String? _currentSquadId;
+  String? _currentSquadName;
 
   bool _isLoadingInventory = false;
   bool _isLoadingLogs = false;
@@ -32,9 +44,28 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    final initialIndex = widget.initialTabIndex < 0
+        ? 0
+        : widget.initialTabIndex > 2
+        ? 2
+        : widget.initialTabIndex;
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
     _tabController.addListener(_handleTabChange);
-    _fetchInventory();
+    _fetchSquadScope();
+    switch (initialIndex) {
+      case 1:
+        _fetchLogs();
+        break;
+      case 2:
+        _fetchPendingReturns();
+        break;
+      default:
+        _fetchInventory();
+    }
   }
 
   @override
@@ -60,6 +91,26 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
       case 2:
         _fetchPendingReturns();
         break;
+    }
+  }
+
+  bool get _canManageInventory => !widget.readOnlyInventory;
+
+  Future<void> _fetchSquadScope() async {
+    if (!widget.squadLeaderMode) return;
+    try {
+      final response = await ApiClient.getData(
+        'schedules/get_user_schedule.php',
+      );
+      if (!mounted || response['status'] != 'success') return;
+      final squad = response['squad'];
+      if (squad is! Map) return;
+      setState(() {
+        _currentSquadId = _firstValue(squad, ['id', 'squad_id']);
+        _currentSquadName = _firstValue(squad, ['squad_name', 'name']);
+      });
+    } catch (_) {
+      // The API may already scope results by token; keep the screen usable.
     }
   }
 
@@ -219,6 +270,57 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
         setState(() => _isLoadingReturns = false);
       }
     }
+  }
+
+  bool _matchesSquadScope(Map<String, dynamic> row) {
+    if (!widget.squadLeaderMode) return true;
+    final rowSquadId = _firstValue(row, [
+      'squad_id',
+      'assigned_squad_id',
+      'patrol_squad_id',
+    ]);
+    final rowSquadName = _firstValue(row, [
+      'squad_name',
+      'squad',
+      'village_name',
+      'kampung_name',
+    ]);
+
+    if (rowSquadId == null && rowSquadName == null) {
+      return true;
+    }
+    if (_currentSquadId != null && rowSquadId == _currentSquadId) {
+      return true;
+    }
+    if (_currentSquadName != null && rowSquadName != null) {
+      return _normalizeLookup(rowSquadName) ==
+          _normalizeLookup(_currentSquadName!);
+    }
+    return false;
+  }
+
+  List<dynamic> get _visibleLogs => _logs
+      .whereType<Map>()
+      .where((row) => _matchesSquadScope(Map<String, dynamic>.from(row)))
+      .toList();
+
+  List<dynamic> get _visiblePendingReturns => _pendingReturns
+      .whereType<Map>()
+      .where((row) => _matchesSquadScope(Map<String, dynamic>.from(row)))
+      .toList();
+
+  String? _firstValue(Map<dynamic, dynamic> row, List<String> keys) {
+    for (final key in keys) {
+      final value = row[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty && text != 'null') return text;
+    }
+    return null;
+  }
+
+  String _normalizeLookup(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   Future<void> _showAddEquipmentDialog(SettingsProvider settings) async {
@@ -551,6 +653,9 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final auth = context.watch<AuthProvider>();
+    final isSquadLeader =
+        widget.squadLeaderMode || auth.role == 'ketua_peronda';
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -561,13 +666,19 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
             child: Column(
               children: [
                 CommandHeader(
-                  title: settings.t('Log & Inventori Peralatan'),
+                  title: settings.t(
+                    isSquadLeader
+                        ? 'Log Peralatan Skuad'
+                        : 'Log & Inventori Peralatan',
+                  ),
                   subtitle: settings.t(
-                    'Pantau stok, pinjaman, dan pengesahan pemulangan rondaan.',
+                    isSquadLeader
+                        ? 'Pantau pinjaman dan pemulangan peralatan skuad anda.'
+                        : 'Pantau stok, pinjaman, dan pengesahan pemulangan rondaan.',
                   ),
                   icon: Icons.inventory_2_outlined,
                   compact: true,
-                  trailing: _tabController.index == 0
+                  trailing: _canManageInventory && _tabController.index == 0
                       ? IconButton.filledTonal(
                           icon: const Icon(Icons.add),
                           tooltip: settings.t('Tambah Peralatan'),
@@ -731,38 +842,48 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
                 ),
               ],
             );
-            final actions = PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  _showEditEquipmentDialog(item, settings);
-                } else if (value == 'delete') {
-                  _showDeleteEquipmentConfirm(item, settings);
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem<String>(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.edit_outlined, color: Colors.blueAccent, size: 20),
-                      const SizedBox(width: 8),
-                      Text(settings.t('Kemaskini')),
+            final actions = _canManageInventory
+                ? PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _showEditEquipmentDialog(item, settings);
+                      } else if (value == 'delete') {
+                        _showDeleteEquipmentConfirm(item, settings);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => [
+                      PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.edit_outlined,
+                              color: Colors.blueAccent,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(settings.t('Kemaskini')),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.delete_outline,
+                              color: Colors.redAccent,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(settings.t('Padam')),
+                          ],
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                      const SizedBox(width: 8),
-                      Text(settings.t('Padam')),
-                    ],
-                  ),
-                ),
-              ],
-            );
+                  )
+                : const SizedBox.shrink();
 
             return Card(
               elevation: 2,
@@ -831,13 +952,14 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   }
 
   Widget _buildLogsTab(SettingsProvider settings, ThemeData theme) {
-    if (_isLoadingLogs && _logs.isEmpty) {
+    final logs = _visibleLogs;
+    if (_isLoadingLogs && logs.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.lightBlueAccent),
       );
     }
 
-    if (_logsError != null && _logs.isEmpty) {
+    if (_logsError != null && logs.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -863,7 +985,7 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
       );
     }
 
-    if (_logs.isEmpty) {
+    if (logs.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -885,9 +1007,9 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
 
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: _logs.length,
+      itemCount: logs.length,
       itemBuilder: (context, index) {
-        final log = _logs[index];
+        final log = logs[index] as Map<String, dynamic>;
         final patrollerName = log['patroller_name'] ?? 'Peronda';
         final phone = log['phone_number'] ?? '';
         final borrowedAtStr = log['borrowed_at'] ?? '';
@@ -1013,13 +1135,14 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
   }
 
   Widget _buildPendingReturnsTab(SettingsProvider settings, ThemeData theme) {
-    if (_isLoadingReturns && _pendingReturns.isEmpty) {
+    final pendingReturns = _visiblePendingReturns;
+    if (_isLoadingReturns && pendingReturns.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.lightBlueAccent),
       );
     }
 
-    if (_returnsError != null && _pendingReturns.isEmpty) {
+    if (_returnsError != null && pendingReturns.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -1045,7 +1168,7 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
       );
     }
 
-    if (_pendingReturns.isEmpty) {
+    if (pendingReturns.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -1065,9 +1188,9 @@ class _AdminEquipmentScreenState extends State<AdminEquipmentScreen>
 
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: _pendingReturns.length,
+      itemCount: pendingReturns.length,
       itemBuilder: (context, index) {
-        final pendingReturn = _pendingReturns[index] as Map<String, dynamic>;
+        final pendingReturn = pendingReturns[index] as Map<String, dynamic>;
         final equipment = List<String>.from(
           pendingReturn['equipment'] ?? const [],
         );

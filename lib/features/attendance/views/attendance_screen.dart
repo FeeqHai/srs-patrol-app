@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 import '../../auth/providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -402,7 +401,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                 children: [
                   Text(
                     settings.t(
-                      'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.',
+                      'Tandakan semua peralatan yang telah diserahkan kepada Ketua Peronda atau Ketua KRT.',
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -568,7 +567,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     }
 
     if (_shiftActive && !_returnScannerOpen) {
-
       return Scaffold(
         body: Center(
           child: SingleChildScrollView(
@@ -855,7 +853,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     final message =
         _pendingMessage ??
         settings.t(
-          'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.',
+          'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.',
         );
 
     return Scaffold(
@@ -866,7 +864,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CommandHeader(
-                title: settings.t('Menunggu Pengesahan Ketua KRT'),
+                title: settings.t('Menunggu Pengesahan Ketua Peronda/KRT'),
                 subtitle: settings.t(
                   'Pemulangan telah dihantar. Status akan dikemas kini selepas semakan peralatan.',
                 ),

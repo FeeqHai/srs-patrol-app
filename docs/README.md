@@ -1,17 +1,17 @@
-# srs_app
+# srs_app Documentation
 
-A new Flutter project.
+This folder contains the working documentation for the iRonda FYP project.
 
-## Getting Started
+## Key Documents
 
-This project is a starting point for a Flutter application.
+- `PROJECT_GUIDELINE.md` - main FYP project guideline for scope, development rules, testing, report alignment, and submission readiness.
+- `CONTEXT.md` - detailed technical context, implementation notes, architecture, known issues, and backlog.
+- `DESIGN.md` - visual design system and UI rules.
+- `MILESTONE_PROGRESS.md` - completed work, remaining work, and milestone tracking.
+- `SUPER_ADMIN_TEST_REPORT.md` - super-admin feature implementation and verification notes.
+- `DIGITALOCEAN_DEPLOYMENT.md` - deployment preparation notes.
+- `ui_layout_analysis.md` - UI layout review notes.
 
-A few resources to get you started if this is your first Flutter project:
+## Usage
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Start with `PROJECT_GUIDELINE.md` when planning new work. Use `CONTEXT.md` when technical detail is needed before editing the Flutter app, PHP backend, database, or final report.

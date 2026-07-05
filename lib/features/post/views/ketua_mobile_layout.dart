@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../auth/providers/auth_provider.dart';
-import '../../attendance/views/attendance_screen.dart';
 import '../../incident/views/incident_screen.dart';
 import '../../dashboard/views/dashboard_screen.dart';
 import '../../dashboard/views/schedule_screen.dart';
@@ -13,6 +12,7 @@ import '../../../core/widgets/responsive_shell.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/widgets/app_notification_button.dart';
 import '../../../core/widgets/global_menu_button.dart';
+import 'squad_shift_screen.dart';
 
 class KetuaMobileLayout extends StatefulWidget {
   const KetuaMobileLayout({super.key});
@@ -31,7 +31,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
     'Jadual Rondaan',
     'Suapan Insiden',
     'Laporan Peronda',
-    'Pengesahan Rondaan',
+    'Rondaan Skuad',
   ];
 
   Future<void> _triggerSOS() async {
@@ -230,13 +230,7 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
           });
         },
       ),
-      AttendanceScreen(
-        onNavigateToDashboard: () {
-          setState(() {
-            _currentIndex = 0;
-          });
-        },
-      ),
+      const SquadShiftScreen(showAppBar: false),
     ];
 
     final settings = context.watch<SettingsProvider>();
@@ -263,8 +257,8 @@ class _KetuaMobileLayoutState extends State<KetuaMobileLayout> {
           label: settings.t('Laporan Peronda'),
         ),
         NavigationItem(
-          icon: Icons.qr_code_scanner,
-          label: settings.t('Rondaan'),
+          icon: Icons.groups_2_outlined,
+          label: settings.t('Rondaan Skuad'),
         ),
       ],
       onSosPressed: _triggerSOS,

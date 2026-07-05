@@ -58,6 +58,57 @@ class SettingsProvider extends ChangeNotifier {
   // --- VERY BASIC TRANSLATION MAP ---
   final Map<String, Map<String, String>> _translations = {
     'en': {
+      'Kehadiran Saya': 'My Attendance',
+      'Rondaan Skuad': 'Squad Patrol',
+      'Jana QR Skuad': 'Generate Squad QR',
+      'Jana QR Clock Out Skuad': 'Generate Squad Clock Out QR',
+      'Jana QR Kehadiran Skuad': 'Generate Squad Attendance QR',
+      'Buku Kedatangan Skuad': 'Squad Attendance Book',
+      'Log Peralatan Skuad': 'Squad Equipment Log',
+      'Skuad/Kampung': 'Squad/Village',
+      'Skuad belum ditetapkan': 'Squad not assigned',
+      'Paparan dihadkan kepada skuad rondaan anda.':
+          'View is limited to your patrol squad.',
+      'Mulakan shif, rekod kehadiran ketua, dan paparkan QR untuk ahli skuad.':
+          'Start the shift, record leader attendance, and show QR codes to squad members.',
+      'Jadual Hari Ini': "Today's Schedule",
+      'Tiada jadual rondaan hari ini.': 'No patrol schedule today.',
+      'Shif sedang berjalan': 'Shift in progress',
+      'Shif belum dimulakan': 'Shift not started',
+      'Mula Shif': 'Start Shift',
+      'Tamat Shif': 'End Shift',
+      'Jana Semula QR Masuk': 'Regenerate Clock-In QR',
+      'Jana Semula QR Keluar': 'Regenerate Clock-Out QR',
+      'QR Masuk Ahli Skuad': 'Squad Member Clock-In QR',
+      'QR Keluar Ahli Skuad': 'Squad Member Clock-Out QR',
+      'Penilaian Kehadiran': 'Attendance Assessment',
+      'Sahkan status kehadiran ahli skuad untuk jadual rondaan ini.':
+          'Confirm squad member attendance status for this patrol schedule.',
+      'Disahkan': 'Acknowledged',
+      'Hadir': 'Present',
+      'Lewat': 'Late',
+      'Tidak Hadir': 'Absent',
+      'Dikecualikan': 'Excused',
+      'Imbas Masuk': 'Clock In Scan',
+      'Imbas Keluar': 'Clock Out Scan',
+      'Tiada rekod imbas QR.': 'No QR scan record.',
+      'Catatan': 'Notes',
+      'Contoh: hadir tetapi lewat 10 minit':
+          'Example: present but 10 minutes late',
+      'Sahkan Kehadiran': 'Acknowledge Attendance',
+      'Tiada jadual rondaan untuk dinilai.': 'No patrol schedule to assess.',
+      'Minta ahli skuad imbas QR ini untuk mula kehadiran.':
+          'Ask squad members to scan this QR to clock in.',
+      'Minta ahli skuad imbas QR ini untuk tamatkan kehadiran.':
+          'Ask squad members to scan this QR to clock out.',
+      'Pantau pinjaman dan pemulangan peralatan skuad anda.':
+          'Monitor your squad equipment borrowing and returns.',
+      'Papar kod QR pemulangan di pos rondaan skuad dan sahkan peralatan selepas rondaan.':
+          'Show the return QR at the squad patrol post and confirm equipment after patrol.',
+      'Papar kod QR ini kepada ahli skuad untuk merekod kehadiran rondaan.':
+          'Show this QR code to squad members to record patrol attendance.',
+      'Papar kod QR pemulangan di pos rondaan dan sahkan peralatan selepas rondaan.':
+          'Show the return QR at the patrol post and confirm equipment after patrol.',
       'Peralatan Tersedia': 'Available Equipment',
       'Hari Ini': 'Today',
       'Arkib': 'Archive',
@@ -129,6 +180,8 @@ class SettingsProvider extends ChangeNotifier {
       'Cari nama, IC, telefon atau e-mel...':
           'Search name, IC, phone or email...',
       'Quick Access': 'Quick Access',
+      'Buka Akses Pantas': 'Open Quick Access',
+      'Tutup Akses Pantas': 'Close Quick Access',
       'Namakan Semula': 'Rename',
       'Nyahaktifkan': 'Deactivate',
       'Nyahaktifkan Lokasi': 'Deactivate Location',
@@ -247,17 +300,27 @@ class SettingsProvider extends ChangeNotifier {
       'Sahkan Pemulangan Peralatan': 'Confirm Equipment Return',
       'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.':
           'Tick every item handed back to Ketua KRT.',
+      'Tandakan semua peralatan yang telah diserahkan kepada Ketua Peronda atau Ketua KRT.':
+          'Tick every item handed back to the squad leader or Ketua KRT.',
       'Tiada peralatan dipinjam untuk shif ini.':
           'No equipment was borrowed for this shift.',
       'Pemulangan tidak dapat disahkan.': 'The return could not be confirmed.',
       'Menunggu pengesahan Ketua KRT.':
           'Waiting for Ketua KRT acknowledgement.',
       'Menunggu Pengesahan Ketua KRT': 'Waiting for Ketua KRT Acknowledgement',
+      'Menunggu Pengesahan Ketua Peronda/KRT':
+          'Waiting for Squad Leader/Ketua KRT Acknowledgement',
       'Pemulangan anda sedang menunggu pengesahan Ketua KRT.':
           'Your return is waiting for Ketua KRT acknowledgement.',
+      'Pemulangan anda sedang menunggu pengesahan Ketua Peronda atau Ketua KRT.':
+          'Your return is waiting for squad leader or Ketua KRT acknowledgement.',
       'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.':
           'Your return has been submitted. Please wait for Ketua KRT to confirm the equipment handover.',
+      'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.':
+          'Your return has been submitted. Please wait for the squad leader or Ketua KRT to confirm the equipment handover.',
       'Semak Status Pemulangan': 'Check Return Status',
+      'Sahkan pemulangan peralatan ahli skuad yang telah selesai rondaan.':
+          'Acknowledge equipment returns for squad members who finished patrol.',
       'Sila kembali ke pos rondaan untuk imbas QR pulang.':
           'Please return to the patrol post to scan the return QR.',
       'Semua peralatan perlu ditanda sebelum tamat syif.':
@@ -265,6 +328,7 @@ class SettingsProvider extends ChangeNotifier {
       'Sistem sedang mengesahkan...': 'System is validating...',
       'Imbas QR Clock In KRT untuk mula': 'Scan the KRT Clock In QR to start',
       'Menunggu KRT': 'Waiting for KRT',
+      'Menunggu Pengesahan': 'Waiting for Acknowledgement',
       'MENUNGGU PENGESAHAN': 'WAITING FOR ACKNOWLEDGEMENT',
       'KEMBALI KE PAPAN PEMUKA': 'BACK TO DASHBOARD',
       'Hantar Pemulangan': 'Submit Return',
@@ -805,6 +869,8 @@ class SettingsProvider extends ChangeNotifier {
       'Cari nama, IC, telefon atau e-mel...':
           'Cari nama, IC, telefon atau e-mel...',
       'Quick Access': 'Akses Pantas',
+      'Buka Akses Pantas': 'Buka Akses Pantas',
+      'Tutup Akses Pantas': 'Tutup Akses Pantas',
       'Namakan Semula': 'Namakan Semula',
       'Nyahaktifkan': 'Nyahaktifkan',
       'Nyahaktifkan Lokasi': 'Nyahaktifkan Lokasi',
@@ -905,16 +971,26 @@ class SettingsProvider extends ChangeNotifier {
       'Sahkan Pemulangan Peralatan': 'Sahkan Pemulangan Peralatan',
       'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.':
           'Tandakan semua peralatan yang telah diserahkan kepada Ketua KRT.',
+      'Tandakan semua peralatan yang telah diserahkan kepada Ketua Peronda atau Ketua KRT.':
+          'Tandakan semua peralatan yang telah diserahkan kepada Ketua Peronda atau Ketua KRT.',
       'Tiada peralatan dipinjam untuk shif ini.':
           'Tiada peralatan dipinjam untuk shif ini.',
       'Pemulangan tidak dapat disahkan.': 'Pemulangan tidak dapat disahkan.',
       'Menunggu pengesahan Ketua KRT.': 'Menunggu pengesahan Ketua KRT.',
       'Menunggu Pengesahan Ketua KRT': 'Menunggu Pengesahan Ketua KRT',
+      'Menunggu Pengesahan Ketua Peronda/KRT':
+          'Menunggu Pengesahan Ketua Peronda/KRT',
       'Pemulangan anda sedang menunggu pengesahan Ketua KRT.':
           'Pemulangan anda sedang menunggu pengesahan Ketua KRT.',
+      'Pemulangan anda sedang menunggu pengesahan Ketua Peronda atau Ketua KRT.':
+          'Pemulangan anda sedang menunggu pengesahan Ketua Peronda atau Ketua KRT.',
       'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.':
           'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.',
+      'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.':
+          'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.',
       'Semak Status Pemulangan': 'Semak Status Pemulangan',
+      'Sahkan pemulangan peralatan ahli skuad yang telah selesai rondaan.':
+          'Sahkan pemulangan peralatan ahli skuad yang telah selesai rondaan.',
       'Sila kembali ke pos rondaan untuk imbas QR pulang.':
           'Sila kembali ke pos rondaan untuk imbas QR pulang.',
       'Semua peralatan perlu ditanda sebelum tamat syif.':
@@ -922,6 +998,7 @@ class SettingsProvider extends ChangeNotifier {
       'Sistem sedang mengesahkan...': 'Sistem sedang mengesahkan...',
       'Imbas QR Clock In KRT untuk mula': 'Imbas QR Clock In KRT untuk mula',
       'Menunggu KRT': 'Menunggu KRT',
+      'Menunggu Pengesahan': 'Menunggu Pengesahan',
       'MENUNGGU PENGESAHAN': 'MENUNGGU PENGESAHAN',
       'KEMBALI KE PAPAN PEMUKA': 'KEMBALI KE PAPAN PEMUKA',
       'Hantar Pemulangan': 'Hantar Pemulangan',

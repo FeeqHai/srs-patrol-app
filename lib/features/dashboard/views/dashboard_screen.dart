@@ -17,6 +17,7 @@ import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../incident/views/incident_detail_screen.dart';
 import '../../incident/views/lampiran_6_screen.dart';
+import '../../post/views/admin_equipment_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onNavigateToScan;
@@ -57,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _squadName = '';
   Map<String, dynamic>? _squad;
   List<String> _activeEquipment = [];
+  bool _isQuickAccessExpanded = false;
 
   Future<void> _fetchSquadInfo() async {
     try {
@@ -252,8 +254,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           _pendingAcknowledgement =
               cachedReturnStatus == 'pending_acknowledgement';
           _shiftActive = cachedReturnStatus == 'active';
-          _pendingAcknowledgementMessage = prefs.getString(
-            'pendingAcknowledgementMessage',
+          _pendingAcknowledgementMessage = _normalizePendingMessage(
+            prefs.getString('pendingAcknowledgementMessage'),
           );
           _shiftStartTime = startTime;
           _activeEquipment = eqList;
@@ -303,6 +305,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     } catch (e) {
       // Keep the temporary cache view if the network fails.
     }
+  }
+
+  String? _normalizePendingMessage(String? message) {
+    if (message == null) return null;
+    if (message.contains('Ketua KRT') && !message.contains('Ketua Peronda')) {
+      return 'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.';
+    }
+    return message;
   }
 
   void _startTimer() {
@@ -683,7 +693,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ? Colors.orange
         : (_shiftActive ? Colors.green : Colors.blueGrey);
     final statusLabel = _pendingAcknowledgement
-        ? settings.t('Menunggu KRT')
+        ? settings.t('Menunggu Pengesahan')
         : (_shiftActive ? settings.t('Aktif') : settings.t('Sedia'));
     final cardColor = _pendingAcknowledgement
         ? Colors.orange.withValues(alpha: 0.08)
@@ -694,14 +704,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         ? Colors.orange.shade800
         : (_shiftActive ? Colors.green : Colors.white);
     final cardTitle = _pendingAcknowledgement
-        ? settings.t('Menunggu Pengesahan Ketua KRT')
+        ? settings.t('Menunggu Pengesahan Ketua Peronda/KRT')
         : (_shiftActive
               ? settings.t('Sedang Meronda')
               : settings.t('Sedia Untuk Rondaan'));
     final cardSubtitle = _pendingAcknowledgement
         ? (_pendingAcknowledgementMessage ??
               settings.t(
-                'Pemulangan anda telah dihantar. Sila tunggu Ketua KRT mengesahkan penerimaan peralatan.',
+                'Pemulangan anda telah dihantar. Sila tunggu Ketua Peronda atau Ketua KRT mengesahkan penerimaan peralatan.',
               ))
         : (_shiftActive
               ? _elapsedTime
@@ -1342,9 +1352,57 @@ class _DashboardScreenState extends State<DashboardScreen>
     final actions = isPatrolLeader
         ? [
             _DashboardActionData(
-              label: settings.t('Pengesahan Rondaan'),
-              icon: Icons.fact_check_outlined,
+              label: settings.t('Rondaan Skuad'),
+              icon: Icons.groups_2_outlined,
               onTap: widget.onNavigateToScan,
+            ),
+            _DashboardActionData(
+              label: settings.t('Buku Kedatangan Skuad'),
+              icon: Icons.fact_check_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AttendanceBookScreen(),
+                ),
+              ),
+            ),
+            _DashboardActionData(
+              label: settings.t('Log Peralatan Skuad'),
+              icon: Icons.inventory_2_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Scaffold(
+                    appBar: AppBar(
+                      title: Text(settings.t('Log Peralatan Skuad')),
+                    ),
+                    body: const AdminEquipmentScreen(
+                      readOnlyInventory: true,
+                      squadLeaderMode: true,
+                      initialTabIndex: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            _DashboardActionData(
+              label: settings.t('Pengesahan Pemulangan'),
+              icon: Icons.assignment_return_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Scaffold(
+                    appBar: AppBar(
+                      title: Text(settings.t('Pengesahan Pemulangan')),
+                    ),
+                    body: const AdminEquipmentScreen(
+                      readOnlyInventory: true,
+                      squadLeaderMode: true,
+                      initialTabIndex: 2,
+                    ),
+                  ),
+                ),
+              ),
             ),
             _DashboardActionData(
               label: settings.t('Laporan Peronda'),
@@ -1400,6 +1458,19 @@ class _DashboardScreenState extends State<DashboardScreen>
           ];
 
     final theme = Theme.of(context);
+    final isExpandable = actions.length > 2;
+    final collapsedActionCount = actions.length > 4 ? 4 : 2;
+    final displayActions = isExpandable && !_isQuickAccessExpanded
+        ? actions.take(collapsedActionCount).toList()
+        : actions;
+
+    void toggleQuickAccess() {
+      if (!isExpandable) return;
+      setState(() {
+        _isQuickAccessExpanded = !_isQuickAccessExpanded;
+      });
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -1418,56 +1489,128 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.flash_on_rounded,
-                  color: theme.primaryColor,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  settings.t('Quick Access'),
-                  style: TextStyle(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
+          InkWell(
+            onTap: isExpandable ? toggleQuickAccess : null,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.flash_on_rounded,
+                    color: theme.primaryColor,
+                    size: 18,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    settings.t('Quick Access'),
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (isExpandable) ...[
+                    const Spacer(),
+                    AnimatedRotation(
+                      turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: theme.primaryColor,
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 760
-                  ? (isPatrolLeader ? 5 : 4)
-                  : 2;
-              const spacing = 8.0;
-              final tileWidth =
-                  (constraints.maxWidth - (spacing * (columns - 1))) / columns;
-              return Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: actions
-                    .map(
-                      (action) => SizedBox(
-                        width: tileWidth,
-                        child: CommandQuickActionTile(
-                          label: action.label,
-                          icon: action.icon,
-                          onTap: action.onTap,
-                          color: action.color,
-                          destructive: action.color == Colors.redAccent,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 760
+                    ? (isPatrolLeader ? 4 : 4)
+                    : 2;
+                const spacing = 8.0;
+                final tileWidth =
+                    (constraints.maxWidth - (spacing * (columns - 1))) /
+                    columns;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: displayActions
+                      .map(
+                        (action) => SizedBox(
+                          width: tileWidth,
+                          child: CommandQuickActionTile(
+                            label: action.label,
+                            icon: action.icon,
+                            onTap: action.onTap,
+                            color: action.color,
+                            destructive: action.color == Colors.redAccent,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ),
+          if (isExpandable) ...[
+            const SizedBox(height: 8),
+            Center(
+              child: Tooltip(
+                message: settings.t(
+                  _isQuickAccessExpanded
+                      ? 'Tutup Akses Pantas'
+                      : 'Buka Akses Pantas',
+                ),
+                child: Semantics(
+                  button: true,
+                  label: settings.t(
+                    _isQuickAccessExpanded
+                        ? 'Tutup Akses Pantas'
+                        : 'Buka Akses Pantas',
+                  ),
+                  child: InkWell(
+                    onTap: toggleQuickAccess,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 76,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                          bottom: Radius.circular(16),
+                        ),
+                        border: Border.all(
+                          color: theme.primaryColor.withValues(alpha: 0.22),
                         ),
                       ),
-                    )
-                    .toList(),
-              );
-            },
-          ),
+                      child: AnimatedRotation(
+                        turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: theme.primaryColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

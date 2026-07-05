@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../core/utils/logger.dart';
 import '../services/incident_service.dart';
 
 class IncidentProvider extends ChangeNotifier {
@@ -20,13 +21,25 @@ class IncidentProvider extends ChangeNotifier {
     required String locationName,
     required String reportedTo,
     required List<File> imageFiles,
+    Position? location,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      Position currentPosition = await _determinePosition();
+      Position? currentPosition = location;
+      if (currentPosition == null) {
+        try {
+          currentPosition = await _determinePosition();
+        } catch (e, stackTrace) {
+          appLogger.w(
+            'Daily note GPS unavailable; continuing with typed location only.',
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
+      }
 
       final String? serverError = await _service.submitReport(
         reporterId: userId,

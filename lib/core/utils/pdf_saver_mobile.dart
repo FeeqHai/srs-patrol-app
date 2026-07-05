@@ -1,7 +1,10 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../features/notifications/services/notification_service.dart';
+
+const MethodChannel _downloadsChannel = MethodChannel('srs_app/downloads');
 
 Future<void> savePdf(
   BuildContext context,
@@ -9,15 +12,35 @@ Future<void> savePdf(
   String filename,
 ) async {
   try {
-    Directory? directory;
     if (Platform.isAndroid) {
-      final dir = Directory('/storage/emulated/0/Download');
-      if (await dir.exists()) {
-        directory = dir;
-      } else {
-        directory = await getExternalStorageDirectory();
+      final savedUri = await _downloadsChannel.invokeMethod<String>(
+        'savePdfToDownloads',
+        {'bytes': bytes, 'filename': filename},
+      );
+      if (savedUri == null || savedUri.isEmpty) {
+        throw Exception('Android did not return a saved file URI.');
       }
-    } else if (Platform.isIOS) {
+
+      await NotificationService().showDownloadCompleteNotification(
+        filePath: savedUri,
+        fileName: filename,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Fail berjaya disimpan ke folder Download: $filename',
+            ),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+      return;
+    }
+
+    Directory? directory;
+    if (Platform.isIOS) {
       directory = await getApplicationDocumentsDirectory();
     } else {
       directory = await getDownloadsDirectory();
@@ -30,6 +53,10 @@ Future<void> savePdf(
     final filePath = '${directory.path}/$filename';
     final file = File(filePath);
     await file.writeAsBytes(bytes);
+    await NotificationService().showDownloadCompleteNotification(
+      filePath: filePath,
+      fileName: filename,
+    );
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

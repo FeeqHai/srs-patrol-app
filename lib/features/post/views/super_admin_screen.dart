@@ -9,16 +9,11 @@ import '../../../core/widgets/user_avatar.dart';
 import '../../attendance/views/attendance_book_screen.dart';
 import '../../incident/views/lampiran_6_screen.dart';
 
-
 class SuperAdminScreen extends StatefulWidget {
   final VoidCallback? onOpenMembers;
   final VoidCallback? onOpenLocations;
 
-  const SuperAdminScreen({
-    super.key,
-    this.onOpenMembers,
-    this.onOpenLocations,
-  });
+  const SuperAdminScreen({super.key, this.onOpenMembers, this.onOpenLocations});
 
   @override
   State<SuperAdminScreen> createState() => _SuperAdminScreenState();
@@ -32,6 +27,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
   Map<String, dynamic> _stats = {};
   List<dynamic> _krtAdmins = [];
   List<dynamic> _districtCoverage = [];
+  bool _isQuickAccessExpanded = false;
 
   @override
   void initState() {
@@ -75,8 +71,6 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
       });
     }
   }
-
-
 
   List<Map<String, dynamic>> get _cleanDistrictCoverage => _districtCoverage
       .whereType<Map<String, dynamic>>()
@@ -142,7 +136,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                       ),
 
                       const SizedBox(height: 14),
-                      _buildReportPanel(settings, theme),
+                      _buildQuickAccessPanel(settings, theme),
                       const SizedBox(height: 18),
                       _buildKrtAdminPreview(settings, theme),
                       const SizedBox(height: 14),
@@ -178,126 +172,181 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     );
   }
 
+  Widget _buildQuickAccessPanel(SettingsProvider settings, ThemeData theme) {
+    final actions = [
+      _SuperAdminQuickActionData(
+        label: settings.t('Laporan Bulanan'),
+        icon: Icons.picture_as_pdf_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Lampiran6Screen()),
+          );
+        },
+      ),
+      _SuperAdminQuickActionData(
+        label: settings.t('Kedatangan'),
+        icon: Icons.fact_check_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AttendanceBookScreen(),
+            ),
+          );
+        },
+      ),
+      _SuperAdminQuickActionData(
+        label: settings.t('Pengurusan Lokasi'),
+        icon: Icons.location_city_outlined,
+        onTap: widget.onOpenLocations,
+      ),
+      _SuperAdminQuickActionData(
+        label: settings.t('Pengurusan Ahli'),
+        icon: Icons.groups_2_outlined,
+        onTap: widget.onOpenMembers,
+      ),
+    ];
 
+    final displayActions = _isQuickAccessExpanded
+        ? actions
+        : actions.take(2).toList();
 
-  Widget _buildReportPanel(SettingsProvider settings, ThemeData theme) {
+    void toggleQuickAccess() {
+      setState(() {
+        _isQuickAccessExpanded = !_isQuickAccessExpanded;
+      });
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.14)),
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondary.withValues(alpha: 0.24),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.summarize_outlined,
-                  color: theme.primaryColor,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      settings.t('Laporan Operasi'),
-                      style: TextStyle(
-                        color: theme.textTheme.bodyLarge?.color,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
+          InkWell(
+            onTap: toggleQuickAccess,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.flash_on_rounded,
+                    size: 18,
+                    color: theme.primaryColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    settings.t('Quick Access'),
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      settings.t(
-                        'Jana dokumen demo tanpa meninggalkan dashboard.',
-                      ),
-                      style: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.62,
-                        ),
-                        fontSize: 11,
-                      ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: theme.primaryColor,
+                      size: 20,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Lampiran6Screen(),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 760 ? 4 : 2;
+                const spacing = 8.0;
+                final tileWidth =
+                    (constraints.maxWidth - (spacing * (columns - 1))) /
+                    columns;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: displayActions
+                      .map(
+                        (action) => SizedBox(
+                          width: tileWidth,
+                          child: CommandQuickActionTile(
+                            label: action.label,
+                            icon: action.icon,
+                            onTap: action.onTap,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Tooltip(
+              message: settings.t(
+                _isQuickAccessExpanded
+                    ? 'Tutup Akses Pantas'
+                    : 'Buka Akses Pantas',
+              ),
+              child: Semantics(
+                button: true,
+                label: settings.t(
+                  _isQuickAccessExpanded
+                      ? 'Tutup Akses Pantas'
+                      : 'Buka Akses Pantas',
+                ),
+                child: InkWell(
+                  onTap: toggleQuickAccess,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 76,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(8),
+                        bottom: Radius.circular(16),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.analytics_outlined, size: 18),
-                  label: Text(
-                    settings.t('Lampiran 6'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 42),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: theme.primaryColor.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: AnimatedRotation(
+                      turns: _isQuickAccessExpanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 250),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: theme.primaryColor,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AttendanceBookScreen(),
-                      ),
-                    );
-                  },
-                  icon: Icon(
-                    Icons.fact_check_outlined,
-                    color: theme.primaryColor,
-                    size: 18,
-                  ),
-                  label: Text(
-                    settings.t('Kedatangan'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.primaryColor,
-                    side: BorderSide(color: theme.primaryColor),
-                    minimumSize: const Size(0, 42),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -443,8 +492,6 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     );
   }
 
-
-
   Widget _buildEmptyText(String text, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 18),
@@ -458,12 +505,6 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
       ),
     );
   }
-
-
-
-
-
-
 
   void _showLegacyCleanupSheet(SettingsProvider settings) {
     _showSearchableSheet(
@@ -629,6 +670,18 @@ class _SurfacePanel extends StatelessWidget {
   }
 }
 
+class _SuperAdminQuickActionData {
+  const _SuperAdminQuickActionData({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+}
+
 class _IconTile extends StatelessWidget {
   const _IconTile({required this.icon, required this.color});
 
@@ -648,8 +701,6 @@ class _IconTile extends StatelessWidget {
     );
   }
 }
-
-
 
 class _SectionTopRow extends StatelessWidget {
   const _SectionTopRow({
@@ -897,5 +948,3 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
-
-

@@ -55,6 +55,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
   final List<File> _images = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLocating = true;
+  Position? _currentPosition;
 
   @override
   void initState() {
@@ -84,6 +85,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
           accuracy: LocationAccuracy.high,
         ),
       );
+      _currentPosition = position;
 
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
@@ -192,6 +194,7 @@ class _IncidentReportScreenState extends State<IncidentReportScreen> {
       locationName: _locationController.text.trim(),
       reportedTo: _selectedReportedTo!,
       imageFiles: _images,
+      location: _currentPosition,
     );
 
     if (!mounted) return;

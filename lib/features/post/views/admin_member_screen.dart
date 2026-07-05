@@ -157,11 +157,11 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
         await _fetchMembers();
       }
     } catch (e) {
+      final message = e is ApiException && e.statusCode != null
+          ? e.message
+          : '${settings.t('Ralat Rangkaian')}: $e';
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('${settings.t('Ralat Rangkaian')}: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
       );
     }
   }

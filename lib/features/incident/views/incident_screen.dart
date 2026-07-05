@@ -279,6 +279,13 @@ class _IncidentScreenState extends State<IncidentScreen>
         headers: {if (token != null) 'Authorization': 'Bearer $token'},
         body: {'id': id},
       );
+      appLogger.d(
+        '=== RAW INCIDENT STATUS NETWORK DATA ===\n'
+        'Target URI Hit: ${response.request?.url}\n'
+        'HTTP Status Code: ${response.statusCode}\n'
+        'Raw Body Response: "${response.body}"\n'
+        '=============================',
+      );
 
       if (response.statusCode == 200) {
         final res = json.decode(response.body);
@@ -318,6 +325,13 @@ class _IncidentScreenState extends State<IncidentScreen>
         Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
         headers: {if (token != null) 'Authorization': 'Bearer $token'},
         body: {'id': id, 'status': 'Submitted'},
+      );
+      appLogger.d(
+        '=== RAW DAILY NOTE SUBMIT NETWORK DATA ===\n'
+        'Target URI Hit: ${response.request?.url}\n'
+        'HTTP Status Code: ${response.statusCode}\n'
+        'Raw Body Response: "${response.body}"\n'
+        '=============================',
       );
 
       if (response.statusCode == 200) {
@@ -407,6 +421,13 @@ class _IncidentScreenState extends State<IncidentScreen>
           headers: {if (token != null) 'Authorization': 'Bearer $token'},
           body: {'id': id},
         );
+        appLogger.d(
+          '=== RAW INCIDENT STATUS NETWORK DATA ===\n'
+          'Target URI Hit: ${response.request?.url}\n'
+          'HTTP Status Code: ${response.statusCode}\n'
+          'Raw Body Response: "${response.body}"\n'
+          '=============================',
+        );
         if (response.statusCode == 200) {
           final res = json.decode(response.body);
           if (res['status'] == 'success') {
@@ -469,6 +490,13 @@ class _IncidentScreenState extends State<IncidentScreen>
           Uri.parse(ApiConstants.buildApiUrl('incidents/update_status.php')),
           headers: {if (token != null) 'Authorization': 'Bearer $token'},
           body: {'id': id, 'status': 'Submitted'},
+        );
+        appLogger.d(
+          '=== RAW DAILY NOTE SUBMIT NETWORK DATA ===\n'
+          'Target URI Hit: ${response.request?.url}\n'
+          'HTTP Status Code: ${response.statusCode}\n'
+          'Raw Body Response: "${response.body}"\n'
+          '=============================',
         );
         if (response.statusCode == 200) {
           final res = json.decode(response.body);

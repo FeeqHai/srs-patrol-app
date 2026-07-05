@@ -817,6 +817,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         ? const Color(0xFFF5C2C2)
         : const Color(0xFF7A1C1C);
     final isClockOut = _qrMode == 'OUT';
+    final isSquadLeader = auth.role == 'ketua_peronda';
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -832,12 +833,22 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                 children: [
                   CommandHeader(
                     title: settings.t(
-                      isClockOut ? 'Jana QR Clock Out' : 'Jana QR Kehadiran',
+                      isSquadLeader
+                          ? (isClockOut
+                                ? 'Jana QR Clock Out Skuad'
+                                : 'Jana QR Kehadiran Skuad')
+                          : (isClockOut
+                                ? 'Jana QR Clock Out'
+                                : 'Jana QR Kehadiran'),
                     ),
                     subtitle: settings.t(
-                      isClockOut
-                          ? 'Papar kod QR pemulangan di pos utama dan sahkan peralatan selepas rondaan.'
-                          : 'Papar kod QR ini kepada peronda untuk merekod kehadiran rondaan.',
+                      isSquadLeader
+                          ? (isClockOut
+                                ? 'Papar kod QR pemulangan di pos rondaan skuad dan sahkan peralatan selepas rondaan.'
+                                : 'Papar kod QR ini kepada ahli skuad untuk merekod kehadiran rondaan.')
+                          : (isClockOut
+                                ? 'Papar kod QR pemulangan di pos rondaan dan sahkan peralatan selepas rondaan.'
+                                : 'Papar kod QR ini kepada peronda untuk merekod kehadiran rondaan.'),
                     ),
                     icon: Icons.qr_code_2_rounded,
                   ),
