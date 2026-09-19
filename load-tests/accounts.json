@@ -1,0 +1,7 @@
+[
+  {"label":"super-admin","email":"admin@ironda.demo","role":"super_admin"},
+  {"label":"krt-melaka","email":"krt.melaka.tengah@ironda.demo","role":"ketua_krt"},
+  {"label":"krt-jasin","email":"krt.jasin@ironda.demo","role":"ketua_krt"},
+  {"label":"leader-alpha","email":"leader.alpha@ironda.demo","role":"ketua_peronda"},
+  {"label":"patroller-ali","email":"peronda.ali@ironda.demo","role":"peronda"}
+]

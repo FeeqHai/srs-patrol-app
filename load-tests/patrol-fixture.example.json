@@ -1,0 +1,11 @@
+{
+  "leaderLabel": "leader-alpha",
+  "patrollerLabel": "patroller-ali",
+  "squadId": "REPLACE_WITH_TEST_SQUAD_ID",
+  "scheduleId": "REPLACE_WITH_TODAYS_FIRST_TEST_SCHEDULE_ID",
+  "latitude": null,
+  "longitude": null,
+  "equipmentIds": [],
+  "noteCategory": "",
+  "testRecordsOnly": false
+}

@@ -5,11 +5,43 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "iRonda - Local (XAMPP)",
+            "type": "dart",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "lib/main.dart",
+            "flutterMode": "debug",
+            "toolArgs": [
+                "--dart-define",
+                "SRS_API_BASE_URL=http://${input:xamppHost}/srs_api/"
+            ]
+        },
+        {
+            "name": "iRonda - Pi (HTTPS)",
+            "type": "dart",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "lib/main.dart",
+            "flutterMode": "debug",
+            "toolArgs": [
+                "--dart-define",
+                "SRS_API_BASE_URL=https://api.ironda.app/srs_api/"
+            ]
+        },
+        {
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
             "url": "http://localhost:8080",
             "webRoot": "${workspaceFolder}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "xamppHost",
+            "type": "promptString",
+            "description": "XAMPP laptop IP for a phone on the same Wi-Fi. Android emulator: 10.0.2.2; Chrome on this PC: 127.0.0.1. Enter host only.",
+            "default": "192.168.1.109"
         }
     ]
 }

@@ -51,3 +51,26 @@ app.*.map.json
 
 *.zip
 docs/changes 21-6-26/*.sql
+
+# Final submission: local/private/generated material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.keystore
+android/key.properties
+android/build/
+backend/private/
+backend/srs_api/uploads/**/*
+!backend/srs_api/uploads/**/.htaccess
+Testing/**/results/
+load-tests/results/
+*.local.json
+test_assets/
+assets/models/
+out.txt
+temp_out.txt
+docs/changes 21-6-26/
+test_vector.dart

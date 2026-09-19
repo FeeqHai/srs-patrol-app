@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/utils/account_validation.dart';
 import '../providers/auth_provider.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -33,8 +34,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final auth = context.read<AuthProvider>();
     final settings = context.read<SettingsProvider>();
     final ok = await auth.changePassword(
-      currentPassword: _currentController.text.trim(),
-      newPassword: _newController.text.trim(),
+      currentPassword: _currentController.text,
+      newPassword: _newController.text,
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -42,7 +43,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         content: Text(
           ok
               ? settings.t('Kata laluan berjaya ditukar')
-              : auth.errorMessage ?? settings.t('Kata laluan gagal ditukar'),
+              : settings.t(auth.errorMessage ?? 'Kata laluan gagal ditukar'),
         ),
         backgroundColor: ok ? Colors.green : Colors.redAccent,
       ),
@@ -120,10 +121,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         onToggle: () =>
                             setState(() => _obscureNew = !_obscureNew),
                         validator: (value) {
-                          if ((value ?? '').trim().length < 8) {
-                            return settings.t('Minimum 8 aksara');
-                          }
-                          return null;
+                          final error = AccountValidation.password(value);
+                          return error == null ? null : settings.t(error);
                         },
                       ),
                       const SizedBox(height: 16),
@@ -134,11 +133,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         onToggle: () =>
                             setState(() => _obscureNew = !_obscureNew),
                         validator: (value) {
-                          if ((value ?? '').trim() !=
-                              _newController.text.trim()) {
-                            return settings.t('Kata laluan tidak sepadan');
-                          }
-                          return null;
+                          final error = AccountValidation.confirmPassword(
+                            value,
+                            _newController.text,
+                          );
+                          return error == null ? null : settings.t(error);
                         },
                       ),
                       const SizedBox(height: 24),
@@ -189,8 +188,12 @@ class _PasswordField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
+      autocorrect: false,
+      enableSuggestions: false,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
+        errorMaxLines: 3,
         prefixIcon: const Icon(Icons.lock_outline),
         suffixIcon: IconButton(
           onPressed: onToggle,

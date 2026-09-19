@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/account_validation.dart';
 import '../models/location_option.dart';
 import '../models/user_model.dart';
 
@@ -27,7 +28,13 @@ class AuthService {
     required String zoneId,
     required String email,
     required String password,
+    required String verificationToken,
   }) async {
+    final validationError =
+        AccountValidation.icNumber(icNumber) ??
+        AccountValidation.phone(phoneNumber) ??
+        AccountValidation.password(password);
+    if (validationError != null) return validationError;
     // 1. Generate the secure v4 UUID locally
     final String newUserId = _uuid.v4();
 
@@ -35,13 +42,14 @@ class AuthService {
     final Map<String, String> payload = {
       'id': newUserId,
       'full_name': fullName,
-      'ic_number': icNumber, // NEW DATA
-      'phone_number': phoneNumber, // NEW DATA
+      'ic_number': AccountValidation.normalizeIc(icNumber),
+      'phone_number': AccountValidation.normalizePhone(phoneNumber),
       'state_id': stateId,
       'district_id': districtId,
       'zone_id': zoneId,
       'email': email,
       'password': password,
+      'verification_token': verificationToken,
     };
 
     try {
@@ -55,7 +63,10 @@ class AuthService {
       if (response['status'] == 'success') {
         return null; // Registration successful, no errors to report
       } else {
-        return response['message']; // Return the specific error from PHP (e.g., duplicate email)
+        final message = response['message'];
+        return message is String && message.trim().isNotEmpty
+            ? message
+            : 'Pendaftaran gagal. Sila cuba lagi.';
       }
     } catch (e, stackTrace) {
       // 1. Print the exact exception token
@@ -65,7 +76,8 @@ class AuthService {
         stackTrace: stackTrace,
       );
 
-      return "Network Exception: Unable to communicate with the server.";
+      if (e is ApiException && e.isUserFacing) return e.message;
+      return 'Tidak dapat menghubungi pelayan. Sila cuba lagi.';
     }
   }
 

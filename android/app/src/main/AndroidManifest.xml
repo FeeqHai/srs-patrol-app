@@ -12,7 +12,7 @@
         android:label="iRonda"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="false">
         <activity
 
             android:name=".MainActivity"

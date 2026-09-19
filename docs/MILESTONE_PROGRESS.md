@@ -1,13 +1,100 @@
 # Skim Rondaan Sukarela (SRS) Digital Patrol System — Milestone & Codebase Progress Report
 
 > **Project**: Skim Rondaan Sukarela (SRS) Digital Patrol System
-> **Milestone Date**: 2026-06-18
+> **Last updated**: 2026-09-05
 > **Author**: Rafeeq (B032410536) — FYP, Universiti Teknikal Malaysia Melaka (UTeM)
-> **Status**: Completed Iteration 2: Bottom Navigation Bar Redesign & Squad Card Interactivity — Clean Compile & Warning-Free
+> **Status**: Core prototype implemented; Raspberry Pi migration verified; release validation, user testing and final report completion remain in progress.
 
 This document provides a comprehensive log of codebase modifications, categorised into **Adjustments**, **Fixes**, and **Removals** across the Flutter client (`srs_app`) and raw PHP backend (`srs_api`). It also serves as a tracking reference for the remaining work (bugs, improvements, and new features).
 
 ---
+
+## Current progress — 5 September 2026
+
+This snapshot supersedes the dated timeline and backlog below. It consolidates
+existing implementation notes, test records and recent project task history;
+tests and live service checks were not rerun for this documentation update.
+The current local workspace is `C:/Users/rafee/Documents/UTeM/FYP`. On recheck,
+`E:/Documents/Utem's Works/Year3Sem2/UTeM/FYP` is accessible. Both Flutter
+checkouts have the same latest commit (`995702f`), but their uncommitted changes
+differ. The E: copy has no additional or differing report/testing files compared
+with the C: copy; it lacks the newer account-validation and Pi deployment guides.
+The current snapshot remains based on the C: workspace and recorded task history.
+
+### Completed or implemented
+
+| Workstream | Progress and evidence | Remaining boundary |
+| --- | --- | --- |
+| Core iRonda prototype | Authentication and role access, members, squads, scheduling, QR attendance, incidents, SOS, equipment, analytics and Lampiran-style reporting are implemented. June milestones and subsequent code history record navigation, location scoping, squad attendance assessment and shift management work. | Complete a current end-to-end regression cycle on the final Pi-backed Android build. Implementation does not establish acceptance. |
+| Administrator controls | Location management, scoped reports, member profile/role/location changes, password reset and forced password change are implemented; earlier API smoke checks and analysis passed. See [administrator test report](SUPER_ADMIN_TEST_REPORT.md). | Repeat role and cross-location access tests on the release environment. |
+| MyKad registration | Android capture, OCR parsing, image-quality checks, selfie/liveness flow, face comparison and one-time verification-session registration are present. Parser, similarity calculations and session/token cases have local automated evidence. See [test catalogue](../../Testing/test_case_catalog.md). | Real-camera tests, consented same/different-person evaluation, similarity threshold calibration, privacy inspection and remaining tamper cases are unexecuted in the catalogue. Do not claim verified biometric accuracy. |
+| Account validation | Password/confirmation, Malaysian phone formatting, valid MyKad date/length checks and bilingual account errors are implemented in Flutter and local PHP. | These September changes still need Pi deployment and an updated Android build. See [account validation](ACCOUNT_VALIDATION.md). |
+| Raspberry Pi hosting | Backend and selected database migrated to Debian 12; all 16 table row counts matched. LAN API, authentication rejection, private-configuration denial and image checks passed. Public HTTPS baseline checks passed on 3 September through Cloudflare at `https://api.ironda.app/srs_api/`. | Full authenticated app testing, mobile-data access, reboot recovery and backup restore remain pending. This is recorded evidence, not a fresh uptime check. See [deployment record](RASPBERRY_PI_DEPLOYMENT.md). |
+| Development/database access | Local XAMPP and Pi launch profiles are configured. Recent task history records Workbench displaying all 16 database tables. | Retain connection evidence and verify reconnection after restart; the database-access guide still contains setup-stage checks. |
+| Testing preparation | Detailed test cases, requirements traceability, capacity scripts, UAT protocol/questionnaire and result template exist under `Testing/`. | Execute and record the outstanding cases and human sessions. |
+| Final report | The user reported evaluator approval of the submitted report and requested continuation from Chapter 5 onward. Report drafts, diagrams and writing guidance are present. | Completion of Chapter 5 onward and the final submission has not been verified; consolidate actual test findings into the final report. |
+
+### Recorded verification results
+
+- Account-validation record, 3 September: **61 Flutter tests**, **63 PHP
+  account-validation assertions**, **7 verification/privacy assertions**, and
+  **31 API integration checks** passed locally. These are different check types,
+  not a combined full-system acceptance score.
+- Pi migration: all **16 tables** matched source row counts; the recorded LAN
+  and public HTTPS checks passed. The app's default API URL still points to the
+  former DigitalOcean host, so the final build must explicitly use the Pi HTTPS
+  address or have that default corrected.
+- Preliminary local read-only load test, 8 August: stages through **150 concurrent
+  requests** had zero failures; the 200-concurrency stage recorded **68/4,000
+  failures (1.7%)**, exceeding the 1% limit. These short ApacheBench runs do
+  **not** establish real-user capacity or Raspberry Pi capacity. See
+  [raw results](../../Testing/performance/results/local_preliminary/local_preliminary_capacity.csv).
+- UAT result record explicitly says **not yet executed**; the planned 12 human
+  sessions have no recorded scores. No acceptance percentage is claimed.
+
+### Next milestones, in order
+
+1. **Bring the Pi and Android release up to date.** Deploy the account-validation
+   PHP files together, preserving the Pi's environment-based JWT configuration.
+   Configure private release signing and build with the final Pi HTTPS API URL.
+2. **Verify the final device/server combination.** Check mobile-data access,
+   login and account states, MyKad capture and rejection cases, registration,
+   approval, role/location boundaries, patrol workflows and uploaded images.
+   Retain results, screenshots and the origin setup checks; verify reboot
+   recovery and a backup restore.
+3. **Measure server capacity.** Use an isolated Pi staging clone and separate
+   load generator for baseline, normal, stress, spike and endurance tests.
+   Record latency, error rates, resource use and data integrity. Update the
+   performance guide's historical DigitalOcean example for the selected staging
+   environment before executing it.
+4. **Run UAT and close defects.** Conduct the planned participant sessions,
+   calculate results from actual responses and retest material fixes.
+5. **Finish Chapter 5 onward and submission materials.** Incorporate measured
+   results, implementation screenshots, Pi architecture, limitations and
+   conclusions; reconcile diagrams and report claims with the final build,
+   then prepare the demonstration and submission package.
+
+### Corrections to the historical backlog
+
+- BUG-010 is no longer a hardcoded-LAN-only configuration problem: an
+  `SRS_API_BASE_URL` override and local/Pi launch profiles exist. Selecting the
+  correct final release URL remains necessary.
+- Member management is implemented; the old description of its screen as a
+  stub is obsolete. Current validation and deployment checks remain relevant.
+- Portable upload-path handling exists, and nine legacy URLs were converted
+  in the Pi database. This does not establish that every historical image-path
+  issue in every environment is closed.
+- `google_mlkit_face_detection` now supports identity verification and must
+  not be removed solely because the June backlog called it unused.
+- The June/July target dates and August submission target below are historical,
+  not a confirmed revised deadline. Unreviewed legacy items remain historical
+  backlog entries, not automatically current requirements.
+
+## Historical milestone log (June 2026)
+
+The sections below retain the original development record. Their statuses,
+metrics, suggested next steps and dates apply to that period; use the current
+snapshot above for planning.
 
 ## 2026-06-27 Update: Super Admin Location Report Scope
 

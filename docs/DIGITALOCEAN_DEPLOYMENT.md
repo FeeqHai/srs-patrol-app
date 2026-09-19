@@ -3,8 +3,11 @@
 
 # DigitalOcean Demo Runtime
 
-This project now treats DigitalOcean as the production/demo source of truth.
-XAMPP is only a local development or staging copy.
+Historical reference, superseded on 2026-09-02 by `RASPBERRY_PI_DEPLOYMENT.md`.
+The user selected the latest local XAMPP database for migration to the Raspberry Pi.
+The Pi migration and local-network API checks have passed; public HTTPS and the
+release APK remain pending. The instructions below describe the previous setup
+and are not authorization to deploy changes to DigitalOcean.
 
 ## Flutter API Base URL
 
@@ -46,6 +49,31 @@ For any PHP backend fix:
 2. Deploy the same file to `/var/www/html/srs_api` on DigitalOcean.
 3. Run PHP lint on the server.
 4. Verify against the DigitalOcean API, not only localhost.
+
+Do not copy the backend document root indiscriminately. Developer-only content
+must remain outside the deployed web application, including:
+
+```text
+tests/
+migrations/
+backups/
+local test assets
+```
+
+When deploying the full backend from WSL or another environment with `rsync`,
+use explicit exclusions:
+
+```bash
+rsync -av \
+  --exclude 'tests/' \
+  --exclude 'migrations/' \
+  --exclude 'backups/' \
+  /mnt/c/xampp/htdocs/srs_api/ \
+  root@157.245.53.82:/var/www/html/srs_api/
+```
+
+The local `tests/.htaccess` is an additional safeguard, not a replacement for
+excluding developer tests from the production deployment.
 
 Example deploy:
 

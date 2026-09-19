@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart'; // INJECTED: The centralized network layer
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/account_validation.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -139,8 +140,9 @@ class AuthProvider extends ChangeNotifier {
         stackTrace: stackTrace,
       );
 
-      _errorMessage =
-          "Network Exception: Unable to communicate with the server.";
+      _errorMessage = e is ApiException && e.isUserFacing
+          ? e.message
+          : 'Tidak dapat menghubungi pelayan. Sila cuba lagi.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -181,6 +183,14 @@ class AuthProvider extends ChangeNotifier {
     required String currentPassword,
     required String newPassword,
   }) async {
+    final validationError =
+        AccountValidation.required(currentPassword) ??
+        AccountValidation.password(newPassword);
+    if (validationError != null) {
+      _errorMessage = validationError;
+      notifyListeners();
+      return false;
+    }
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -208,8 +218,9 @@ class AuthProvider extends ChangeNotifier {
         error: e,
         stackTrace: stackTrace,
       );
-      _errorMessage =
-          "Network Exception: Unable to communicate with the server.";
+      _errorMessage = e is ApiException && e.isUserFacing
+          ? e.message
+          : 'Tidak dapat menghubungi pelayan. Sila cuba lagi.';
       _isLoading = false;
       notifyListeners();
       return false;

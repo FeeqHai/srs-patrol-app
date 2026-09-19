@@ -552,7 +552,6 @@ class SettingsProvider extends ChangeNotifier {
       'Pendaftaran Selesai': 'Registration Complete',
       'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.':
           'Your account has been recorded. Please contact the KRT Head to verify your identity before logging in.',
-      'Kembali ke Log Masuk': 'Back to Login',
       'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.':
           'Registration denied: Form incomplete or zone not selected.',
       // Incidents / Misc
@@ -595,7 +594,221 @@ class SettingsProvider extends ChangeNotifier {
       'Alamat E-mel': 'Email Address',
       'Kata Laluan': 'Password',
       'Ruangan ini wajib diisi': 'This field is required',
+      'Kata laluan mesti sekurang-kurangnya 8 aksara.':
+          'Password must be at least 8 characters.',
+      'Kata laluan terlalu panjang. Sila gunakan kurang aksara.':
+          'Password is too long. Please use fewer characters.',
+      'Kata laluan tidak boleh mengandungi aksara kawalan.':
+          'Password cannot contain control characters.',
+      'Kata laluan mengandungi aksara tidak sah.':
+          'Password contains invalid characters.',
+      'Masukkan nombor telefon yang sah bermula dengan 0 atau +60 (9 hingga 11 digit dalam format tempatan).':
+          'Enter a valid phone number starting with 0 or +60 (9 to 11 digits in local format).',
+      'Tarikh lahir dalam nombor MyKad tidak sah.':
+          'The birth date in the MyKad number is invalid.',
+      'Pendaftaran gagal. Sila cuba lagi.':
+          'Registration failed. Please try again.',
+      'Tidak dapat menghubungi pelayan. Sila cuba lagi.':
+          'Unable to contact the server. Please try again.',
+      'Current password is incorrect.': 'Current password is incorrect.',
+      'Current password and new password are required.':
+          'Current password and new password are required.',
       'HANTAR PERMOHONAN': 'SUBMIT APPLICATION',
+      'Pendaftaran Peronda': 'Patroller Registration',
+      'Lengkapkan butiran di bawah untuk mendaftar.':
+          'Complete the details below to register.',
+      'Sertai Rangkaian\nPeronda Kami.': 'Join Our Patrol\nNetwork.',
+      'Daftar sebagai peronda SRS untuk membantu menjaga keselamatan dan keharmonian komuniti setempat.':
+          'Register as an SRS patroller to help protect the safety and harmony of the local community.',
+      'Memuatkan negeri...': 'Loading states...',
+      'Pilih Negeri': 'Select State',
+      'Pilih Daerah': 'Select District',
+      'Pilih Zon Rondaan': 'Select Patrol Zone',
+      'Sila pilih negeri': 'Please select a state',
+      'Sila pilih daerah': 'Please select a district',
+      'Sila pilih zon': 'Please select a zone',
+      'Tidak dapat memuatkan senarai negeri.': 'Unable to load the state list.',
+      'Tidak dapat memuatkan senarai daerah.':
+          'Unable to load the district list.',
+      'Tidak dapat memuatkan senarai zon.': 'Unable to load the zone list.',
+      'Borang tidak lengkap. Sila isi semua butiran.':
+          'The form is incomplete. Please complete all details.',
+      'Ralat pelayan semasa menyemak pengesahan identiti.':
+          'A server error occurred while checking identity verification.',
+      'Pengesahan identiti tidak sah atau telah tamat.':
+          'Identity verification is invalid or has expired.',
+      'Ralat pelayan semasa menyemak imbasan MyKad.':
+          'A server error occurred while checking the MyKad scan.',
+      'Imbasan MyKad tidak sah atau telah tamat.':
+          'The MyKad scan is invalid or has expired.',
+      'Ralat pelayan semasa menyemak lokasi.':
+          'A server error occurred while checking the location.',
+      'Pilihan negeri, daerah dan zon tidak sah.':
+          'The selected state, district, and zone are invalid.',
+      'Ralat pelayan semasa menamatkan sesi pengesahan.':
+          'A server error occurred while completing the verification session.',
+      'No. Kad Pengenalan atau E-mel telah didaftarkan dalam sistem.':
+          'The IC number or email has already been registered in the system.',
+      'Ralat pangkalan data.': 'A database error occurred.',
+      // Identity verification
+      'Pendaftaran Berjaya': 'Registration Successful',
+      'Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.':
+          'Please contact the KRT Head to approve your account before logging in.',
+      'Akaun anda sedang menunggu kelulusan Pentadbir KRT.':
+          'Your account is awaiting KRT Administrator approval.',
+      'Pendaftaran anda telah ditolak atau akaun telah dinyahaktifkan.':
+          'Your registration was rejected or the account has been deactivated.',
+      'Invalid credentials.': 'Invalid email or password.',
+      'Status akaun berjaya dikemas kini.':
+          'The account status was updated successfully.',
+      'Status akaun gagal dikemas kini.':
+          'The account status could not be updated.',
+      'Kembali ke Log Masuk': 'Back to Login',
+      'Selesaikan pengesahan MyKad dan wajah sebelum mendaftar.':
+          'Complete MyKad and face verification before registering.',
+      'Pendaftaran peronda baharu hanya tersedia melalui aplikasi Android iRonda.':
+          'New patroller registration is only available through the iRonda Android app.',
+      'Pendaftaran memerlukan Android': 'Registration requires Android',
+      'Pengesahan MyKad diperlukan': 'MyKad verification required',
+      'Identiti telah disahkan': 'Identity verified',
+      'Pengesahan MyKad dan wajah menggunakan kamera hanya disokong dalam aplikasi Android iRonda.':
+          'Camera-based MyKad and face verification is only supported in the iRonda Android app.',
+      'Imbas MyKad dan lengkapkan swafoto serta cabaran rawak. Tiada pilihan untuk melangkau langkah ini.':
+          'Scan your MyKad and complete the selfie and random challenge. This step cannot be skipped.',
+      'Nama dan nombor MyKad dikunci berdasarkan keputusan pengesahan. Pilih sendiri negeri, daerah dan zon rondaan anda.':
+          'The name and MyKad number are locked based on the verification result. Select your operating state, district, and patrol zone.',
+      'Selesaikan pengekstrakan nama dan nombor MyKad sebelum mendaftar.':
+          'Complete the extraction of the name and MyKad number before registering.',
+      'Imbasan MyKad diperlukan': 'MyKad scan required',
+      'Data MyKad telah diekstrak': 'MyKad data extracted',
+      'Pengimbasan MyKad menggunakan kamera hanya disokong dalam aplikasi Android iRonda.':
+          'Camera-based MyKad scanning is only supported in the iRonda Android app.',
+      'Imbas MyKad untuk mengekstrak nama penuh dan nombor MyKad. Tiada swafoto atau perbandingan wajah dilakukan.':
+          'Scan the MyKad to extract the full name and MyKad number. No selfie or face comparison is performed.',
+      'Nama dan nombor MyKad dikunci berdasarkan data yang diekstrak. Pilih sendiri negeri, daerah dan zon rondaan anda.':
+          'The name and MyKad number are locked based on the extracted data. Select your operating state, district, and patrol zone.',
+      'MULA IMBASAN': 'START SCAN',
+      'ULANG IMBASAN': 'SCAN AGAIN',
+      'ANDROID DIPERLUKAN': 'ANDROID REQUIRED',
+      'MULA PENGESAHAN': 'START VERIFICATION',
+      'ULANG PENGESAHAN': 'REPEAT VERIFICATION',
+      'Nama Penuh (Mengikut MyKad)': 'Full Name (As on MyKad)',
+      'Pengesahan Identiti': 'Identity Verification',
+      'Pengekstrakan Data MyKad': 'MyKad Data Extraction',
+      'Pengekstrakan prototaip — bukan pengesahan pemilik MyKad':
+          'Prototype extraction — not MyKad holder verification',
+      'Tujuan: membaca nama penuh dan nombor MyKad untuk mengisi borang pendaftaran.\n\nData diproses: imej MyKad, nama penuh dan nombor MyKad. Tiada swafoto, pengesanan hidup atau perbandingan wajah dilakukan.\n\nPrivasi: imej MyKad diproses pada peranti dan tidak dihantar ke pelayan. Fail imej sementara dipadam apabila proses tamat atau skrin ini ditutup. Anda boleh membatalkan sebelum bersetuju.':
+          'Purpose: to read the full name and MyKad number for the registration form.\n\nData processed: MyKad image, full name, and MyKad number. No selfie, liveness detection, or face comparison is performed.\n\nPrivacy: the MyKad image is processed on the device and is not sent to the server. The temporary image file is deleted when processing ends or this screen is closed. You may cancel before consenting.',
+      'Pengekstrakan data MyKad hanya tersedia melalui aplikasi Android iRonda.':
+          'MyKad data extraction is only available through the iRonda Android app.',
+      'Saya bersetuju dengan pemprosesan sementara MyKad untuk mengekstrak nama penuh dan nombor MyKad bagi pendaftaran iRonda.':
+          'I consent to the temporary processing of my MyKad to extract the full name and MyKad number for iRonda registration.',
+      'Imbas dan baca MyKad': 'Scan and read MyKad',
+      'Pegang telefon secara menegak atau melintang. Kualiti imej akan diperiksa sebelum nama penuh dan nombor MyKad dibaca.':
+          'Hold your phone in portrait or landscape orientation. Image quality will be checked before the full name and MyKad number are read.',
+      'Menyemak kualiti dan membaca nama serta nombor MyKad...':
+          'Checking image quality and reading the name and MyKad number...',
+      'Semak Maklumat Diekstrak': 'Review Extracted Information',
+      'Pastikan nama penuh dan nombor MyKad berikut sepadan dengan kad anda.':
+          'Make sure the following full name and MyKad number match your card.',
+      'Nombor MyKad': 'MyKad Number',
+      'Tiada maklumat dihantar ke pelayan sehingga anda memilih BETUL.':
+          'No information is sent to the server until you select CORRECT.',
+      'IMBAS SEMULA': 'RESCAN',
+      'BETUL': 'CORRECT',
+      'Menyediakan sesi pendaftaran...':
+          'Preparing the registration session...',
+      'Imbasan MyKad telah tamat. Sila imbas semula sebelum mendaftar.':
+          'The MyKad scan has expired. Please scan it again before registering.',
+      'Selaraskan MyKad di dalam bingkai': 'Align the MyKad inside the frame',
+      'Pastikan keempat-empat penjuru kelihatan, teks jelas dan tiada silau sebelum mengambil gambar.':
+          'Make sure all four corners are visible, the text is clear, and there is no glare before taking the picture.',
+      'AMBIL GAMBAR': 'CAPTURE',
+      'Gambar tidak dapat diambil. Sila cuba semula.':
+          'The picture could not be taken. Please try again.',
+      'Kamera tidak dapat dibuka. Semak kebenaran kamera dan cuba semula.':
+          'The camera could not be opened. Check the camera permission and try again.',
+      'CUBA SEMULA': 'TRY AGAIN',
+      'Pengesahan prototaip — bukan e-KYC rasmi':
+          'Prototype verification — not official e-KYC',
+      'Tujuan: mengesahkan identiti peronda semasa pendaftaran.\n\nData diproses: imej MyKad, nama, nombor MyKad, swafoto, tindakan hidup dan skor persamaan wajah.\n\nPrivasi: imej dan vektor wajah diproses pada peranti dan tidak dihantar ke pelayan. Pelayan hanya menerima hasil pengesahan dan maklumat pendaftaran yang diperlukan. Fail imej sementara dipadam apabila percubaan tamat atau skrin ini ditutup. Anda boleh membatalkan sebelum bersetuju.':
+          'Purpose: to verify a patroller’s identity during registration.\n\nData processed: MyKad image, name, MyKad number, selfie, liveness action, and face-similarity score.\n\nPrivacy: images and face vectors are processed on the device and are not sent to the server. The server only receives the verification result and required registration information. Temporary image files are deleted when the attempt ends or this screen is closed. You may cancel before consenting.',
+      'Pendaftaran peronda dengan pengesahan identiti hanya tersedia melalui aplikasi Android iRonda.':
+          'Patroller registration with identity verification is only available through the iRonda Android app.',
+      'Saya bersetuju dengan pemprosesan sementara MyKad dan wajah seperti yang diterangkan di atas untuk tujuan pendaftaran iRonda. Persetujuan ini diperlukan untuk meneruskan.':
+          'I consent to the temporary processing of my MyKad and face as described above for iRonda registration. Consent is required to continue.',
+      'Imbas MyKad': 'Scan MyKad',
+      'Putar telefon ke kedudukan melintang. Kualiti, OCR dan potret utama MyKad akan diperiksa.':
+          'Rotate your phone to landscape. Image quality, OCR, and the main MyKad portrait will be checked.',
+      'Swafoto neutral': 'Neutral selfie',
+      'Pandang kamera dengan kedua-dua mata terbuka.':
+          'Face the camera with both eyes open.',
+      'Cabaran rawak': 'Random challenge',
+      'Pejamkan kedua-dua mata dan ambil swafoto.':
+          'Close both eyes and take a selfie.',
+      'Pusingkan kepala ke kiri atau kanan dan ambil swafoto.':
+          'Turn your head left or right and take a selfie.',
+      'MEMPROSES...': 'PROCESSING...',
+      'IMBAS MYKAD': 'SCAN MYKAD',
+      'AMBIL SWAFOTO': 'TAKE SELFIE',
+      'LAKSANAKAN CABARAN': 'PERFORM CHALLENGE',
+      'Sediakan MyKad': 'Prepare your MyKad',
+      'Anda boleh memegang telefon secara menegak atau melintang. Letakkan MyKad secara mendatar di dalam bingkai dan pastikan seluruh kad, termasuk keempat-empat penjuru, berada dalam bingkai. Elakkan silau dan pegang telefon dengan stabil.':
+          'You may hold your phone in portrait or landscape orientation. Place the MyKad horizontally inside the guide and ensure the entire card, including all four corners, is inside the frame. Avoid glare and hold the phone steady.',
+      'BATAL': 'CANCEL',
+      'BUKA KAMERA': 'OPEN CAMERA',
+      'Menyemak kualiti dan membaca maklumat MyKad...':
+          'Checking image quality and reading MyKad information...',
+      'MyKad dibaca. Seterusnya, ambil swafoto menghadap kamera.':
+          'MyKad read successfully. Next, take a selfie facing the camera.',
+      'Mengesan wajah dalam swafoto...': 'Detecting the face in the selfie...',
+      'Buka kedua-dua mata untuk swafoto pertama.':
+          'Keep both eyes open for the first selfie.',
+      'Menyemak tindakan rawak dan persamaan wajah...':
+          'Checking the random action and face similarity...',
+      'Resolusi imej terlalu rendah.': 'The image resolution is too low.',
+      'Keseluruhan kad perlu kelihatan di dalam bingkai.':
+          'The entire card must be visible inside the frame.',
+      'Imej kabur. Pegang telefon dengan stabil dan cuba semula.':
+          'The image is blurry. Hold the phone steady and try again.',
+      'Pantulan cahaya terlalu kuat pada MyKad.':
+          'There is too much glare on the MyKad.',
+      'Fail imej MyKad tidak dapat dibaca.':
+          'The MyKad image file could not be read.',
+      'Nama atau nombor MyKad tidak dapat dibaca dengan yakin.':
+          'The name or MyKad number could not be read reliably.',
+      'Pastikan potret utama MyKad jelas dan tiada wajah lain kelihatan di luar kad.':
+          'Ensure the main MyKad portrait is clear and no other face is visible outside the card.',
+      'Fail swafoto tidak dapat dibaca.': 'The selfie file could not be read.',
+      'Pastikan hanya satu wajah kelihatan dalam swafoto.':
+          'Ensure only one face is visible in the selfie.',
+      'Dekatkan wajah kepada kamera dan cuba semula.':
+          'Move your face closer to the camera and try again.',
+      'Imej wajah tidak dapat dibaca.': 'The face image could not be read.',
+      'Kedudukan wajah dalam imej tidak sah.':
+          'The face position in the image is invalid.',
+      'Respons sesi pengesahan tidak sah.':
+          'The verification-session response is invalid.',
+      'Token pengesahan tidak diterima.':
+          'The verification token was not received.',
+      'Pengesahan identiti gagal.': 'Identity verification failed.',
+      'Persetujuan privasi diperlukan sebelum pengesahan.':
+          'Privacy consent is required before verification.',
+      'Nombor MyKad mesti mengandungi 12 digit.':
+          'The MyKad number must contain 12 digits.',
+      'Pengecam peranti tidak sah.': 'The device identifier is invalid.',
+      'Nombor MyKad ini telah didaftarkan.':
+          'This MyKad number has already been registered.',
+      'Had permintaan dicapai. Cuba semula kemudian.':
+          'The request limit has been reached. Try again later.',
+      'Sesi pengesahan telah tamat atau tidak sah. Sila mula semula.':
+          'The verification session has expired or is invalid. Please start again.',
+      'Pengesahan identiti tidak berjaya. Sila cuba semula.':
+          'Identity verification was unsuccessful. Please try again.',
+      'Kualiti imej MyKad tidak memenuhi syarat. Sila cuba semula.':
+          'The MyKad image quality did not meet the requirements. Please try again.',
+      'Sesi pengesahan tidak boleh digunakan semula.':
+          'The verification session cannot be reused.',
       'AMARAN KECEMASAN (SOS)': 'EMERGENCY WARNING (SOS)',
       'LIHAT LOKASI': 'VIEW LOCATION',
       'Isn': 'Mon',
@@ -672,6 +885,10 @@ class SettingsProvider extends ChangeNotifier {
       'Menunggu': 'Pending',
       'Lulus': 'Approve',
       'Tolak': 'Reject',
+      'Lulus Pendaftaran': 'Approve Registration',
+      'Ya, Lulus': 'Yes, Approve',
+      'Adakah anda pasti ingin meluluskan pendaftaran ahli ini?':
+          'Are you sure you want to approve this member\'s registration?',
       'Tolak Pendaftaran': 'Reject Registration',
       'Ya, Tolak': 'Yes, Reject',
       'Adakah anda pasti ingin menolak pendaftaran ahli ini?':
@@ -1214,7 +1431,6 @@ class SettingsProvider extends ChangeNotifier {
       'Pendaftaran Selesai': 'Pendaftaran Selesai',
       'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.':
           'Akaun peronda telah direkodkan. Sila hubungi Ketua KRT untuk pengesahan identiti sebelum log masuk.',
-      'Kembali ke Log Masuk': 'Kembali ke Log Masuk',
       'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.':
           'Pendaftaran ditolak: Borang tidak lengkap atau zon tidak dipilih.',
       // Incidents / Misc
@@ -1261,7 +1477,150 @@ class SettingsProvider extends ChangeNotifier {
       'Alamat E-mel': 'Alamat E-mel',
       'Kata Laluan': 'Kata Laluan',
       'Ruangan ini wajib diisi': 'Ruangan ini wajib diisi',
+      'Kata laluan mesti sekurang-kurangnya 8 aksara.':
+          'Kata laluan mesti sekurang-kurangnya 8 aksara.',
+      'Kata laluan terlalu panjang. Sila gunakan kurang aksara.':
+          'Kata laluan terlalu panjang. Sila gunakan kurang aksara.',
+      'Kata laluan tidak boleh mengandungi aksara kawalan.':
+          'Kata laluan tidak boleh mengandungi aksara kawalan.',
+      'Kata laluan mengandungi aksara tidak sah.':
+          'Kata laluan mengandungi aksara tidak sah.',
+      'Masukkan nombor telefon yang sah bermula dengan 0 atau +60 (9 hingga 11 digit dalam format tempatan).':
+          'Masukkan nombor telefon yang sah bermula dengan 0 atau +60 (9 hingga 11 digit dalam format tempatan).',
+      'Tarikh lahir dalam nombor MyKad tidak sah.':
+          'Tarikh lahir dalam nombor MyKad tidak sah.',
+      'Pendaftaran gagal. Sila cuba lagi.':
+          'Pendaftaran gagal. Sila cuba lagi.',
+      'Tidak dapat menghubungi pelayan. Sila cuba lagi.':
+          'Tidak dapat menghubungi pelayan. Sila cuba lagi.',
+      'Current password is incorrect.': 'Kata laluan semasa tidak betul.',
+      'Current password and new password are required.':
+          'Kata laluan semasa dan kata laluan baharu diperlukan.',
       'HANTAR PERMOHONAN': 'HANTAR PERMOHONAN',
+      'Pendaftaran Peronda': 'Pendaftaran Peronda',
+      'Lengkapkan butiran di bawah untuk mendaftar.':
+          'Lengkapkan butiran di bawah untuk mendaftar.',
+      'Sertai Rangkaian\nPeronda Kami.': 'Sertai Rangkaian\nPeronda Kami.',
+      'Daftar sebagai peronda SRS untuk membantu menjaga keselamatan dan keharmonian komuniti setempat.':
+          'Daftar sebagai peronda SRS untuk membantu menjaga keselamatan dan keharmonian komuniti setempat.',
+      'Memuatkan negeri...': 'Memuatkan negeri...',
+      'Pilih Negeri': 'Pilih Negeri',
+      'Pilih Daerah': 'Pilih Daerah',
+      'Pilih Zon Rondaan': 'Pilih Zon Rondaan',
+      'Sila pilih negeri': 'Sila pilih negeri',
+      'Sila pilih daerah': 'Sila pilih daerah',
+      'Sila pilih zon': 'Sila pilih zon',
+      'Tidak dapat memuatkan senarai negeri.':
+          'Tidak dapat memuatkan senarai negeri.',
+      'Tidak dapat memuatkan senarai daerah.':
+          'Tidak dapat memuatkan senarai daerah.',
+      'Tidak dapat memuatkan senarai zon.':
+          'Tidak dapat memuatkan senarai zon.',
+      // Pengesahan identiti
+      'Pendaftaran Berjaya': 'Pendaftaran Berjaya',
+      'Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.':
+          'Sila hubungi Ketua KRT untuk pengesahan akaun sebelum log masuk.',
+      'Akaun anda sedang menunggu kelulusan Pentadbir KRT.':
+          'Akaun anda sedang menunggu kelulusan Pentadbir KRT.',
+      'Pendaftaran anda telah ditolak atau akaun telah dinyahaktifkan.':
+          'Pendaftaran anda telah ditolak atau akaun telah dinyahaktifkan.',
+      'Invalid credentials.': 'E-mel atau kata laluan tidak sah.',
+      'Status akaun berjaya dikemas kini.':
+          'Status akaun berjaya dikemas kini.',
+      'Status akaun gagal dikemas kini.': 'Status akaun gagal dikemas kini.',
+      'Kembali ke Log Masuk': 'Kembali ke Log Masuk',
+      'Selesaikan pengesahan MyKad dan wajah sebelum mendaftar.':
+          'Selesaikan pengesahan MyKad dan wajah sebelum mendaftar.',
+      'Pendaftaran peronda baharu hanya tersedia melalui aplikasi Android iRonda.':
+          'Pendaftaran peronda baharu hanya tersedia melalui aplikasi Android iRonda.',
+      'Pendaftaran memerlukan Android': 'Pendaftaran memerlukan Android',
+      'Pengesahan MyKad diperlukan': 'Pengesahan MyKad diperlukan',
+      'Identiti telah disahkan': 'Identiti telah disahkan',
+      'Pengesahan MyKad dan wajah menggunakan kamera hanya disokong dalam aplikasi Android iRonda.':
+          'Pengesahan MyKad dan wajah menggunakan kamera hanya disokong dalam aplikasi Android iRonda.',
+      'Imbas MyKad dan lengkapkan swafoto serta cabaran rawak. Tiada pilihan untuk melangkau langkah ini.':
+          'Imbas MyKad dan lengkapkan swafoto serta cabaran rawak. Tiada pilihan untuk melangkau langkah ini.',
+      'Nama dan nombor MyKad dikunci berdasarkan keputusan pengesahan. Pilih sendiri negeri, daerah dan zon rondaan anda.':
+          'Nama dan nombor MyKad dikunci berdasarkan keputusan pengesahan. Pilih sendiri negeri, daerah dan zon rondaan anda.',
+      'Selesaikan pengekstrakan nama dan nombor MyKad sebelum mendaftar.':
+          'Selesaikan pengekstrakan nama dan nombor MyKad sebelum mendaftar.',
+      'Imbasan MyKad diperlukan': 'Imbasan MyKad diperlukan',
+      'Data MyKad telah diekstrak': 'Data MyKad telah diekstrak',
+      'Pengimbasan MyKad menggunakan kamera hanya disokong dalam aplikasi Android iRonda.':
+          'Pengimbasan MyKad menggunakan kamera hanya disokong dalam aplikasi Android iRonda.',
+      'Imbas MyKad untuk mengekstrak nama penuh dan nombor MyKad. Tiada swafoto atau perbandingan wajah dilakukan.':
+          'Imbas MyKad untuk mengekstrak nama penuh dan nombor MyKad. Tiada swafoto atau perbandingan wajah dilakukan.',
+      'Nama dan nombor MyKad dikunci berdasarkan data yang diekstrak. Pilih sendiri negeri, daerah dan zon rondaan anda.':
+          'Nama dan nombor MyKad dikunci berdasarkan data yang diekstrak. Pilih sendiri negeri, daerah dan zon rondaan anda.',
+      'MULA IMBASAN': 'MULA IMBASAN',
+      'ULANG IMBASAN': 'ULANG IMBASAN',
+      'ANDROID DIPERLUKAN': 'ANDROID DIPERLUKAN',
+      'MULA PENGESAHAN': 'MULA PENGESAHAN',
+      'ULANG PENGESAHAN': 'ULANG PENGESAHAN',
+      'Nama Penuh (Mengikut MyKad)': 'Nama Penuh (Mengikut MyKad)',
+      'Pengesahan Identiti': 'Pengesahan Identiti',
+      'Pengekstrakan Data MyKad': 'Pengekstrakan Data MyKad',
+      'Pengekstrakan prototaip — bukan pengesahan pemilik MyKad':
+          'Pengekstrakan prototaip — bukan pengesahan pemilik MyKad',
+      'Tujuan: membaca nama penuh dan nombor MyKad untuk mengisi borang pendaftaran.\n\nData diproses: imej MyKad, nama penuh dan nombor MyKad. Tiada swafoto, pengesanan hidup atau perbandingan wajah dilakukan.\n\nPrivasi: imej MyKad diproses pada peranti dan tidak dihantar ke pelayan. Fail imej sementara dipadam apabila proses tamat atau skrin ini ditutup. Anda boleh membatalkan sebelum bersetuju.':
+          'Tujuan: membaca nama penuh dan nombor MyKad untuk mengisi borang pendaftaran.\n\nData diproses: imej MyKad, nama penuh dan nombor MyKad. Tiada swafoto, pengesanan hidup atau perbandingan wajah dilakukan.\n\nPrivasi: imej MyKad diproses pada peranti dan tidak dihantar ke pelayan. Fail imej sementara dipadam apabila proses tamat atau skrin ini ditutup. Anda boleh membatalkan sebelum bersetuju.',
+      'Pengekstrakan data MyKad hanya tersedia melalui aplikasi Android iRonda.':
+          'Pengekstrakan data MyKad hanya tersedia melalui aplikasi Android iRonda.',
+      'Saya bersetuju dengan pemprosesan sementara MyKad untuk mengekstrak nama penuh dan nombor MyKad bagi pendaftaran iRonda.':
+          'Saya bersetuju dengan pemprosesan sementara MyKad untuk mengekstrak nama penuh dan nombor MyKad bagi pendaftaran iRonda.',
+      'Imbas dan baca MyKad': 'Imbas dan baca MyKad',
+      'Pegang telefon secara menegak atau melintang. Kualiti imej akan diperiksa sebelum nama penuh dan nombor MyKad dibaca.':
+          'Pegang telefon secara menegak atau melintang. Kualiti imej akan diperiksa sebelum nama penuh dan nombor MyKad dibaca.',
+      'Menyemak kualiti dan membaca nama serta nombor MyKad...':
+          'Menyemak kualiti dan membaca nama serta nombor MyKad...',
+      'Semak Maklumat Diekstrak': 'Semak Maklumat Diekstrak',
+      'Pastikan nama penuh dan nombor MyKad berikut sepadan dengan kad anda.':
+          'Pastikan nama penuh dan nombor MyKad berikut sepadan dengan kad anda.',
+      'Nombor MyKad': 'Nombor MyKad',
+      'Tiada maklumat dihantar ke pelayan sehingga anda memilih BETUL.':
+          'Tiada maklumat dihantar ke pelayan sehingga anda memilih BETUL.',
+      'IMBAS SEMULA': 'IMBAS SEMULA',
+      'BETUL': 'BETUL',
+      'Menyediakan sesi pendaftaran...': 'Menyediakan sesi pendaftaran...',
+      'Imbasan MyKad telah tamat. Sila imbas semula sebelum mendaftar.':
+          'Imbasan MyKad telah tamat. Sila imbas semula sebelum mendaftar.',
+      'Selaraskan MyKad di dalam bingkai': 'Selaraskan MyKad di dalam bingkai',
+      'Pastikan keempat-empat penjuru kelihatan, teks jelas dan tiada silau sebelum mengambil gambar.':
+          'Pastikan keempat-empat penjuru kelihatan, teks jelas dan tiada silau sebelum mengambil gambar.',
+      'AMBIL GAMBAR': 'AMBIL GAMBAR',
+      'Gambar tidak dapat diambil. Sila cuba semula.':
+          'Gambar tidak dapat diambil. Sila cuba semula.',
+      'Kamera tidak dapat dibuka. Semak kebenaran kamera dan cuba semula.':
+          'Kamera tidak dapat dibuka. Semak kebenaran kamera dan cuba semula.',
+      'CUBA SEMULA': 'CUBA SEMULA',
+      'Pengesahan prototaip — bukan e-KYC rasmi':
+          'Pengesahan prototaip — bukan e-KYC rasmi',
+      'Tujuan: mengesahkan identiti peronda semasa pendaftaran.\n\nData diproses: imej MyKad, nama, nombor MyKad, swafoto, tindakan hidup dan skor persamaan wajah.\n\nPrivasi: imej dan vektor wajah diproses pada peranti dan tidak dihantar ke pelayan. Pelayan hanya menerima hasil pengesahan dan maklumat pendaftaran yang diperlukan. Fail imej sementara dipadam apabila percubaan tamat atau skrin ini ditutup. Anda boleh membatalkan sebelum bersetuju.':
+          'Tujuan: mengesahkan identiti peronda semasa pendaftaran.\n\nData diproses: imej MyKad, nama, nombor MyKad, swafoto, tindakan hidup dan skor persamaan wajah.\n\nPrivasi: imej dan vektor wajah diproses pada peranti dan tidak dihantar ke pelayan. Pelayan hanya menerima hasil pengesahan dan maklumat pendaftaran yang diperlukan. Fail imej sementara dipadam apabila percubaan tamat atau skrin ini ditutup. Anda boleh membatalkan sebelum bersetuju.',
+      'Pendaftaran peronda dengan pengesahan identiti hanya tersedia melalui aplikasi Android iRonda.':
+          'Pendaftaran peronda dengan pengesahan identiti hanya tersedia melalui aplikasi Android iRonda.',
+      'Saya bersetuju dengan pemprosesan sementara MyKad dan wajah seperti yang diterangkan di atas untuk tujuan pendaftaran iRonda. Persetujuan ini diperlukan untuk meneruskan.':
+          'Saya bersetuju dengan pemprosesan sementara MyKad dan wajah seperti yang diterangkan di atas untuk tujuan pendaftaran iRonda. Persetujuan ini diperlukan untuk meneruskan.',
+      'Imbas MyKad': 'Imbas MyKad',
+      'Putar telefon ke kedudukan melintang. Kualiti, OCR dan potret utama MyKad akan diperiksa.':
+          'Putar telefon ke kedudukan melintang. Kualiti, OCR dan potret utama MyKad akan diperiksa.',
+      'Swafoto neutral': 'Swafoto neutral',
+      'Pandang kamera dengan kedua-dua mata terbuka.':
+          'Pandang kamera dengan kedua-dua mata terbuka.',
+      'Cabaran rawak': 'Cabaran rawak',
+      'Pejamkan kedua-dua mata dan ambil swafoto.':
+          'Pejamkan kedua-dua mata dan ambil swafoto.',
+      'Pusingkan kepala ke kiri atau kanan dan ambil swafoto.':
+          'Pusingkan kepala ke kiri atau kanan dan ambil swafoto.',
+      'MEMPROSES...': 'MEMPROSES...',
+      'IMBAS MYKAD': 'IMBAS MYKAD',
+      'AMBIL SWAFOTO': 'AMBIL SWAFOTO',
+      'LAKSANAKAN CABARAN': 'LAKSANAKAN CABARAN',
+      'Sediakan MyKad': 'Sediakan MyKad',
+      'Anda boleh memegang telefon secara menegak atau melintang. Letakkan MyKad secara mendatar di dalam bingkai dan pastikan seluruh kad, termasuk keempat-empat penjuru, berada dalam bingkai. Elakkan silau dan pegang telefon dengan stabil.':
+          'Anda boleh memegang telefon secara menegak atau melintang. Letakkan MyKad secara mendatar di dalam bingkai dan pastikan seluruh kad, termasuk keempat-empat penjuru, berada dalam bingkai. Elakkan silau dan pegang telefon dengan stabil.',
+      'BATAL': 'BATAL',
+      'BUKA KAMERA': 'BUKA KAMERA',
       'AMARAN KECEMASAN (SOS)': 'AMARAN KECEMASAN (SOS)',
       'LIHAT LOKASI': 'LIHAT LOKASI',
       'Isn': 'Isn',
@@ -1330,6 +1689,10 @@ class SettingsProvider extends ChangeNotifier {
       'Menunggu': 'Menunggu Pengesahan',
       'Lulus': 'Lulus',
       'Tolak': 'Tolak',
+      'Lulus Pendaftaran': 'Lulus Pendaftaran',
+      'Ya, Lulus': 'Ya, Lulus',
+      'Adakah anda pasti ingin meluluskan pendaftaran ahli ini?':
+          'Adakah anda pasti ingin meluluskan pendaftaran ahli ini?',
       'Tolak Pendaftaran': 'Tolak Pendaftaran',
       'Ya, Tolak': 'Ya, Tolak',
       'Adakah anda pasti ingin menolak pendaftaran ahli ini?':

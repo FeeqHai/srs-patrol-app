@@ -43,20 +43,19 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.70, curve: Curves.easeOut),
-    ));
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.35),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 1.0, curve: Curves.easeOutBack),
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.0, 0.70, curve: Curves.easeOut),
+      ),
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.35), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.0, 1.0, curve: Curves.easeOutBack),
+          ),
+        );
 
     _animController.forward();
   }
@@ -114,7 +113,9 @@ class _LoginScreenState extends State<LoginScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F192E) : const Color(0xFFF3F6FA),
+      backgroundColor: isDark
+          ? const Color(0xFF0F192E)
+          : const Color(0xFFF3F6FA),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 800;
@@ -125,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen>
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0E1624) : const Color(0xFFF8FAFC),
+                      color: isDark
+                          ? const Color(0xFF0E1624)
+                          : const Color(0xFFF8FAFC),
                     ),
                     child: Center(
                       child: SingleChildScrollView(
@@ -166,9 +169,7 @@ class _LoginScreenState extends State<LoginScreen>
           Positioned.fill(
             child: Opacity(
               opacity: 0.05,
-              child: CustomPaint(
-                painter: _BrandRadarPainter(),
-              ),
+              child: CustomPaint(painter: _BrandRadarPainter()),
             ),
           ),
           Center(
@@ -255,12 +256,13 @@ class _LoginScreenState extends State<LoginScreen>
             children: [
               // ── Top header bar (Language Switcher) ──
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildLanguageSelector(settings),
-                  ],
+                  children: [_buildLanguageSelector(settings)],
                 ),
               ),
 
@@ -278,10 +280,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
-                    child: Image.asset(
-                      'assets/icon.png',
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.asset('assets/icon.png', fit: BoxFit.contain),
                   ),
                 ),
               ),
@@ -330,7 +329,9 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.4 : 0.08,
+                          ),
                           blurRadius: 30,
                           offset: const Offset(0, -8),
                         ),
@@ -432,7 +433,9 @@ class _LoginScreenState extends State<LoginScreen>
         ],
 
         Row(
-          mainAxisAlignment: isLargeScreen ? MainAxisAlignment.start : MainAxisAlignment.center,
+          mainAxisAlignment: isLargeScreen
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.center,
           children: [
             Icon(Icons.shield_outlined, color: _royalBlue, size: 26),
             const SizedBox(width: 12),
@@ -519,24 +522,28 @@ class _LoginScreenState extends State<LoginScreen>
             focusNode: _passwordFocus,
             obscureText: _obscurePassword,
             style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
-            decoration: _inputDecoration(
-              hintText: '••••••••',
-              icon: Icons.lock_outline,
-              isDark: isDark,
-              isFocused: _passwordFocus.hasFocus,
-            ).copyWith(
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: _passwordFocus.hasFocus
-                      ? _royalBlue
-                      : (isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+            decoration:
+                _inputDecoration(
+                  hintText: '••••••••',
+                  icon: Icons.lock_outline,
+                  isDark: isDark,
+                  isFocused: _passwordFocus.hasFocus,
+                ).copyWith(
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: _passwordFocus.hasFocus
+                          ? _royalBlue
+                          : (isDark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade400),
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-              ),
-            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -570,11 +577,15 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             child: Row(
               children: [
-                const Icon(Icons.gpp_bad_outlined, color: Colors.redAccent, size: 20),
+                const Icon(
+                  Icons.gpp_bad_outlined,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    authProvider.errorMessage!,
+                    settings.t(authProvider.errorMessage!),
                     style: const TextStyle(
                       color: Colors.redAccent,
                       fontSize: 13,
@@ -666,7 +677,10 @@ class _LoginScreenState extends State<LoginScreen>
                 style: TextButton.styleFrom(
                   foregroundColor: isDark ? _goldenYellow : _royalBlue,
                   minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
                 icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
                 label: Text(
@@ -754,8 +768,16 @@ class _BrandRadarPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
 
-    canvas.drawLine(Offset(0, 0), Offset(size.width, size.height), diagonalPaint);
-    canvas.drawLine(Offset(size.width, 0), Offset(0, size.height), diagonalPaint);
+    canvas.drawLine(
+      Offset(0, 0),
+      Offset(size.width, size.height),
+      diagonalPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width, 0),
+      Offset(0, size.height),
+      diagonalPaint,
+    );
   }
 
   @override

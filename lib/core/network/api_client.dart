@@ -5,10 +5,15 @@ import '../constants/api_constants.dart';
 import '../utils/logger.dart';
 
 class ApiException implements Exception {
-  const ApiException(this.message, {this.statusCode});
+  const ApiException(
+    this.message, {
+    this.statusCode,
+    this.isUserFacing = false,
+  });
 
   final String message;
   final int? statusCode;
+  final bool isUserFacing;
 
   @override
   String toString() => message;
@@ -33,10 +38,9 @@ class ApiClient {
 
       // http.post automatically encodes Map<String, String> so PHP's $_POST can read it
       final response = await http.post(url, headers: headers, body: body);
-      // 1. INJECT THIS DEBUG LINE:
-      appLogger.d(
-        '=== RAW HTTP NETWORK DATA ===\nTarget URI Hit: ${response.request?.url}\nHTTP Status Code: ${response.statusCode}\nRaw Body Response: "${response.body}"\n=============================',
-      );
+      // Never log request/response bodies here. Authentication responses can
+      // contain JWTs and registration responses can contain one-time tokens.
+      appLogger.d('HTTP POST completed: ${url.path} (${response.statusCode})');
       return _handleMapResponse(response);
     } on ApiException catch (e, stackTrace) {
       appLogger.e(
@@ -105,10 +109,7 @@ class ApiClient {
       );
     }
 
-    throw ApiException(
-      _extractServerMessage(response),
-      statusCode: response.statusCode,
-    );
+    throw _responseException(response);
   }
 
   static dynamic _handleJsonResponse(http.Response response) {
@@ -117,7 +118,30 @@ class ApiClient {
       return _decodeJsonBody(response.body, statusCode: response.statusCode);
     }
 
-    throw ApiException(
+    throw _responseException(response);
+  }
+
+  static ApiException _responseException(http.Response response) {
+    // Only structured client errors are safe to display as form feedback.
+    // HTML error pages, transport failures and server errors stay generic.
+    if (response.statusCode >= 400 && response.statusCode < 500) {
+      try {
+        final decoded = json.decode(response.body);
+        final message = decoded is Map
+            ? decoded['message'] ?? decoded['error']
+            : null;
+        if (message is String && message.trim().isNotEmpty) {
+          return ApiException(
+            message.trim(),
+            statusCode: response.statusCode,
+            isUserFacing: true,
+          );
+        }
+      } on FormatException {
+        // Fall through to the diagnostic message for logs.
+      }
+    }
+    return ApiException(
       _extractServerMessage(response),
       statusCode: response.statusCode,
     );

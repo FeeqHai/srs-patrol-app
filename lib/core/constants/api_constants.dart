@@ -1,8 +1,9 @@
 class ApiConstants {
-  // Production/demo API on DigitalOcean. Override only when explicitly testing
+  // Public demonstration API. Override only when explicitly testing
   // another backend, for example local XAMPP:
   // flutter run --dart-define=SRS_API_BASE_URL=http://<laptop-ip>/srs_api/
-  static const String _defaultBaseUrl = "http://157.245.53.82/srs_api/";
+  static const String _defaultBaseUrl =
+      "https://api.ironda.app/srs_api/";
   static const String _configuredBaseUrl = String.fromEnvironment(
     'SRS_API_BASE_URL',
     defaultValue: _defaultBaseUrl,
@@ -44,6 +45,9 @@ class ApiConstants {
 
   static const String loginEndpoint = "auth/login.php";
   static const String registerEndpoint = "auth/register.php";
+  static const String verificationStartEndpoint = "auth/verification/start.php";
+  static const String verificationCompleteEndpoint =
+      "auth/verification/complete.php";
   static const String locationsEndpoint = "auth/get_locations.php";
   static const String getIncidentsEndpoint = "incidents/get_incidents.php";
   static const String uploadIncidentEndpoint = "incidents/upload_incident.php";

@@ -1,9 +1,13 @@
 // File: lib/features/auth/views/register_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/utils/account_validation.dart';
 import '../models/location_option.dart';
+import '../models/verified_identity.dart';
 import '../services/auth_service.dart';
+import 'identity_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -22,6 +26,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _obscurePassword = true;
   bool _isHoveringBtn = false;
@@ -34,6 +40,10 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _isLoadingLocations = true;
   String? _locationLoadError;
   bool _isLoading = false;
+  VerifiedIdentity? _verifiedIdentity;
+
+  bool get _isIdentityVerificationSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
@@ -70,14 +80,50 @@ class _RegisterScreenState extends State<RegisterScreen>
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _animController.dispose();
     super.dispose();
   }
 
   Future<void> _submitRegistration() async {
+    if (_isLoading) return;
     FocusScope.of(context).unfocus();
-
     final bool isFormValid = _formKey.currentState?.validate() ?? false;
+
+    if (_verifiedIdentity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.read<SettingsProvider>().t(
+              'Selesaikan pengekstrakan nama dan nombor MyKad sebelum mendaftar.',
+            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.orange.shade800,
+        ),
+      );
+      return;
+    }
+
+    if (_verifiedIdentity!.isExpiredAt(DateTime.now())) {
+      setState(() {
+        _verifiedIdentity = null;
+        _nameController.clear();
+        _icController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.read<SettingsProvider>().t(
+              'Imbasan MyKad telah tamat. Sila imbas semula sebelum mendaftar.',
+            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.orange.shade800,
+        ),
+      );
+      return;
+    }
 
     if (!isFormValid ||
         _selectedState == null ||
@@ -101,13 +147,14 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     final error = await _authService.registerPatroller(
       fullName: _nameController.text.trim(),
-      icNumber: _icController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
+      icNumber: AccountValidation.normalizeIc(_icController.text),
+      phoneNumber: AccountValidation.normalizePhone(_phoneController.text),
       stateId: _selectedState!.id,
       districtId: _selectedDistrict!.id,
       zoneId: _selectedZone!.id,
       email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
+      password: _passwordController.text,
+      verificationToken: _verifiedIdentity!.verificationToken,
     );
 
     if (!mounted) return;
@@ -189,13 +236,37 @@ class _RegisterScreenState extends State<RegisterScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error,
+            context.read<SettingsProvider>().t(error),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.redAccent,
         ),
       );
     }
+  }
+
+  Future<void> _verifyIdentity() async {
+    if (!_isIdentityVerificationSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.read<SettingsProvider>().t(
+              'Pendaftaran peronda baharu hanya tersedia melalui aplikasi '
+              'Android iRonda.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    final result = await Navigator.push<VerifiedIdentity>(
+      context,
+      MaterialPageRoute(builder: (_) => const IdentityVerificationScreen()),
+    );
+    if (!mounted || result == null) return;
+    _nameController.text = result.fullName;
+    _icController.text = result.icNumber;
+    setState(() => _verifiedIdentity = result);
   }
 
   Future<void> _loadStates() async {
@@ -454,7 +525,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               child: Column(
                 children: [
                   Text(
-                    settings.t('PENDAFTARAN'),
+                    settings.t('Pendaftaran').toUpperCase(),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -554,12 +625,93 @@ class _RegisterScreenState extends State<RegisterScreen>
 
             _buildSectionTitle(settings.t('Maklumat Identiti')),
             const SizedBox(height: 16),
+            Card(
+              margin: EdgeInsets.zero,
+              color: !_isIdentityVerificationSupported
+                  ? Colors.orange.withValues(alpha: 0.10)
+                  : _verifiedIdentity == null
+                  ? theme.colorScheme.surfaceContainerHighest
+                  : Colors.green.withValues(alpha: 0.10),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          !_isIdentityVerificationSupported
+                              ? Icons.android_rounded
+                              : _verifiedIdentity == null
+                              ? Icons.badge_outlined
+                              : Icons.verified_user_rounded,
+                          color: !_isIdentityVerificationSupported
+                              ? Colors.orange.shade800
+                              : _verifiedIdentity == null
+                              ? _royalBlue
+                              : Colors.green.shade700,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            !_isIdentityVerificationSupported
+                                ? settings.t('Pendaftaran memerlukan Android')
+                                : _verifiedIdentity == null
+                                ? settings.t('Imbasan MyKad diperlukan')
+                                : settings.t('Data MyKad telah diekstrak'),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      !_isIdentityVerificationSupported
+                          ? settings.t(
+                              'Pengimbasan MyKad menggunakan kamera '
+                              'hanya disokong dalam aplikasi Android iRonda.',
+                            )
+                          : _verifiedIdentity == null
+                          ? settings.t(
+                              'Imbas MyKad untuk mengekstrak nama penuh dan nombor '
+                              'MyKad. Tiada swafoto atau perbandingan wajah dilakukan.',
+                            )
+                          : settings.t(
+                              'Nama dan nombor MyKad dikunci berdasarkan data yang '
+                              'diekstrak. Pilih sendiri negeri, daerah dan zon '
+                              'rondaan anda.',
+                            ),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: !_isIdentityVerificationSupported || _isLoading
+                          ? null
+                          : _verifyIdentity,
+                      icon: Icon(
+                        _verifiedIdentity == null
+                            ? Icons.document_scanner_outlined
+                            : Icons.refresh_rounded,
+                      ),
+                      label: Text(
+                        !_isIdentityVerificationSupported
+                            ? settings.t('ANDROID DIPERLUKAN')
+                            : _verifiedIdentity == null
+                            ? settings.t('MULA IMBASAN')
+                            : settings.t('ULANG IMBASAN'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             _buildTextField(
               _nameController,
               settings.t('Nama Penuh (Mengikut MyKad)'),
               Icons.person_outline,
               TextInputType.name,
               isDark,
+              readOnly: true,
             ),
             const SizedBox(height: 16),
             _buildTextField(
@@ -568,6 +720,8 @@ class _RegisterScreenState extends State<RegisterScreen>
               Icons.badge_outlined,
               TextInputType.number,
               isDark,
+              readOnly: true,
+              validator: AccountValidation.icNumber,
             ),
             const SizedBox(height: 32),
 
@@ -579,6 +733,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               Icons.phone_outlined,
               TextInputType.phone,
               isDark,
+              validator: AccountValidation.phone,
             ),
             const SizedBox(height: 16),
 
@@ -586,10 +741,10 @@ class _RegisterScreenState extends State<RegisterScreen>
               value: _selectedState,
               items: _states,
               hint: _isLoadingLocations
-                  ? 'Memuatkan negeri...'
-                  : 'Pilih Negeri',
+                  ? settings.t('Memuatkan negeri...')
+                  : settings.t('Pilih Negeri'),
               icon: Icons.map_outlined,
-              enabled: !_isLoadingLocations,
+              enabled: !_isLoadingLocations && !_isLoading,
               onChanged: _selectState,
               validator: (value) =>
                   value == null ? settings.t('Sila pilih negeri') : null,
@@ -600,7 +755,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             _buildLocationDropdown(
               value: _selectedDistrict,
               items: _districts,
-              hint: 'Pilih Daerah',
+              hint: settings.t('Pilih Daerah'),
               icon: Icons.account_tree_outlined,
               enabled: _selectedState != null && _districts.isNotEmpty,
               onChanged: _selectDistrict,
@@ -613,7 +768,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             _buildLocationDropdown(
               value: _selectedZone,
               items: _zones,
-              hint: 'Pilih Zon Rondaan',
+              hint: settings.t('Pilih Zon Rondaan'),
               icon: Icons.location_on_outlined,
               enabled: _selectedDistrict != null && _zones.isNotEmpty,
               onChanged: (value) => setState(() => _selectedZone = value),
@@ -634,7 +789,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _locationLoadError!,
+                      settings.t(_locationLoadError!),
                       style: const TextStyle(
                         color: Colors.redAccent,
                         fontSize: 13,
@@ -645,7 +800,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     onPressed: _selectedState == null
                         ? _loadStates
                         : () => _selectDistrict(_selectedDistrict),
-                    child: const Text('Cuba lagi'),
+                    child: Text(settings.t('Cuba lagi')),
                   ),
                 ],
               ),
@@ -690,6 +845,9 @@ class _RegisterScreenState extends State<RegisterScreen>
               controller: _passwordController,
               obscureText: _obscurePassword,
               keyboardType: TextInputType.visiblePassword,
+              autocorrect: false,
+              enableSuggestions: false,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
               decoration:
                   _inputDecoration(
@@ -697,6 +855,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                     icon: Icons.lock_outline,
                     isDark: isDark,
                   ).copyWith(
+                    helperText: settings.t(
+                      AccountValidation.passwordLengthMessage,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -710,9 +871,32 @@ class _RegisterScreenState extends State<RegisterScreen>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
-              validator: (value) => value == null || value.isEmpty
-                  ? settings.t('Ruangan ini wajib diisi')
-                  : null,
+              validator: (value) {
+                final error = AccountValidation.password(value);
+                return error == null ? null : settings.t(error);
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _confirmPasswordController,
+              obscureText: _obscurePassword,
+              keyboardType: TextInputType.visiblePassword,
+              autocorrect: false,
+              enableSuggestions: false,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
+              decoration: _inputDecoration(
+                hintText: settings.t('Confirm Password'),
+                icon: Icons.lock_outline,
+                isDark: isDark,
+              ),
+              validator: (value) {
+                final error = AccountValidation.confirmPassword(
+                  value,
+                  _passwordController.text,
+                );
+                return error == null ? null : settings.t(error);
+              },
             ),
             const SizedBox(height: 48),
 
@@ -801,6 +985,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     required Color textColor,
   }) {
     return DropdownButtonFormField<LocationOption>(
+      key: ValueKey('$hint-${value?.id ?? 'none'}-${items.length}'),
       initialValue: value,
       isExpanded: true,
       icon: Icon(
@@ -848,19 +1033,24 @@ class _RegisterScreenState extends State<RegisterScreen>
     String hint,
     IconData icon,
     TextInputType type,
-    bool isDark,
-  ) {
+    bool isDark, {
+    bool readOnly = false,
+    FormFieldValidator<String>? validator,
+  }) {
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? _charcoal;
 
     return TextFormField(
       controller: controller,
       keyboardType: type,
+      readOnly: readOnly,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
       decoration: _inputDecoration(hintText: hint, icon: icon, isDark: isDark),
-      validator: (value) => value == null || value.isEmpty
-          ? context.read<SettingsProvider>().t('Ruangan ini wajib diisi')
-          : null,
+      validator: (value) {
+        final error = (validator ?? AccountValidation.required)(value);
+        return error == null ? null : context.read<SettingsProvider>().t(error);
+      },
     );
   }
 

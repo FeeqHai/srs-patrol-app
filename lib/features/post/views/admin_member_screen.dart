@@ -9,6 +9,7 @@ import '../../auth/models/location_option.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/services/auth_service.dart';
+import '../widgets/edit_member_profile_dialog.dart';
 
 const String _all = 'all';
 const String _locationSeparator = ' • ';
@@ -146,7 +147,9 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
       final ok = data['status'] == 'success';
       messenger.showSnackBar(
         SnackBar(
-          content: Text(data['message'] ?? settings.t('Kemas kini selesai')),
+          content: Text(
+            settings.t(data['message']?.toString() ?? 'Kemas kini selesai'),
+          ),
           backgroundColor: ok ? Colors.green : Colors.redAccent,
         ),
       );
@@ -157,13 +160,52 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
         await _fetchMembers();
       }
     } catch (e) {
-      final message = e is ApiException && e.statusCode != null
-          ? e.message
-          : '${settings.t('Ralat Rangkaian')}: $e';
+      final message = e is ApiException && e.isUserFacing
+          ? settings.t(e.message)
+          : settings.t('Tidak dapat menghubungi pelayan. Sila cuba lagi.');
       messenger.showSnackBar(
         SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
       );
     }
+  }
+
+  Future<void> _confirmPendingDecision(
+    UserModel member, {
+    required bool approve,
+  }) async {
+    final settings = context.read<SettingsProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          settings.t(approve ? 'Lulus Pendaftaran' : 'Tolak Pendaftaran'),
+        ),
+        content: Text(
+          '${settings.t(approve ? 'Adakah anda pasti ingin meluluskan pendaftaran ahli ini?' : 'Adakah anda pasti ingin menolak pendaftaran ahli ini?')}\n\n${member.fullName}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(settings.t('Batal')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: approve ? Colors.green.shade700 : Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(settings.t(approve ? 'Ya, Lulus' : 'Ya, Tolak')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    await _postAction({
+      'action': 'update_status',
+      'user_id': member.id,
+      'account_status': approve ? 'active' : 'inactive',
+    });
   }
 
   Future<void> _showTempPassword(String password) async {
@@ -303,73 +345,20 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
   }
 
   Future<void> _showEditProfileDialog(UserModel member) async {
-    final settings = context.read<SettingsProvider>();
-    final name = TextEditingController(text: member.fullName);
-    final ic = TextEditingController(text: member.icNumber ?? '');
-    final phone = TextEditingController(text: member.phoneNumber ?? '');
-    final email = TextEditingController(text: member.email ?? '');
-    await showDialog<void>(
+    final result = await showDialog<MemberProfileEditResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(settings.t('Edit Profil Ahli')),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: name,
-                decoration: InputDecoration(
-                  labelText: settings.t('Nama Penuh'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: ic,
-                decoration: InputDecoration(
-                  labelText: settings.t('No. Kad Pengenalan'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phone,
-                decoration: InputDecoration(
-                  labelText: settings.t('No. Telefon'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: email,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(settings.t('Batal')),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _postAction({
-                'action': 'update_profile',
-                'user_id': member.id,
-                'full_name': name.text.trim(),
-                'ic_number': ic.text.trim(),
-                'phone_number': phone.text.trim(),
-                'email': email.text.trim(),
-              });
-            },
-            child: Text(settings.t('Simpan')),
-          ),
-        ],
-      ),
+      builder: (_) => EditMemberProfileDialog(member: member),
     );
-    name.dispose();
-    ic.dispose();
-    phone.dispose();
-    email.dispose();
+    if (!mounted || result == null) return;
+
+    await _postAction({
+      'action': 'update_profile',
+      'user_id': member.id,
+      'full_name': result.fullName,
+      'ic_number': result.icNumber,
+      'phone_number': result.phoneNumber,
+      'email': result.email,
+    });
   }
 
   Future<void> _showTransferDialog(UserModel member) async {
@@ -1209,11 +1198,8 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                 children: [
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: () => _postAction({
-                        'action': 'update_status',
-                        'user_id': member.id,
-                        'account_status': 'active',
-                      }),
+                      onPressed: () =>
+                          _confirmPendingDecision(member, approve: true),
                       icon: const Icon(Icons.check),
                       label: Text(settings.t('Lulus')),
                       style: FilledButton.styleFrom(
@@ -1229,11 +1215,8 @@ class _AdminMemberScreenState extends State<AdminMemberScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _postAction({
-                        'action': 'update_status',
-                        'user_id': member.id,
-                        'account_status': 'inactive',
-                      }),
+                      onPressed: () =>
+                          _confirmPendingDecision(member, approve: false),
                       icon: const Icon(Icons.close),
                       label: Text(settings.t('Tolak')),
                       style: OutlinedButton.styleFrom(
